@@ -14,7 +14,7 @@ import ResetPasswordToken from "./pages/ResetPasswordToken";
 import HomePage from "./pages/HomePage";
 import NewStudentRegister from "./pages/NewStudentRegister";
 
-import AdminDashboard from "./pages/AdminDashboard";
+import IntegratedAdminPortal from "./pages/IntegratedAdminPortal";
 import AdminEnrollment from "./pages/AdminEnrollment";
 import AdminCourses from "./pages/AdminCourses";
 import AdminStudents from "./pages/AdminStudents";
@@ -196,10 +196,7 @@ const App: React.FC = () => {
 
             {user?.role === "admin" ? (
               <>
-                <Route
-                  path="/admin/dashboard"
-                  element={<AdminDashboard user={user} onLogout={handleLogout} />}
-                />
+                <Route path="/admin/dashboard" element={<IntegratedAdminPortal user={user} onLogout={handleLogout} />} />
                 <Route
                   path="/admin/enrollment"
                   element={<AdminEnrollment user={user} onLogout={handleLogout} />}

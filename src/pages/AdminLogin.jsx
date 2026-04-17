@@ -47,7 +47,7 @@ function AdminLogin() {
       }
 
       // Login successful
-      alert(t('loginSuccess') + ' ' + data.adminname + '!');
+      alert(t('loginSuccess') + ' ' + (data.adminName || data.fullName || data.name || '') + '!');
       
       // Save admin token and info to localStorage
       if (result?.token) {
