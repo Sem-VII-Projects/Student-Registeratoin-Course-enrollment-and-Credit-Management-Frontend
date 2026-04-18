@@ -146,6 +146,36 @@ function normalizeStudent(student: any) {
   };
 }
 
+function normalizeAdmin(admin: any) {
+  if (!admin) return admin;
+  return {
+    ...admin,
+    adminname: admin.adminname || admin.adminName || admin.fullName || "",
+  };
+}
+
+function normalizeParent(parent: any) {
+  if (!parent) return parent;
+  return {
+    ...parent,
+    id: parent.id || parent.parentid,
+    parentid: parent.parentid || parent.id,
+    studentid: parent.studentid || parent.studentId || parent.student_id,
+    full_name: parent.full_name || parent.fullName || "",
+    relation: parent.relation || "",
+    job_position: parent.job_position || parent.jobPosition || "",
+    education: parent.education || "",
+    address: parent.address || "",
+    phone_number: parent.phone_number || parent.phone || parent.phoneNumber || "",
+    ethnic: parent.ethnic || "",
+    religion: parent.religion || "",
+    birthplace: parent.birthplace || "",
+    nrc_number: parent.nrc_number || parent.nrcNumber || "",
+    nrc_front_image: parent.nrc_front_image || parent.nrcFrontImage || "",
+    nrc_back_image: parent.nrc_back_image || parent.nrcBackImage || "",
+  };
+}
+
 // ---- Global auth-failure handling (401/403) ----
 function clearAuthSession() {
   sessionStorage.removeItem("user");
@@ -322,55 +352,143 @@ export type AdminAnnouncementBulkPayload = {
 // ---------------------------
 export const api = {
   // Public student registration
-  registerStudent: (payload: any) => request("/api/auth/register", { method: "POST", body: payload }),
-  getRegistrationWindowSettings: () => request("/api/registration-window", {}),
+  getRegistrationWindowSettings: () => request("/api/registration-window", { backend: "spring" }),
+  updateRegistrationWindowSettings: (body: any) => request("/api/admin/registration-window", { method: "PUT", body, backend: "spring" }),
 
-  // Legacy Spring auth endpoints kept for compatibility with src/pages login flows.
-  loginStudent: (payload: { email: string; username: string; password: string }) =>
-    request("/api/auth/login", { method: "POST", body: payload, backend: "spring" }),
-  loginAdmin: (payload: { email: string; password: string }) =>
-    request("/api/auth/admin/login", { method: "POST", body: payload, backend: "spring" }),
-  getStudents: async (email: string) => {
-    const result = await request<any[]>(
-      `/api/students?email=${encodeURIComponent(email)}`,
-      { backend: "spring" }
-    );
-    return Array.isArray(result) ? result.map(normalizeStudent) : [];
+  // Spring Boot specific methods from client.js
+  adminListRegistrations: (status?: string) => {
+    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    return request(`/v1/admin/registrations${query}`, { backend: "spring" });
   },
-  getStudentById: async (studentId: string) => {
-    const result = await request<any>(
-      `/api/students/${encodeURIComponent(studentId)}`,
-      { backend: "spring" }
-    );
-    return normalizeStudent(result);
+  adminApproveRegistration: (registrationId: string) => 
+    request(`/v1/admin/registrations/${encodeURIComponent(registrationId)}/approve`, { method: "PATCH", backend: "spring" }),
+  adminRejectRegistration: (registrationId: string, reason: string) => {
+    const query = reason ? `?reason=${encodeURIComponent(reason)}` : '';
+    return request(`/v1/admin/registrations/${encodeURIComponent(registrationId)}/reject${query}`, { method: "PATCH", backend: "spring" });
   },
-  updateStudent: async (studentId: string, payload: any) => {
-    const result = await request<any>(
-      `/api/students/${encodeURIComponent(studentId)}`,
-      { method: "PUT", body: payload, backend: "spring" }
-    );
-    return normalizeStudent(result);
+  clearRegistrationSections: (registrationId: string) =>
+    request(`/v1/registration/${encodeURIComponent(registrationId)}/sections`, { method: "DELETE", backend: "spring" }),
+  deleteStudentDocuments: (studentId: string, docType?: string) => {
+    const query = docType
+      ? `?studentId=${encodeURIComponent(studentId)}&docType=${encodeURIComponent(docType)}`
+      : `?studentId=${encodeURIComponent(studentId)}`;
+    return request(`/v1/student/documents${query}`, { method: "DELETE", backend: "spring" });
   },
-  getStudentStartRoute: () =>
-    request("/api/student/start-route", { backend: "spring" }),
-  listRegistrations: async (studentId?: string) => {
-    const registrations = await request<any[]>("/api/admin/registrations", { backend: "spring" });
-    if (!studentId) return registrations;
-    const sid = String(studentId);
-    return (Array.isArray(registrations) ? registrations : []).filter((item) => {
-      const candidate =
-        item?.studentId ||
-        item?.student_id ||
-        item?.studentUserId ||
-        item?.student_user_id ||
-        item?.user_id ||
-        null;
-      return candidate != null && String(candidate) === sid;
+  createParent: (body: any) => request('/api/parents', { method: 'POST', body, backend: "spring" }),
+  listParents: (studentId: string) => {
+    const query = studentId ? `?studentId=${encodeURIComponent(studentId)}` : '';
+    return request<any[]>(`/api/parents${query}`, { backend: "spring" }).then((items) => {
+      const list = Array.isArray(items)
+        ? items
+        : Array.isArray((items as any)?.parents)
+          ? (items as any).parents
+          : Array.isArray((items as any)?.data)
+            ? (items as any).data
+            : [];
+      return list;
     });
   },
-  getRegistrationSections: (registrationId: string) =>
-    request(`/v1/registration/${encodeURIComponent(registrationId)}/sections`, { backend: "spring" }),
+  adminUpdateMajorClass: (payload: any) => request('/api/admin/major-classes', { method: 'PUT', body: payload, backend: "spring" }),
+  adminUpdateClassSection: (payload: any) => request('/api/admin/class-sections', { method: 'PUT', body: payload, backend: "spring" }),
+  adminMoveStudentSection: (payload: any) => request('/api/admin/class-sections/move-student', { method: 'POST', body: payload, backend: "spring" }),
+  approveStudent: (studentId: string, body: any) => request(`/api/students/${encodeURIComponent(studentId)}/approve`, { method: 'POST', body, backend: "spring" }),
+  rejectStudent: (studentId: string, body: any) => request(`/api/students/${encodeURIComponent(studentId)}/reject`, { method: 'POST', body, backend: "spring" }),
+  updateStudentStatus: (studentId: string, status: string) => request(`/api/students/${encodeURIComponent(studentId)}/status`, { method: 'PATCH', body: { status }, backend: "spring" }),
+  getClassSections: (paramsOrYear: any, semesterArg?: any, yearLevelArg?: any) => {
+    const queryParams = new URLSearchParams();
+    if (paramsOrYear && typeof paramsOrYear === 'object') {
+      const { academicYear, semester, yearLevel, year } = paramsOrYear;
+      if (academicYear != null) queryParams.set('academicYear', String(academicYear));
+      if (semester != null) queryParams.set('semester', String(semester));
+      if (yearLevel != null) queryParams.set('yearLevel', String(yearLevel));
+      if (year != null) queryParams.set('year', String(year));
+    } else if (semesterArg != null || yearLevelArg != null) {
+      if (paramsOrYear != null) queryParams.set('academicYear', String(paramsOrYear));
+      if (semesterArg != null) queryParams.set('semester', String(semesterArg));
+      if (yearLevelArg != null) queryParams.set('yearLevel', String(yearLevelArg));
+    } else if (paramsOrYear != null) {
+      queryParams.set('year', String(paramsOrYear));
+    }
+    const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    return request(`/api/class-sections${query}`, { backend: "spring" });
+  },
 
+  // Legacy Spring auth endpoints kept for compatibility with src/pages login flows.
+  getStudents: async (email?: string) => {
+    const query = email ? `?email=${encodeURIComponent(email)}` : '';
+    const items = await request<any>(`/api/students${query}`, { backend: "spring" });
+    const list = Array.isArray(items)
+      ? items
+      : Array.isArray(items?.students)
+        ? items.students
+        : Array.isArray(items?.data)
+          ? items.data
+          : Array.isArray(items?.content)
+            ? items.content
+            : Array.isArray(items?.results)
+              ? items.results
+              : [];
+    return list.map(normalizeStudent);
+  },
+  getCurrentTerm: () => request('/api/terms/current', { backend: "spring" }),
+  adminListTermEnrollments: (params: any = {}) => {
+    const queryParams = new URLSearchParams();
+    const { academicYear, semester, yearLevel, section, status } = params || {};
+    if (academicYear != null && String(academicYear).trim() !== '') {
+      queryParams.set('academicYear', String(academicYear));
+    }
+    if (semester != null && String(semester).trim() !== '') {
+      queryParams.set('semester', String(semester));
+    }
+    if (yearLevel != null && String(yearLevel).trim() !== '') {
+      queryParams.set('yearLevel', String(yearLevel));
+    }
+    if (section != null && String(section).trim() !== '') {
+      queryParams.set('section', String(section));
+    }
+    if (status != null && String(status).trim() !== '') {
+      queryParams.set('status', String(status));
+    }
+    const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    return request(`/api/admin/term-enrollments${query}`, { backend: "spring" });
+  },
+  listRegistrations: async (studentId?: string) => {
+    const query = studentId ? `?studentId=${encodeURIComponent(studentId)}` : '';
+    const items = await request<any>(`/api/registrations${query}`, { backend: "spring" });
+    if (Array.isArray(items)) return items;
+    if (Array.isArray(items?.registrations)) return items.registrations;
+    if (Array.isArray(items?.data)) return items.data;
+    if (Array.isArray(items?.content)) return items.content;
+    if (Array.isArray(items?.results)) return items.results;
+    return [];
+  },
+  adminListMajorClasses: (params: any = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.academicYear != null && String(params.academicYear).trim() !== '') {
+      queryParams.set('academicYear', String(params.academicYear).trim());
+    }
+    if (params.semester != null && String(params.semester).trim() !== '') {
+      queryParams.set('semester', String(params.semester).trim());
+    }
+    if (params.yearLevel != null && String(params.yearLevel).trim() !== '') {
+      queryParams.set('yearLevel', String(params.yearLevel).trim());
+    }
+    if (params.departmentId != null && String(params.departmentId).trim() !== '') {
+      queryParams.set('departmentId', String(params.departmentId).trim());
+    }
+    if (params.includeInactive != null) {
+      queryParams.set('includeInactive', params.includeInactive ? 'true' : 'false');
+    }
+    const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    return request(`/api/admin/major-classes${query}`, { backend: "spring" });
+  },
+
+  loginAdmin: (body: any) => request('/api/auth/admin/login', { method: 'POST', body, backend: "spring" }).then((data) => {
+    if (data?.admin) {
+      return { ...data, admin: normalizeAdmin(data.admin) };
+    }
+    return normalizeAdmin(data);
+  }),
   login: (payload: { username: string; password: string; role: "admin" | "student" }) =>
     request("/api/v1/auth/login", { method: "POST", body: payload }),
 

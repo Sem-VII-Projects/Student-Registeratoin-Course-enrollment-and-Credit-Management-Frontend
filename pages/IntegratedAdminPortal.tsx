@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import AdminDashboard from './AdminDashboard';
+import AdminDashboard_Friend from './AdminDashboard_Friend';
 
 export default function IntegratedAdminPortal({ user, onLogout }: any) {
   const [activeTab, setActiveTab] = useState<'student' | 'course'>('student');
 
   return (
-    <div className="flex flex-row h-screen w-screen overflow-hidden bg-white dark:bg-slate-950 font-roboto text-slate-900 transition-colors duration-500">
+    <div className="flex flex-row h-screen w-full overflow-hidden bg-white dark:bg-slate-950 font-roboto text-slate-900 transition-colors duration-500">
       {/* 
           Refined Vertical Minimalist Sidebar 
           Takes as little horizontal space as possible using vertical writing mode
       */}
-      <div className="flex flex-col border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 z-20 relative w-12 hover:w-14 transition-all duration-500 ease-in-out">
+      <div className="flex flex-col border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 z-20 relative w-12 hover:w-14 transition-all duration-500 ease-in-out shrink-0">
         <div className="flex flex-col items-center py-8 gap-12 h-full">
           {/* Student Registration Tab */}
           <button
@@ -22,14 +23,14 @@ export default function IntegratedAdminPortal({ user, onLogout }: any) {
               }
             `}
             onClick={() => setActiveTab('student')}
-            title="Student Registration"
+            title="my friend's project"
           >
             {/* Vertical Label */}
             <span className={`
               [writing-mode:vertical-lr] rotate-180 text-[10px] font-poppins font-bold uppercase tracking-[0.2em] whitespace-nowrap
               transition-transform duration-500 group-hover:scale-105
             `}>
-              Student Registration
+              my friend's project
             </span>
             
             {/* Active Indicator (Perplexity Style Pill) */}
@@ -72,10 +73,10 @@ export default function IntegratedAdminPortal({ user, onLogout }: any) {
       </div>
 
       {/* Main Tab Content Area */}
-      <div className="flex-1 relative z-10 bg-white dark:bg-slate-900 flex flex-col overflow-auto">
+      <div className="flex-1 relative z-10 bg-white dark:bg-slate-900 flex flex-col overflow-hidden min-w-0">
         <div className="flex-1 w-full h-full animate-in fade-in duration-700">
             {activeTab === 'student' && (
-              <div className="flex-1 w-full h-full bg-white dark:bg-slate-900" />
+              <AdminDashboard_Friend user={user} onLogout={onLogout} />
             )}
             {activeTab === 'course' && (
               <div className="flex-1 w-full h-full">

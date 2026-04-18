@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { api } from '../../lib/api';
 import { LanguageSwitcher } from '../../components/LanguageSwitcher';
 
-function AdminLogin() {
+function AdminLogin({ onLogin }) {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
@@ -46,17 +46,30 @@ function AdminLogin() {
         return;
       }
 
+      // Ensure role is set for App.tsx routing
+      const adminUser = {
+        ...data,
+        role: 'admin'
+      };
+
       // Login successful
-      alert(t('loginSuccess') + ' ' + (data.adminName || data.fullName || data.name || '') + '!');
+      alert(t('loginSuccess') + ' ' + (adminUser.adminname || adminUser.adminName || adminUser.fullName || adminUser.name || '') + '!');
       
       // Save admin token and info to localStorage
       if (result?.token) {
         localStorage.setItem('adminAuthToken', result.token);
+        // Also set access_token for the global api request interceptor
+        localStorage.setItem('access_token', result.token);
       }
-      localStorage.setItem('adminData', JSON.stringify(data));
+      localStorage.setItem('adminData', JSON.stringify(adminUser));
+      
+      // Update global app state
+      if (typeof onLogin === 'function') {
+        onLogin(adminUser);
+      }
       
       // Navigate to admin dashboard
-      navigate('/admin/dashboard'); // Adjusted to match your app's actual admin dashboard route
+      navigate('/admin/dashboard');
 
     } catch (error) {
       console.error('Admin login error:', error);

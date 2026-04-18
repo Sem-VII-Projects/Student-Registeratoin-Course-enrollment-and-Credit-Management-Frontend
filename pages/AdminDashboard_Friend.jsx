@@ -1,0 +1,971 @@
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { api } from '../lib/client';
+import Composer from '../components/Composer'
+import * as XLSX from 'xlsx';
+
+// UI Components to match project style
+function cn(...classes) {
+  return classes.filter(Boolean).join(" ");
+}
+
+function Skeleton({ className }) {
+  return <div className={cn("animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800/50", className)} />;
+}
+
+function IconBadge({ icon, tone = "primary" }) {
+  const tones = {
+    primary: "bg-teal-100 text-teal-700 dark:bg-teal-900/35 dark:text-teal-300",
+    emerald: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/35 dark:text-emerald-300",
+    amber: "bg-amber-100 text-amber-700 dark:bg-amber-900/35 dark:text-amber-300",
+    rose: "bg-rose-100 text-rose-700 dark:bg-rose-900/35 dark:text-rose-300",
+    cyan: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/35 dark:text-cyan-300",
+    indigo: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/35 dark:text-indigo-300",
+  };
+  return (
+    <div className={cn("grid h-10 w-10 place-items-center rounded-xl", tones[tone])}>
+      <span className="material-icons-outlined text-[20px]">{icon}</span>
+    </div>
+  );
+}
+
+const AWAITING_APPROVAL_STATUSES = ['DRAFT', 'PENDING', 'PENDING_APPROVAL'];
+const BASE_PAYMENT_STATUS = ['PAYMENT_PENDING', 'PAYMENT_DONE'];
+const PAYMENT_SESSION_STATUSES = [...BASE_PAYMENT_STATUS];
+const BASE_CLASS_OPTIONS = ['A', 'B', 'C', 'D'];
+const DEFAULT_CONFIG_YEARS = [1, 2, 3, 4];
+const BASE_STATUS_OPTIONS = [
+  'REGISTERED',
+  'ENROLLED',
+  'PAYMENT_PENDING',
+  'PAYMENT_DONE',
+  'COMPLETED',
+  'FAILED',
+  'REEXAM_PENDING',
+  'REEXAM_PASSED',
+  'WITHDRAWN',
+  'TERMINATED'
+];
+
+const normalizeStatusValue = (value) => String(value || '').trim().toUpperCase();
+
+const buildStatusOptions = (students) => {
+  const knownBase = new Set(BASE_STATUS_OPTIONS);
+  const extras = new Set();
+  (Array.isArray(students) ? students : []).forEach((student) => {
+    const normalized = normalizeStatusValue(student?.status);
+    if (!normalized) return;
+    if (!knownBase.has(normalized)) {
+      extras.add(normalized);
+    }
+  });
+  const sortedExtras = Array.from(extras).sort((a, b) => a.localeCompare(b));
+  return [...BASE_STATUS_OPTIONS, ...sortedExtras];
+};
+
+const toPositiveYear = (value) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return null;
+  return Math.trunc(numeric);
+};
+
+const toUniqueSortedYears = (values) => {
+  const unique = new Set();
+  (Array.isArray(values) ? values : []).forEach((value) => {
+    const year = toPositiveYear(value);
+    if (year) unique.add(year);
+  });
+  return Array.from(unique).sort((a, b) => a - b);
+};
+
+const toYearRange = (maxYear) => {
+  const max = toPositiveYear(maxYear);
+  if (!max) return [];
+  return Array.from({ length: max }, (_, index) => index + 1);
+};
+
+const readConfigYears = (config, fallbackMajorSelectionStartYear) => {
+  if (!config || typeof config !== 'object') return [];
+  const directYears = toUniqueSortedYears([
+    ...(Array.isArray(config.availableYears) ? config.availableYears : []),
+    ...(Array.isArray(config.allowedYears) ? config.allowedYears : [])
+  ]);
+  if (directYears.length > 0) return directYears;
+  const yearsField = Array.isArray(config.years) ? config.years.map((entry) => (typeof entry === 'object' ? (entry?.yearLevel ?? entry?.year) : entry)) : [];
+  const yearsFromYearsField = toUniqueSortedYears(yearsField);
+  if (yearsFromYearsField.length > 0) return yearsFromYearsField;
+  const yearsFromYearlyConfig = toUniqueSortedYears(Array.isArray(config.yearlyConfig) ? config.yearlyConfig.map((entry) => entry?.yearLevel ?? entry?.year) : []);
+  if (yearsFromYearlyConfig.length > 0) return yearsFromYearlyConfig;
+  const configuredMaxYear = toPositiveYear(config.maxYear ?? config?.header?.maxYear ?? config?.header?.totalYears ?? config.totalYears ?? config.no_of_years);
+  if (configuredMaxYear) return toYearRange(configuredMaxYear);
+  const majorSelectionStartYear = toPositiveYear(config.majorSelectionStartYear ?? config.major_selection_start_year ?? fallbackMajorSelectionStartYear);
+  if (majorSelectionStartYear && configuredMaxYear) return toYearRange(Math.max(majorSelectionStartYear, configuredMaxYear));
+  return [];
+};
+
+const getAcademicYearSortValue = (value) => {
+  const match = String(value || '').match(/\d{4}/);
+  return match ? Number(match[0]) : Number.NEGATIVE_INFINITY;
+};
+
+const ROMAN_SEMESTER_ORDER = { I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7, VIII: 8, IX: 9, X: 10 };
+
+const getSemesterSortValue = (value) => {
+  const text = String(value || '').trim();
+  if (!text) return Number.POSITIVE_INFINITY;
+  const digitMatch = text.match(/\d+/);
+  if (digitMatch) return Number(digitMatch[0]);
+  const romanMatch = text.match(/([ivx]+)$/i);
+  if (romanMatch) {
+    const roman = romanMatch[1].toUpperCase();
+    if (ROMAN_SEMESTER_ORDER[roman]) return ROMAN_SEMESTER_ORDER[roman];
+  }
+  return Number.POSITIVE_INFINITY;
+};
+
+const normalizeTermConfig = (term) => {
+  if (!term || typeof term !== 'object') return null;
+  const academicYear = String(term.academicYear || term.currentAcademicYear || '').trim();
+  const semesterRaw = term.semester ?? term.currentSemester;
+  const semester = Number(semesterRaw);
+  const majorSelectionStartYearRaw = term.majorSelectionStartYear ?? term.major_selection_start_year ?? term.majorStartYear ?? 3;
+  const majorSelectionStartYear = Number(majorSelectionStartYearRaw);
+  return {
+    academicYear,
+    semester: Number.isFinite(semester) && semester > 0 ? semester : null,
+    majorSelectionStartYear: Number.isFinite(majorSelectionStartYear) && majorSelectionStartYear > 0 ? majorSelectionStartYear : 3
+  };
+};
+
+const normalizeAdminTermEnrollments = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.enrollments)) return payload.enrollments;
+  return [];
+};
+
+const pickValue = (...values) => values.find((value) => value !== undefined && value !== null && String(value).trim() !== '');
+const toBoolean = (value) => typeof value === 'boolean' ? value : (typeof value === 'string' ? value.trim().toLowerCase() === 'true' : !!value);
+const asObject = (value) => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+const hasValues = (record) => Object.values(asObject(record)).some((value) => value !== null && value !== undefined && (typeof value === 'string' ? value.trim() !== '' : true));
+const getRegistrationId = (record) => record?.registrationId || record?.registrationid || record?.registration_id || record?.id || null;
+
+const normalizePaymentSessionStatus = (record) => {
+  const paymentStatus = String(record?.payment_status || record?.paymentStatus || '').toUpperCase();
+  if (['PAYMENT_PENDING', 'PENDING', 'SUBMITTED'].includes(paymentStatus)) return 'PAYMENT_PENDING';
+  if (['PAYMENT_DONE', 'APPROVED', 'PAID'].includes(paymentStatus)) return 'PAYMENT_DONE';
+  return '';
+};
+
+const isPaymentSessionStudentRecord = (record) => PAYMENT_SESSION_STATUSES.includes(normalizePaymentSessionStatus(record));
+
+const getPaymentSessionCounts = (records) => (Array.isArray(records) ? records : []).reduce((acc, record) => {
+  const normalized = normalizePaymentSessionStatus(record);
+  if (normalized === 'PAYMENT_PENDING') acc.paymentPending += 1;
+  else if (normalized === 'PAYMENT_DONE') acc.paymentDone += 1;
+  return acc;
+}, { paymentPending: 0, paymentDone: 0 });
+
+const getResolvedYearValue = (record) => {
+  const value = Number(record?.currentyear ?? record?.currentYear ?? record?.yearLevel ?? record?.year_level ?? 0);
+  return Number.isFinite(value) && value > 0 ? value : null;
+};
+
+const getResolvedAcademicYearValue = (record, currentTerm) => {
+  const direct = String(record?.termAcademicYear || currentTerm?.academicYear || record?.academicYear || record?.academic_year || record?.academicYearEntered || record?.academic_year_entered || record?.academicyearentered || '').trim();
+  return direct || String(currentTerm?.academicYear || '').trim();
+};
+
+const getResolvedSemesterValue = (record, currentTerm) => {
+  const direct = String(record?.termSemester || (currentTerm?.semester ? String(currentTerm.semester) : '') || record?.academicSemester || record?.academic_semester || record?.semester || record?.semester_name || '').trim();
+  return direct || (currentTerm?.semester ? String(currentTerm.semester) : '');
+};
+
+const hasOptionValue = (options, value) => {
+  const target = String(value || '').trim();
+  if (!target) return true;
+  return (Array.isArray(options) ? options : []).some((option) => String(option || '').trim() === target);
+};
+
+const normalizeFilterValue = (options, value) => hasOptionValue(options, value) ? value : '';
+
+const normalizeClassLabel = (value) => String(value || '').trim();
+const normalizeClassLabelKey = (value) => normalizeClassLabel(value).toUpperCase();
+const toFoundationClassFilterValue = (section) => `FOUNDATION:${String(section || '').trim().toUpperCase()}`;
+const toMajorClassFilterValue = (majorClassId) => `MAJOR:${String(majorClassId || '').trim()}`;
+const toMajorClassLabelFilterValue = (label) => `MAJOR_LABEL:${normalizeClassLabelKey(label)}`;
+
+const normalizeLegacyClassFilterValue = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const upper = raw.toUpperCase();
+  if (upper.startsWith('FOUNDATION:') || upper.startsWith('MAJOR:') || upper.startsWith('MAJOR_LABEL:')) return raw;
+  if (BASE_CLASS_OPTIONS.includes(upper)) return toFoundationClassFilterValue(upper);
+  return raw;
+};
+
+const resolveEnrolledClassDisplay = (student) => {
+  const majorLabel = normalizeClassLabel(student?.majorClassLabel || student?.major_class_label || '');
+  if (majorLabel) return majorLabel;
+  const foundationSection = String(student?.foundationSection || student?.section || '').trim().toUpperCase();
+  if (foundationSection) return foundationSection;
+  const assigned = normalizeClassLabel(student?.assigned_class || student?.assignedClass || '');
+  return assigned || '';
+};
+
+const matchesEnrolledClassFilter = (student, filterValue) => {
+  const rawFilter = String(filterValue || '').trim();
+  if (!rawFilter) return true;
+  const normalizedFilter = normalizeLegacyClassFilterValue(rawFilter);
+  const upperFilter = normalizedFilter.toUpperCase();
+  const majorClassId = String(student?.majorClassId || student?.major_class_id || '').trim();
+  const majorClassLabel = normalizeClassLabelKey(student?.majorClassLabel || student?.major_class_label || '');
+  const foundationSection = String(student?.foundationSection || student?.section || '').trim().toUpperCase();
+  if (upperFilter.startsWith('FOUNDATION:')) return foundationSection === upperFilter.slice('FOUNDATION:'.length).trim();
+  if (upperFilter.startsWith('MAJOR:')) return !!majorClassId && majorClassId === normalizedFilter.slice('MAJOR:'.length).trim();
+  if (upperFilter.startsWith('MAJOR_LABEL:')) return !!majorClassLabel && majorClassLabel === upperFilter.slice('MAJOR_LABEL:'.length).trim();
+  if (BASE_CLASS_OPTIONS.includes(upperFilter)) return foundationSection === upperFilter;
+  if (majorClassId && normalizedFilter === majorClassId) return true;
+  return majorClassLabel === upperFilter;
+};
+
+const toMyanmarDigits = (num) => {
+  if (num === null || num === undefined) return '-';
+  const digits = {
+    '0': '၀', '1': '၁', '2': '၂', '3': '၃', '4': '၄',
+    '5': '၅', '6': '၆', '7': '၇', '8': '၈', '9': '၉'
+  };
+  return String(num).replace(/[0-9]/g, (w) => digits[w]);
+};
+
+function AdminDashboard({ user, onLogout }) {
+  const navigate = useNavigate();
+  const [admin, setAdmin] = useState(user || null);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  
+  const [rejectDialog, setRejectDialog] = useState({ open: false, student: null, reason: '' });
+  const [detailsRejectDialog, setDetailsRejectDialog] = useState({ open: false, student: null, reason: '' });
+  const [paymentRejectDialog, setPaymentRejectDialog] = useState({ open: false, student: null, reason: '' });
+
+  // Data states
+  const [students, setStudents] = useState([]);
+  const [newRegistrations, setNewRegistrations] = useState([]);
+  const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, detailsSubmitted: 0, paymentPending: 0, paymentDone: 0, enrolled: 0, benefit: 0, hostel: 0, onBreak: 0 });
+
+  // Filter states
+  const [filters, setFilters] = useState({ search: '', year: '', batch: '', semester: '', status: '' });
+  const [paymentFilters, setPaymentFilters] = useState({ search: '', year: '', batch: '', semester: '', paymentStatus: '' });
+  const [enrolledFilters, setEnrolledFilters] = useState({ search: '', year: '', batch: '', semester: '', class: '' });
+  
+  const [currentTerm, setCurrentTerm] = useState(null);
+  const [termEnrolledStudents, setTermEnrolledStudents] = useState([]);
+  const [enrolledMajorClasses, setEnrolledMajorClasses] = useState([]);
+  const [registrationConfig, setRegistrationConfig] = useState(null);
+  const [availableYears, setAvailableYears] = useState(DEFAULT_CONFIG_YEARS);
+  
+  const [classSections, setClassSections] = useState([]);
+  const [majorClassesByYear, setMajorClassesByYear] = useState({});
+  const [selectedYear, setSelectedYear] = useState(1);
+  const [editingSection, setEditingSection] = useState({});
+  const [moveStudentData, setMoveStudentData] = useState({ studentId: '', toSection: '' });
+  const [moveStudentSearch, setMoveStudentSearch] = useState('');
+
+  // Derived options for filters
+  const allStudentYearOptions = useMemo(() => toUniqueSortedYears(availableYears).length > 0 ? toUniqueSortedYears(availableYears) : DEFAULT_CONFIG_YEARS, [availableYears]);
+  const allStudentStatusOptions = useMemo(() => buildStatusOptions(students.map(s => ({ status: s.status }))), [students]);
+
+  const loadRegistrationConfig = useCallback(() => {
+    try {
+      const savedConfig = localStorage.getItem('registration_form_data');
+      if (savedConfig) {
+        const parsed = JSON.parse(savedConfig);
+        const latestConfig = Array.isArray(parsed) ? parsed[parsed.length - 1] : parsed;
+        if (latestConfig?.header) {
+          setRegistrationConfig(latestConfig);
+          const configuredYears = readConfigYears(latestConfig);
+          if (configuredYears.length > 0) setAvailableYears(configuredYears);
+        }
+      }
+    } catch (e) { console.warn('Failed to load registration config:', e); }
+  }, []);
+
+  const refreshCurrentTerm = useCallback(async () => {
+    try {
+      const payload = await api.getCurrentTerm();
+      const normalized = normalizeTermConfig(payload);
+      setCurrentTerm(normalized);
+      return normalized;
+    } catch (e) { return null; }
+  }, []);
+
+  const handleAuthError = useCallback(() => {
+    if (typeof onLogout === 'function') {
+      onLogout();
+    }
+    navigate('/login');
+  }, [onLogout, navigate]);
+
+  const loadData = useCallback(async (mode = "initial") => {
+    mode === "refresh" ? setRefreshing(true) : setLoading(true);
+    try {
+      const [allStudents, normalizedTerm] = await Promise.all([api.getStudents(), refreshCurrentTerm()]);
+      let termEnrollmentPayload = [];
+      if (normalizedTerm?.academicYear && normalizedTerm?.semester) {
+        try { termEnrollmentPayload = await api.adminListTermEnrollments({ academicYear: normalizedTerm.academicYear, semester: normalizedTerm.semester, status: 'ENROLLED' }); } catch (e) {}
+      }
+      let pendingRegistrations = [];
+      try { const regResponse = await api.adminListRegistrations(); pendingRegistrations = Array.isArray(regResponse) ? regResponse : (regResponse?.registrations || regResponse?.data || []); } catch (err) { try { pendingRegistrations = await api.listRegistrations(); } catch (e) { pendingRegistrations = []; } }
+
+      const sortedStudents = [...(allStudents || [])].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      const byStudentId = new Map(sortedStudents.filter(s => s?.studentid || s?.id).map(s => [String(s.studentid || s.id), s]));
+
+      const normalizedEnrolledStudents = normalizeAdminTermEnrollments(termEnrollmentPayload).map(row => {
+        const studentId = row?.studentId || row?.student_id || null;
+        const linked = studentId ? byStudentId.get(String(studentId)) : null;
+        const foundationSection = String(row?.section || '').trim().toUpperCase();
+        const majorClassLabel = normalizeClassLabel(row?.majorClassLabel || row?.major_class_label || '');
+        const classDisplay = majorClassLabel || foundationSection || normalizeClassLabel(linked?.assigned_class || linked?.assignedClass || '');
+        return { ...linked, studentid: studentId || linked?.studentid || linked?.id || null, classDisplay, termAcademicYear: String(row?.academicYear || row?.academic_year || normalizedTerm?.academicYear || '').trim(), termSemester: String(row?.semester ?? normalizedTerm?.semester ?? '') };
+      }).filter(s => s.studentid);
+
+      setTermEnrolledStudents(normalizedEnrolledStudents);
+      setStudents(sortedStudents);
+
+      const mergedNewRegs = new Map();
+      [...sortedStudents.filter(s => AWAITING_APPROVAL_STATUSES.includes((s.status || 'DRAFT').toUpperCase())), ...pendingRegistrations.filter(r => AWAITING_APPROVAL_STATUSES.includes(String(r?.status || 'PENDING').toUpperCase()))].forEach(item => {
+        const key = String(item.studentid || item.registrationid || item.email || '').trim().toLowerCase();
+        if (key) mergedNewRegs.set(key, { ...mergedNewRegs.get(key), ...item });
+      });
+      const newRegs = Array.from(mergedNewRegs.values());
+      setNewRegistrations(newRegs);
+
+      const paymentSessionCounts = getPaymentSessionCounts(sortedStudents);
+      setStats({
+        total: sortedStudents.filter(s => String(s.status || '').toUpperCase() !== 'REJECTED').length,
+        pending: newRegs.length,
+        approved: sortedStudents.filter(s => String(s.status || '').toUpperCase() === 'APPROVED').length,
+        detailsSubmitted: sortedStudents.filter(s => String(s.status || '').toUpperCase() === 'DETAILS_SUBMITTED').length,
+        paymentPending: paymentSessionCounts.paymentPending,
+        paymentDone: paymentSessionCounts.paymentDone,
+        enrolled: normalizedEnrolledStudents.length || sortedStudents.filter(s => isEnrolledStudentRecord(s)).length,
+        benefit: sortedStudents.filter(s => s.isBenefitStudent || s.is_benefit_student).length,
+        hostel: sortedStudents.filter(s => s.isHostelStudent || s.is_hostel_student).length,
+        onBreak: sortedStudents.filter(s => s.isOnBreak || s.is_on_break).length
+      });
+      loadRegistrationConfig();
+    } catch (error) { 
+      if (error?.status === 401 || error?.status === 403) {
+        handleAuthError();
+      } 
+    } finally { mode === "refresh" ? setRefreshing(false) : setLoading(false); }
+  }, [loadRegistrationConfig, navigate, refreshCurrentTerm, handleAuthError]);
+
+  useEffect(() => {
+    if (!admin) {
+      const adminData = localStorage.getItem('adminData') || sessionStorage.getItem('user');
+      if (!adminData) { 
+        handleAuthError();
+        return; 
+      }
+      setAdmin(JSON.parse(adminData));
+    }
+    loadData();
+  }, [admin, loadData, handleAuthError]);
+
+  // Tab Sidebar Layout Helpers
+  const sidebarLinks = [
+    { key: 'overview', label: 'Overview', icon: 'dashboard', count: null },
+    { key: 'new', label: 'New Registrations', icon: 'group_add', count: stats.pending, section: 'Student Management' },
+    { key: 'details', label: 'Details Review', icon: 'fact_check', count: stats.detailsSubmitted },
+    { key: 'payment', label: 'Payment Desk', icon: 'payments', count: stats.paymentPending + stats.paymentDone },
+    { key: 'enrolled', label: 'Enrolled List', icon: 'school', count: stats.enrolled, section: 'Academic' },
+    { key: 'all', label: 'Full Directory', icon: 'groups', count: null },
+    { key: 'composer', label: 'Form Designer', icon: 'settings_applications', count: null, section: 'System' },
+    { key: 'class-sections', label: 'Section Config', icon: 'grid_view', count: null },
+  ];
+
+  const kpis = [
+    { label: "TOTAL REGISTRATIONS", value: stats.total, icon: "groups", tone: "primary", hint: "Active system records" },
+    { label: "PENDING APPROVAL", value: stats.pending, icon: "hourglass_empty", tone: "amber", hint: "Waiting for review" },
+    { label: "SUCCESSFULLY ENROLLED", value: stats.enrolled, icon: "verified", tone: "emerald", hint: "Current semester" },
+    { label: "FINANCIAL AID", value: stats.benefit, icon: "payments", tone: "indigo", hint: "Benefit students" },
+    { label: "HOSTEL RESIDENTS", value: stats.hostel, icon: "home", tone: "cyan", hint: "On-campus stay" },
+    { label: "ON ACADEMIC BREAK", value: stats.onBreak, icon: "pause_circle", tone: "rose", hint: "Inactive status" },
+  ];
+
+  const approveStudent = async (student) => {
+    const studentId = student.studentid || student.id;
+    const confirm = window.confirm(`Approve ${student.namemm}?`);
+    if (!confirm) return;
+    setLoading(true);
+    try { await api.approveStudent(studentId, { username: student.email?.split('@')[0], password: 'Password123!' }); loadData(); } catch (e) { alert(e.message); } finally { setLoading(false); }
+  };
+
+  const approveDetails = async (student) => {
+    const confirm = window.confirm(`Approve ${student.namemm}'s details?`);
+    if (!confirm) return;
+    setLoading(true);
+    try { await api.updateStudent(student.studentid || student.id, { status: 'PAYMENT_REQUIRED' }); loadData(); } catch (e) { alert(e.message); } finally { setLoading(false); }
+  };
+
+  const approvePayment = async (student) => {
+    const confirm = window.confirm(`Approve payment for ${student.namemm}?`);
+    if (!confirm) return;
+    setLoading(true);
+    try { await api.updateStudent(student.studentid || student.id, { status: 'PAYMENT_DONE' }); loadData(); } catch (e) { alert(e.message); } finally { setLoading(false); }
+  };
+
+  const exportPaymentStudentsToExcel = () => {
+    const filtered = getFilteredPaymentStudents();
+    if (filtered.length === 0) {
+      alert("No data available to export.");
+      return;
+    }
+
+    // Map data to array of objects (keys = column headers)
+    const exportData = filtered.map(student => ({
+      "Name": student.namemm || "-",
+      "Username": student.user_name || "-",
+      "Email": student.email || "-",
+      "Phone": student.phone || "-",
+      "Year": getResolvedYearValue(student) || "-",
+      "Academic Year": getResolvedAcademicYearValue(student, currentTerm),
+      "Semester": getResolvedSemesterValue(student, currentTerm),
+      "Payment Status": normalizePaymentSessionStatus(student),
+      "Benefit Student": (student.isBenefitStudent || student.is_benefit_student) ? "Yes" : "No",
+      "Hostel Student": (student.isHostelStudent || student.is_hostel_student) ? "Yes" : "No"
+    }));
+
+    // Convert to worksheet
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    // Append sheet
+    XLSX.utils.book_append_sheet(wb, ws, "Payment Desk");
+    // Trigger browser download
+    XLSX.writeFile(wb, `Payment_Verification_List_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  const getFilteredStudents = () => {
+    let filtered = [...students];
+    if (filters.search) filtered = filtered.filter(s => s.namemm?.toLowerCase().includes(filters.search.toLowerCase()) || s.email?.toLowerCase().includes(filters.search.toLowerCase()));
+    if (filters.status) filtered = filtered.filter(s => s.status?.toUpperCase() === filters.status.toUpperCase());
+    return filtered;
+  };
+
+  const getFilteredPaymentStudents = () => {
+    let filtered = students.filter(s => isPaymentSessionStudentRecord(s));
+    if (paymentFilters.search) {
+      const search = paymentFilters.search.toLowerCase();
+      filtered = filtered.filter(s => 
+        (s.namemm?.toLowerCase().includes(search)) || 
+        (s.user_name?.toLowerCase().includes(search)) || 
+        (s.email?.toLowerCase().includes(search))
+      );
+    }
+    if (paymentFilters.year) filtered = filtered.filter(s => getResolvedYearValue(s) === parseInt(paymentFilters.year));
+    if (paymentFilters.batch) filtered = filtered.filter(s => getResolvedAcademicYearValue(s, currentTerm) === paymentFilters.batch);
+    if (paymentFilters.semester) filtered = filtered.filter(s => getResolvedSemesterValue(s, currentTerm) === paymentFilters.semester);
+    if (paymentFilters.paymentStatus) filtered = filtered.filter(s => normalizePaymentSessionStatus(s) === paymentFilters.paymentStatus);
+    return filtered;
+  };
+
+  const getFilteredEnrolledStudents = () => termEnrolledStudents;
+
+  if (!admin) return <div className="flex h-screen items-center justify-center bg-white dark:bg-slate-950 font-black text-teal-600 uppercase tracking-widest text-xs animate-pulse">Synchronizing System...</div>;
+
+  return (
+    <div className="flex h-full w-full bg-white dark:bg-slate-950 overflow-hidden font-roboto">
+      {/* SIDEBAR */}
+      <aside className="w-72 flex flex-col border-r border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950 transition-all shrink-0">
+        <div className="h-20 flex items-center px-8">
+            <span className="text-2xl font-black tracking-tighter text-teal-600">
+                Uni<span className="text-slate-900 dark:text-white font-black">Admin</span>
+            </span>
+        </div>
+        <nav className="flex-1 px-4 py-8 space-y-1.5 overflow-y-auto scrollbar-hide">
+            {sidebarLinks.map((link) => (
+                <React.Fragment key={link.key}>
+                    {link.section && (
+                        <div className="pt-8 pb-3 px-4">
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">{link.section}</p>
+                        </div>
+                    )}
+                    <button
+                        onClick={() => setActiveTab(link.key)}
+                        className={cn(
+                            "w-full group flex items-center rounded-2xl px-4 py-3 transition-all duration-300",
+                            activeTab === link.key 
+                                ? "bg-slate-900 text-white shadow-xl shadow-slate-200 dark:bg-teal-600 dark:shadow-teal-900/20" 
+                                : "text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white"
+                        )}
+                    >
+                        <span className="material-icons-outlined text-[22px] mr-4 transition-transform group-hover:scale-110 duration-300">{link.icon}</span>
+                        <span className="text-sm font-bold tracking-tight">{link.label}</span>
+                        {link.count > 0 && (
+                            <span className="ml-auto rounded-lg bg-teal-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-teal-600 dark:bg-teal-950 dark:text-teal-400 border border-teal-100 dark:border-teal-900">
+                                {link.count}
+                            </span>
+                        )}
+                    </button>
+                </React.Fragment>
+            ))}
+        </nav>
+        <div className="p-6">
+            <div className="rounded-[32px] bg-slate-50 dark:bg-slate-900/50 p-5 border border-slate-100 dark:border-slate-800">
+                <div className="flex items-center mb-6 px-1">
+                    <div className="relative group shrink-0">
+                        <div className="h-11 w-11 rounded-2xl bg-teal-600 flex items-center justify-center text-white font-black shadow-sm transition-transform duration-500 group-hover:scale-105 uppercase">{admin.adminname?.charAt(0)}</div>
+                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" />
+                    </div>
+                    <div className="ml-4 overflow-hidden">
+                        <p className="text-sm font-black text-slate-900 dark:text-white truncate tracking-tight uppercase">{admin.adminname}</p>
+                        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate">System Admin</p>
+                    </div>
+                </div>
+                <button onClick={() => navigate('/')} className="w-full flex items-center justify-center gap-3 py-3 rounded-xl bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 border border-slate-100 dark:border-slate-800 transition-all text-xs font-black uppercase tracking-widest shadow-sm active:scale-[0.98]">
+                    <span className="material-icons-round text-sm">logout</span>
+                    <span>Sign Out</span>
+                </button>
+            </div>
+        </div>
+      </aside>
+
+      {/* MAIN CONTENT AREA */}
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        {/* HEADER */}
+        <header className="flex h-20 items-center justify-between border-b border-slate-100 bg-white/80 px-10 dark:border-slate-800 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
+            <div className="flex flex-col">
+                <h1 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase tracking-widest text-[11px] opacity-40 mb-0.5">NAVIGATION CONTEXT</h1>
+                <p className="text-sm font-bold text-slate-500 dark:text-slate-400 capitalize">Registration Dashboard • {activeTab.replace('-', ' ')}</p>
+            </div>
+            <div className="flex items-center gap-6">
+                <button className="relative rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700">
+                    <span className="material-icons-outlined">notifications</span>
+                    <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-slate-950"></span>
+                </button>
+                <div className="h-8 w-px bg-slate-100 dark:bg-slate-800" />
+                <div className="flex items-center gap-4 pl-2">
+                    <div className="text-right hidden sm:block">
+                        <p className="text-sm font-black text-slate-900 dark:text-white leading-tight tracking-tight uppercase">{admin.adminname}</p>
+                        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Protocol Admin</p>
+                    </div>
+                    <div className="h-10 w-10 rounded-2xl bg-slate-50 dark:bg-slate-900 border-2 border-white dark:border-slate-800 grid place-items-center text-teal-600 font-black uppercase shadow-sm">{admin.adminname?.charAt(0)}</div>
+                </div>
+            </div>
+        </header>
+
+        <main className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
+            <div className="px-10 py-10 space-y-10 animate-in fade-in duration-1000 slide-in-from-bottom-4 max-w-full">
+                
+                {/* KPI Grid */}
+                <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 gap-4 max-w-full">
+                    {kpis.map((kpi, idx) => (
+                        <div key={idx} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[32px] p-6 transition-all hover:-translate-y-2 hover:shadow-2xl group cursor-default relative overflow-hidden min-w-0">
+                            <div className="flex items-start justify-between gap-4 mb-4 relative z-10">
+                                <div className="flex items-center gap-3">
+                                    <div className="shrink-0 transform group-hover:scale-110 transition-transform duration-500 bg-slate-50 dark:bg-slate-950 p-2 rounded-xl border border-slate-100 dark:border-slate-800">
+                                        <IconBadge icon={kpi.icon} tone={kpi.tone} />
+                                    </div>
+                                    <div>
+                                        <div className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{kpi.label}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-end justify-between gap-2 relative z-10">
+                                <div className="text-4xl font-black tracking-tighter text-slate-900 dark:text-white">
+                                    {loading ? <Skeleton className="h-10 w-20 rounded-xl" /> : kpi.value}
+                                </div>
+                                <div className="flex items-end gap-1 mb-2">
+                                    {[6, 14, 10, 22, 18, 28, 24].map((h, i) => (
+                                        <div key={i} className="w-1 rounded-full bg-teal-500/10 group-hover:bg-teal-500/40 transition-all duration-700" style={{ height: `${h}px` }} />
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="mt-6 pt-4 border-t border-slate-50 dark:border-slate-800/50 flex justify-between items-center relative z-10">
+                                <span className="text-[8px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.2em]">{kpi.hint}</span>
+                                <div className="h-5 w-5 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all transform translate-x-4 group-hover:translate-x-0">
+                                    <span className="text-teal-500 material-icons-outlined text-[12px]">arrow_forward</span>
+                                </div>
+                            </div>
+                            <div className={cn("absolute top-0 right-0 h-20 w-20 rounded-bl-full transform translate-x-4 -translate-y-4 transition-transform group-hover:scale-110", kpi.tone === 'primary' ? "bg-teal-500/5" : kpi.tone === 'amber' ? "bg-amber-500/5" : kpi.tone === 'rose' ? "bg-rose-500/5" : "bg-emerald-500/5")} />
+                        </div>
+                    ))}
+                </section>
+
+                {/* CONTENT AREA WRAPPER */}
+                <section className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[40px] p-1 shadow-sm min-h-[600px] max-w-full overflow-hidden">
+                    <div className="p-10 max-w-full overflow-hidden">
+                        {activeTab === 'overview' && (
+                            <div className="space-y-10 animate-in fade-in duration-700">
+                                <div className="flex items-center gap-4">
+                                    <div className="h-12 w-12 rounded-full bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center">
+                                        <span className="material-icons-outlined text-teal-600 text-2xl">analytics</span>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">System Summary</h3>
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Real-time Registration Pulse</p>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="bg-slate-50/50 dark:bg-slate-950/50 rounded-[32px] p-8 border border-slate-100 dark:border-slate-800 relative group overflow-hidden transition-all hover:shadow-lg">
+                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 px-1">Performance Metrics</h4>
+                                        <div className="space-y-4">
+                                            {[
+                                                { l: "Total Registrations", v: stats.total, c: "teal" },
+                                                { l: "Successfully Approved", v: stats.approved, c: "emerald" },
+                                                { l: "Successfully Enrolled", v: stats.enrolled, c: "cyan" },
+                                                { l: "Verification Pending", v: stats.pending + stats.detailsSubmitted, c: "rose" }
+                                            ].map((row, i) => (
+                                                <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:translate-x-1">
+                                                    <span className="text-sm font-bold text-slate-600 dark:text-slate-400">{row.l}</span>
+                                                    <span className={cn("text-xl font-black", `text-${row.c}-600 dark:text-${row.c}-400`)}>{row.v}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="absolute top-0 right-0 h-32 w-32 bg-teal-500/5 rounded-bl-full transform group-hover:scale-110 transition-transform" />
+                                    </div>
+                                    <div className="bg-slate-50/50 dark:bg-slate-950/50 rounded-[32px] p-8 border border-slate-100 dark:border-slate-800 relative group overflow-hidden transition-all hover:shadow-lg">
+                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 px-1">Demographics</h4>
+                                        <div className="space-y-4">
+                                            {[
+                                                { l: "Financial Aid Required", v: stats.benefit, c: "indigo" },
+                                                { l: "On-Campus Hostel", v: stats.hostel, c: "cyan" },
+                                                { l: "Academic Leave", v: stats.onBreak, c: "amber" }
+                                            ].map((row, i) => (
+                                                <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:translate-x-1">
+                                                    <span className="text-sm font-bold text-slate-600 dark:text-slate-400">{row.l}</span>
+                                                    <span className={cn("text-xl font-black", `text-${row.c}-600 dark:text-${row.c}-400`)}>{row.v}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="absolute top-0 right-0 h-32 w-32 bg-indigo-500/5 rounded-bl-full transform group-hover:scale-110 transition-transform" />
+                                    </div>
+                                </div>
+
+                                {/* Recent Activity Section */}
+                                <div className="bg-slate-50/30 dark:bg-slate-950/30 rounded-[32px] p-10 border border-slate-100 dark:border-slate-800 relative group overflow-hidden">
+                                    <div className="flex items-center gap-4 mb-8">
+                                        <div className="h-10 w-10 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center text-teal-600 border border-slate-100 dark:border-slate-800 shadow-sm">
+                                            <span className="material-icons-outlined">history</span>
+                                        </div>
+                                        <h4 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase">Recent Registration Activity</h4>
+                                    </div>
+                                    
+                                    <div className="space-y-3">
+                                        {newRegistrations.length > 0 ? (
+                                            <div className="flex flex-wrap gap-2">
+                                                {newRegistrations.slice(0, 8).map((student, i) => (
+                                                    <div key={i} className="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-2 shadow-sm hover:border-teal-500/30 transition-all cursor-default group/item">
+                                                        <div className="h-1.5 w-1.5 rounded-full bg-teal-500 animate-pulse" />
+                                                        {student.namemm}
+                                                        <span className="text-[10px] opacity-40 font-black tracking-widest">{student.status || 'PENDING'}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs font-black text-slate-300 uppercase tracking-widest">No recent synchronization events recorded.</p>
+                                        )}
+                                    </div>
+                                    <div className="absolute top-0 right-0 h-24 w-24 bg-teal-500/5 rounded-bl-full transform group-hover:scale-110 transition-transform" />
+                                </div>
+                            </div>
+                        )}
+                        {activeTab === 'new' && (
+                            <div className="space-y-8 animate-in fade-in duration-700">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">New Student Registrations</h3>
+                                    <span className="px-4 py-1.5 rounded-full bg-teal-50 dark:bg-teal-900/30 text-teal-600 text-[10px] font-black uppercase tracking-widest border border-teal-100 dark:border-teal-800">{newRegistrations.length} PENDING</span>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                    {newRegistrations.map((student, i) => (
+                                        <div key={i} className="group bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800 rounded-[32px] p-6 hover:shadow-xl hover:-translate-y-1 transition-all relative overflow-hidden">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="h-10 w-10 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center text-teal-600 font-black border border-slate-100 dark:border-slate-800 shadow-sm">{student.namemm?.charAt(0)}</div>
+                                                <span className="text-[9px] font-black uppercase tracking-widest bg-amber-50 text-amber-600 px-2 py-0.5 rounded-md border border-amber-100/50">{student.status || 'DRAFT'}</span>
+                                            </div>
+                                            <h4 className="text-lg font-black text-slate-900 dark:text-white tracking-tight mb-4">{student.namemm}</h4>
+                                            
+                                            <div className="space-y-3 mb-8">
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Email</span>
+                                                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300 truncate">{student.email || '-'}</span>
+                                                </div>
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Phone</span>
+                                                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{student.phone || '-'}</span>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800/50">
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Matric Roll</span>
+                                                        <span className="text-xs font-bold text-slate-900 dark:text-white">{student.matriculation_rollno || '-'}</span>
+                                                    </div>
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Total Marks</span>
+                                                        <span className="text-xs font-bold text-slate-900 dark:text-white">{student.totalmarks_obtained || '-'}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <button onClick={() => approveStudent(student)} className="bg-teal-600 hover:bg-teal-700 text-white text-[10px] font-black uppercase tracking-widest py-3 rounded-xl shadow-md shadow-teal-500/10 active:scale-95 transition-all">Verify</button>
+                                                <button className="bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest py-3 rounded-xl hover:bg-slate-50 transition-all active:scale-95">Decline</button>
+                                            </div>
+                                            <div className="absolute top-0 right-0 h-20 w-20 bg-teal-500/5 rounded-bl-full transform group-hover:scale-110 transition-transform" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        {activeTab === 'details' && (
+                            <div className="space-y-8 animate-in fade-in duration-700">
+                                <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Details Verification Queue</h3>
+                                <div className="grid grid-cols-1 gap-4">
+                                    {students.filter(s => String(s.status || '').toUpperCase() === 'DETAILS_SUBMITTED').map((student, i) => (
+                                        <div key={i} className="flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl hover:shadow-lg transition-all">
+                                            <div className="flex items-center gap-4">
+                                                <div className="h-12 w-12 rounded-2xl bg-white dark:bg-slate-800 grid place-items-center text-teal-600 font-black border border-slate-100 dark:border-slate-800 shadow-sm">{student.namemm?.charAt(0)}</div>
+                                                <div>
+                                                    <div className="font-black text-slate-900 dark:text-white">{student.namemm}</div>
+                                                    <div className="text-xs font-bold text-slate-400">{student.user_name} • {student.email}</div>
+                                                </div>
+                                            </div>
+                                            <button onClick={() => approveDetails(student)} className="px-6 py-3 bg-teal-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-teal-700 active:scale-95 transition-all">Review & Approve</button>
+                                        </div>
+                                    ))}
+                                    {students.filter(s => String(s.status || '').toUpperCase() === 'DETAILS_SUBMITTED').length === 0 && (
+                                        <div className="p-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[32px]">No details pending verification</div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                        {activeTab === 'payment' && (
+                            <div className="space-y-8 animate-in fade-in duration-700">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    <div className="flex flex-col gap-2">
+                                        <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Payment Verification Desk</h3>
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                                            Current Term: {currentTerm?.academicYear || '-'} | Semester {currentTerm?.semester || '-'}
+                                        </p>
+                                    </div>
+                                    <button 
+                                        onClick={() => exportPaymentStudentsToExcel()} 
+                                        className="inline-flex items-center gap-2 bg-slate-900 dark:bg-teal-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:shadow-xl active:scale-95 transition-all w-fit"
+                                    >
+                                        <span className="material-icons-outlined text-sm">download</span>
+                                        Export to Excel
+                                    </button>
+                                </div>
+
+                                {/* Professional Filter Bar */}
+                                <div className="bg-slate-50 dark:bg-slate-950/50 p-4 rounded-[24px] border border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-3 shadow-sm">
+                                    <div className="relative group flex-1 min-w-[300px]">
+                                        <span className="material-icons-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-teal-500 transition-colors text-sm">search</span>
+                                        <input 
+                                            type="text" 
+                                            placeholder="Search by name, username, email..."
+                                            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold outline-none focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/30 transition-all"
+                                            value={paymentFilters.search}
+                                            onChange={(e) => setPaymentFilters({...paymentFilters, search: e.target.value})}
+                                        />
+                                    </div>
+                                    <select 
+                                        value={paymentFilters.year}
+                                        onChange={(e) => setPaymentFilters({...paymentFilters, year: e.target.value})}
+                                        className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[140px]"
+                                    >
+                                        <option value="">All Years</option>
+                                        {allStudentYearOptions.map(y => <option key={y} value={y}>Year {y}</option>)}
+                                    </select>
+                                    <select 
+                                        value={paymentFilters.batch}
+                                        onChange={(e) => setPaymentFilters({...paymentFilters, batch: e.target.value})}
+                                        className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[140px]"
+                                    >
+                                        <option value="">All Academic Years</option>
+                                        {currentTerm?.academicYear && <option value={currentTerm.academicYear}>{currentTerm.academicYear}</option>}
+                                    </select>
+                                    <select 
+                                        value={paymentFilters.semester}
+                                        onChange={(e) => setPaymentFilters({...paymentFilters, semester: e.target.value})}
+                                        className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[100px]"
+                                    >
+                                        <option value="">Semester</option>
+                                        {[1,2].map(s => <option key={s} value={s}>{s}</option>)}
+                                    </select>
+                                    <select 
+                                        value={paymentFilters.paymentStatus}
+                                        onChange={(e) => setPaymentFilters({...paymentFilters, paymentStatus: e.target.value})}
+                                        className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[180px]"
+                                    >
+                                        <option value="">All Payment Status</option>
+                                        <option value="PAYMENT_PENDING">PAYMENT_PENDING</option>
+                                        <option value="PAYMENT_DONE">PAYMENT_DONE</option>
+                                    </select>
+                                </div>
+
+                                {/* Detailed Table */}
+                                <div className="bg-white dark:bg-slate-950/50 rounded-[32px] border border-slate-100 dark:border-slate-800 overflow-x-auto shadow-sm scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
+                                    <table className="w-full border-collapse min-w-[1000px]">
+                                        <thead>
+                                            <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Name</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Username</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Email</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Year</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Academic Year</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Semester</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Payment Status</th>
+                                                <th className="px-6 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                            {getFilteredPaymentStudents().map((student, i) => (
+                                                <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-slate-900 transition-colors group">
+                                                    <td className="px-6 py-6 whitespace-nowrap">
+                                                        <div className="font-black text-slate-900 dark:text-white text-xs">{student.namemm}</div>
+                                                    </td>
+                                                    <td className="px-6 py-6 text-[11px] font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap">{student.user_name || '-'}</td>
+                                                    <td className="px-6 py-6 text-[11px] font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap">{student.email}</td>
+                                                    <td className="px-6 py-6 text-[11px] font-black text-slate-500 uppercase text-center whitespace-nowrap">{getResolvedYearValue(student) || '-'}</td>
+                                                    <td className="px-6 py-6 text-[11px] font-bold text-slate-500 uppercase text-center tabular-nums whitespace-nowrap">{getResolvedAcademicYearValue(student, currentTerm)}</td>
+                                                    <td className="px-6 py-6 text-[11px] font-bold text-slate-500 text-center whitespace-nowrap">{getResolvedSemesterValue(student, currentTerm)}</td>
+                                                    <td className="px-6 py-6 whitespace-nowrap">
+                                                        <span className={cn(
+                                                            "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
+                                                            normalizePaymentSessionStatus(student) === 'PAYMENT_DONE' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-amber-50 text-amber-600 border-amber-100"
+                                                        )}>{normalizePaymentSessionStatus(student)}</span>
+                                                    </td>
+                                                    <td className="px-6 py-6 text-right whitespace-nowrap">
+                                                        {normalizePaymentSessionStatus(student) === 'PAYMENT_PENDING' ? (
+                                                            <button 
+                                                                onClick={() => approvePayment(student)}
+                                                                className="px-4 py-2 bg-teal-600 text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-teal-700 shadow-md shadow-teal-500/10 active:scale-95 transition-all"
+                                                            >
+                                                                Verify Payment
+                                                            </button>
+                                                        ) : (
+                                                            <div className="flex justify-end gap-2">
+                                                                <button className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-teal-600 transition-all"><span className="material-icons-outlined text-sm">visibility</span></button>
+                                                                <button className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-emerald-600 border border-emerald-100 dark:border-emerald-900/30 transition-all"><span className="material-icons-outlined text-sm">check_circle</span></button>
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {getFilteredPaymentStudents().length === 0 && (
+                                                <tr>
+                                                    <td colSpan={8} className="p-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs">No matching records found in desk</td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+                        {activeTab === 'enrolled' && (
+                            <div className="space-y-8 animate-in fade-in duration-700">
+                                <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Enrolled Students Archive</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {getFilteredEnrolledStudents().map((student, i) => (
+                                        <div key={i} className="p-6 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="font-black text-slate-900 dark:text-white">{student.namemm}</div>
+                                                <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase tracking-widest rounded-md border border-emerald-100">ENROLLED</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                <div>
+                                                    <p className="mb-1">Academic Year</p>
+                                                    <p className="text-slate-900 dark:text-white">{student.termAcademicYear || '-'}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="mb-1">Class</p>
+                                                    <p className="text-slate-900 dark:text-white">{student.classDisplay || '-'}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        {activeTab === 'all' && (
+                            <div className="space-y-8 animate-in fade-in duration-700">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Student Directory</h3>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Aggregate Records Archive</p>
+                                    </div>
+                                    <button onClick={() => exportStudentsToExcel()} className="inline-flex items-center gap-2 bg-slate-900 dark:bg-teal-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:shadow-xl active:scale-95 transition-all">
+                                        <span className="material-icons-outlined text-sm">download</span>
+                                        Export Database
+                                    </button>
+                                </div>
+                                <div className="bg-slate-50 dark:bg-slate-950/50 rounded-[32px] border border-slate-100 dark:border-slate-800 overflow-x-auto shadow-sm scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
+                                    <table className="w-full border-collapse min-w-[800px]">
+                                        <thead>
+                                            <tr className="bg-white dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
+                                                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Full Name</th>
+                                                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Identification</th>
+                                                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                                <th className="px-8 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                            {getFilteredStudents().slice(0, 15).map((student, i) => (
+                                                <tr key={i} className="hover:bg-white dark:hover:bg-slate-900 transition-colors group">
+                                                    <td className="px-8 py-6">
+                                                        <div className="font-black text-slate-900 dark:text-white text-sm group-hover:text-teal-600 transition-colors">{student.namemm}</div>
+                                                        <div className="text-xs font-bold text-slate-400">{student.email}</div>
+                                                    </td>
+                                                    <td className="px-8 py-6 text-xs font-black text-slate-500 uppercase tabular-nums tracking-tight">{student.studentid || student.id || 'N/A'}</td>
+                                                    <td className="px-8 py-6">
+                                                        <span className={cn(
+                                                            "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
+                                                            (student.status || '').toUpperCase() === 'ENROLLED' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-slate-100 text-slate-500 border-slate-200"
+                                                        )}>{student.status || 'ACTIVE'}</span>
+                                                    </td>
+                                                    <td className="px-8 py-6 text-right">
+                                                        <button className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-all"><span className="material-icons-outlined text-sm">visibility</span></button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+                        {activeTab === 'composer' && <Composer />}
+                        {activeTab === 'class-sections' && (
+                            <div className="space-y-8 animate-in fade-in duration-700">
+                                <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Section Configuration</h3>
+                                <div className="flex items-center gap-6 p-8 bg-slate-50 dark:bg-slate-900 rounded-[32px] border border-slate-100 dark:border-slate-800">
+                                    <div className="grid gap-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Target Year</label>
+                                        <select value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))} className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-sm font-bold outline-none focus:border-teal-500 transition-all">
+                                            {[1,2,3,4,5].map(y => <option key={y} value={y}>Level {y}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="h-10 w-px bg-slate-200 dark:bg-slate-800 self-end mb-1" />
+                                    <p className="text-xs font-medium text-slate-400 self-end mb-3">Modify capacities and lock states for active academic sessions.</p>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    {['A','B','C','D'].map(sec => (
+                                        <div key={sec} className="p-6 bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm hover:shadow-md transition-all">
+                                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Section {sec}</div>
+                                            <div className="text-2xl font-black text-slate-900 dark:text-white mb-6">40 <span className="text-[10px] text-slate-300">LIMIT</span></div>
+                                            <button className="w-full py-2 bg-slate-100 dark:bg-slate-800 text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-teal-50 hover:text-teal-600 transition-all">Update Protocol</button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </section>
+            </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+export default AdminDashboard;
