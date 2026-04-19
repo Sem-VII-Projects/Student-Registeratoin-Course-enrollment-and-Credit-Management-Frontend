@@ -1,6 +1,10 @@
 const fs = require('fs');
+const path = require('path');
 
-let f = fs.readFileSync('C:/Frontend/Frontend/pages/StudentProgressCurrent.tsx', 'utf8');
+const scriptDir = __dirname;
+const baseDir = path.resolve(scriptDir, '..');
+
+let f = fs.readFileSync(path.join(baseDir, 'pages/StudentProgressCurrent.tsx'), 'utf8');
 
 // Insert hooks
 f = f.replace(
@@ -25,7 +29,7 @@ f = f.replace('<option value="">Select semester</option>', '<option value="">{t(
 f = f.replace('<option key={s} value={s}>{s}</option>', '<option key={s} value={s}>{t(s)}</option>');
 f = f.replace('{loading ? "Saving..." : "Confirm Selection"}', '{loading ? t("Saving...") : t("Confirm Selection")}');
 
-fs.writeFileSync('C:/Frontend/Frontend/pages/StudentProgressCurrent.tsx', f, 'utf8');
+fs.writeFileSync(path.join(baseDir, 'pages/StudentProgressCurrent.tsx'), f, 'utf8');
 
 const myanmarAdditions = {
   "Please select current study year and semester": "ကျေးဇူးပြု၍ လက်ရှိပညာသင်နှစ်နှင့် စာသင်နှစ်ဝက်ကို ရွေးချယ်ပါ",
@@ -49,8 +53,8 @@ const myanmarAdditions = {
   "5-year program (before 2024-2025)": "၅-နှစ် သင်တန်း (၂၀၂၄-၂၀၂၅ မတိုင်မီ)"
 };
 
-const enPath = 'C:/Frontend/Frontend/public/locales/en/translation.json';
-const myPath = 'C:/Frontend/Frontend/public/locales/my/translation.json';
+const enPath = path.join(baseDir, 'public/locales/en/translation.json');
+const myPath = path.join(baseDir, 'public/locales/my/translation.json');
 
 const enData = JSON.parse(fs.readFileSync(enPath, 'utf8'));
 const myData = JSON.parse(fs.readFileSync(myPath, 'utf8'));

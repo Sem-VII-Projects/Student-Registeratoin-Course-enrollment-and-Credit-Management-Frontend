@@ -10,12 +10,19 @@ export default defineConfig(({ mode }) => {
         strictPort: true,
         host: '0.0.0.0',
         proxy: {
+          // 1. FastAPI Backend (Most specific prefix)
           '/api/v1': {
             target: 'http://127.0.0.1:8000',
             changeOrigin: true,
           },
+          // 2. Spring Boot Backend (General /api prefix)
           '/api': {
-            target: 'http://localhost:8090',
+            target: 'http://127.0.0.1:8090',
+            changeOrigin: true,
+          },
+          // 3. Spring Boot Backend (Additional /v1 prefix used in lib/api.ts)
+          '/v1': {
+            target: 'http://127.0.0.1:8090',
             changeOrigin: true,
           },
         },

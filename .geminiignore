@@ -1,0 +1,8 @@
+# Exclude build, dependency, and script folders
+node_modules/
+dist/
+scripts/
+*.md
+*.png
+*.pdf
+*.docx

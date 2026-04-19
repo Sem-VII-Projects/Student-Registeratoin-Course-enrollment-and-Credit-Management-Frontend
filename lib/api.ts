@@ -195,22 +195,37 @@ function redirectToLogin() {
   const hash = window.location.hash || "";
   const onPublicPage =
     hash === "#/login" ||
+    hash === "#/admin-login" ||
     hash.startsWith("#/login?") ||
+    hash.startsWith("#/admin-login?") ||
     hash === "#/forgot-password" ||
     hash.startsWith("#/forgot-password?") ||
     hash === "#/reset-password-token" ||
     hash.startsWith("#/reset-password-token?");
 
   if (!onPublicPage) {
-    window.location.hash = "#/login";
+    // If we were on an admin path, redirect to admin login
+    if (hash.startsWith("#/admin")) {
+      window.location.hash = "#/admin-login";
+    } else {
+      window.location.hash = "#/login";
+    }
   }
 }
 
 function shouldAutoLogout(path: string) {
   if (path === "/api/v1/auth/login") return false;
+  if (path === "/api/auth/admin/login") return false;
   if (path === "/api/v1/auth/me") return false;
   if (path === "/api/v1/auth/forgot-password") return false;
   if (path === "/api/v1/auth/reset-password-with-token") return false;
+  
+  // Spring Boot endpoints (handled by components)
+  if (path.startsWith("/api/students")) return false;
+  if (path.startsWith("/api/admin")) return false;
+  if (path.startsWith("/v1/admin")) return false;
+  if (path.startsWith("/api/registrations")) return false;
+
   if (path.includes("/api/v1/admin/messages/") && path.endsWith("/read")) return false;
   // Allow enrollment errors to be handled by UI instead of auto-redirecting to login
   if (path.includes("/courses/enrollment")) return false;
@@ -260,8 +275,21 @@ async function request<T = any>(path: string, options: RequestOptions = {}): Pro
   }
 
   if ((res.status === 401 || res.status === 403) && shouldAutoLogout(path)) {
-    clearAuthSession();
-    redirectToLogin();
+    // If we are checking the session during boot or on a public page, don't force logout
+    const hash = typeof window !== "undefined" ? window.location.hash : "";
+    const isPublic = hash === "" || hash === "#/" || hash === "#/login" || hash === "#/admin-login";
+    
+    if (path !== "/api/v1/auth/me" && !isPublic) {
+      clearAuthSession();
+      redirectToLogin();
+    }
+    const msg = (data as any)?.detail || (data as any)?.message || `Not authorized (${res.status})`;
+    throw new HttpStatusError(res.status, msg);
+  }
+
+  // If it's a 401/403 but shouldAutoLogout is FALSE (e.g. Spring Boot admin endpoints), 
+  // we just throw the error and let the component handle it without clearing storage.
+  if (res.status === 401 || res.status === 403) {
     const msg = (data as any)?.detail || (data as any)?.message || `Not authorized (${res.status})`;
     throw new HttpStatusError(res.status, msg);
   }
@@ -596,6 +624,17 @@ export const api = {
   adminStudents: () => request("/api/v1/admin/students/"),
   adminStudentIds: () => request("/api/v1/admin/students/ids"),
   adminStudentOptions: () => request("/api/v1/admin/students/options"),
+
+  // SubmittedDetailsReview requirements
+  getStudentById: (studentId: string) => request(`/api/students/${encodeURIComponent(studentId)}`, { backend: "spring" }),
+  getRegistrationSections: (registrationId: string) => request(`/v1/registration/${encodeURIComponent(registrationId)}/sections`, { backend: "spring" }),
+  getLatestStudentDocument: (studentId: string, docType: string) => request(`/v1/student/documents?studentId=${encodeURIComponent(studentId)}&docType=${encodeURIComponent(docType)}`, { backend: "spring" }),
+
+
+
+
+
+
 
   adminCreateMessage: (payload: {
     receiver_id: string;

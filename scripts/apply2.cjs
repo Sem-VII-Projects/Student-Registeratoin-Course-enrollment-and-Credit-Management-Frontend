@@ -63,5 +63,5 @@ export default function IntegratedAdminPortal({ user, onLogout }: any) {
   );
 }\`;
 
-fs.writeFileSync('pages/IntegratedAdminPortal.tsx', code);
+fs.writeFileSync('Frontend/pages/IntegratedAdminPortal.tsx', code);
 console.log('Fixed TSX formatting.');

@@ -49,6 +49,9 @@ import StudentDegreeAudit from "./pages/StudentDegreeAudit";
 
 //  student course details page stays as CourseDetails.tsx (student-facing)
 import CourseDetails from "./pages/CourseDetails";
+import NewStudentDraftDetail from "./pages/NewStudentDraftDetail";
+import SubmittedDetailsReview from "./pages/SubmittedDetailsReview";
+import IsolatedReview from "./pages/IsolatedReview";
 import { DetailedCardGridSkeleton, Skeleton } from "./components/Skeleton";
 
 import { User } from "./types";
@@ -123,7 +126,10 @@ const App: React.FC = () => {
       sessionStorage.removeItem("user");
       sessionStorage.removeItem("role");
       sessionStorage.removeItem("must_reset_password");
+      sessionStorage.removeItem("adminAuthToken");
       localStorage.removeItem("access_token");
+      localStorage.removeItem("adminData");
+      localStorage.removeItem("adminAuthToken");
     }
   };
 
@@ -245,6 +251,18 @@ const App: React.FC = () => {
                 <Route
                   path="/admin/chatbot"
                   element={<AdminChatPage user={user} onLogout={handleLogout} />}
+                />
+                <Route
+                  path="/admin/new-student-draft-detail/:recordId"
+                  element={<NewStudentDraftDetail user={user} onLogout={handleLogout} />}
+                />
+                <Route
+                  path="/admin/submitted-details/:studentId"
+                  element={<SubmittedDetailsReview user={user} onLogout={handleLogout} />}
+                />
+                <Route
+                  path="/admin/isolated-review/:studentId"
+                  element={<IsolatedReview user={user} onLogout={handleLogout} />}
                 />
 
                 <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />

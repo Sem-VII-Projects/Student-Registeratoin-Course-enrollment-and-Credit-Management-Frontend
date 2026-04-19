@@ -52,11 +52,9 @@ export default function IntegratedAdminPortal({ user, onLogout }: any) {
           </div>
         )}
         {activeTab === 'course' && (
-          <iframe
-            src="/#/login"
-            className="flex-1 w-full h-full border-none bg-white dark:bg-slate-900 animate-in fade-in duration-500 slide-in-from-bottom-2"
-            title="Course Enrollment System"
-          />
+          <div className="flex-1 w-full h-full animate-in fade-in duration-500 slide-in-from-bottom-2">
+            <AdminDashboard user={user} onLogout={onLogout} />
+          </div>
         )}
       </div>
     </div>

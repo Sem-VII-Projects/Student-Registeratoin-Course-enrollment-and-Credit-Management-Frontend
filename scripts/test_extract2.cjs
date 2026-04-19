@@ -1,4 +1,10 @@
 const fs = require('fs');
+const path = require('path');
+
+const scriptDir = __dirname;
+const baseDir = path.resolve(scriptDir, '..');
+const outputDir = path.join(baseDir, 'pages');
+
 const content = `import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
@@ -442,4 +448,15 @@ export default function NewStudentRegister() {
 }
 \`;
 
-fs.writeFileSync('c:/Student Registeration + Course Enrollment and Credit Management/Frontend/pages/NewStudentRegister.tsx', content);
+if (!fs.existsSync(outputDir)) {
+  fs.mkdirSync(outputDir, { recursive: true });
+}
+
+const outputPath = path.join(outputDir, 'NewStudentRegistration.tsx');
+try {
+  fs.writeFileSync(outputPath, content);
+  console.log('Written to', outputPath);
+} catch (e) {
+  console.error('Error writing file:', e.message);
+  process.exit(1);
+}
