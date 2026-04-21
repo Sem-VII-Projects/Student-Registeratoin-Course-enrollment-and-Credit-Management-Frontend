@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../lib/client';
 import Composer from '../components/Composer'
 import AdminTermManagement_Friend from '../components/AdminTermManagement_Friend';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import * as XLSX from 'xlsx';
 
 // UI Components to match project style
@@ -253,6 +255,7 @@ const toMyanmarDigits = (num) => {
 
 function AdminDashboard({ user, onLogout }) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [admin, setAdmin] = useState(user || null);
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(false);
@@ -276,17 +279,17 @@ function AdminDashboard({ user, onLogout }) {
 
     const studentId = student.studentid || student.id;
     if (!studentId) {
-      alert('Cannot reject: no student ID found.');
+      alert(t('Cannot reject: no student ID found.'));
       return;
     }
 
     const reason = rejectDialog.reason.trim();
     if (!reason) {
-      alert('Rejection reason is required.');
+      alert(t('Rejection reason is required.'));
       return;
     }
 
-    const confirmReject = window.confirm(`Reject ${student.namemm}?\n\nThis action will notify the student and remove their current draft.`);
+    const confirmReject = window.confirm(t('Reject {{name}}?', { name: student.namemm }) + '\n\n' + t('This action will notify the student and remove their current draft.'));
     if (!confirmReject) return;
 
     setLoading(true);
@@ -297,12 +300,12 @@ function AdminDashboard({ user, onLogout }) {
         reason,
         hardDelete: true
       });
-      alert(`Rejected ${student.namemm}.`);
+      alert(t('Rejected {{name}}.', { name: student.namemm }));
       closeRejectDialog();
       loadData();
     } catch (error) {
       console.error('Reject error:', error);
-      alert('Error: ' + (error.message || 'Rejection failed'));
+      alert(t('Error: ') + (error.message || t('Rejection failed')));
     } finally {
       setLoading(false);
     }
@@ -482,7 +485,7 @@ function AdminDashboard({ user, onLogout }) {
       alert(`Default sections (A,B,C,D) initialized for Year ${selectedYear}`);
       loadClassSectionsForYear(selectedYear);
     } catch (e) { 
-      alert('Failed to initialize: ' + e.message); 
+      alert(t('Failed to initialize: {{message}}', { message: e.message })); 
     } finally { setLoading(false); }
   };
 
@@ -501,7 +504,7 @@ function AdminDashboard({ user, onLogout }) {
       }, {});
       setMajorClassesByYear(grouped);
     } catch (e) { 
-      console.error('Failed to load major classes:', e);
+      console.error(t('Failed to load major classes:'), e);
       setMajorClassesByYear({});
     }
   }, [currentTerm?.academicYear, currentTerm?.semester]);
@@ -510,10 +513,10 @@ function AdminDashboard({ user, onLogout }) {
     setLoading(true);
     try {
       await api.adminUpdateClassSection(sectionData);
-      alert('Section updated successfully');
+      alert(t('Section updated successfully'));
       setEditingSection({});
       loadClassSectionsForYear(selectedYear);
-    } catch (e) { alert('Failed to update section: ' + e.message); }
+    } catch (e) { alert(t('Failed to update section: {{message}}', { message: e.message })); }
     finally { setLoading(false); }
   };
 
@@ -521,27 +524,27 @@ function AdminDashboard({ user, onLogout }) {
     setLoading(true);
     try {
       await api.adminUpdateMajorClass(mcData);
-      alert('Major class updated successfully');
+      alert(t('Major class updated successfully'));
       setEditingSection({});
       loadMajorClasses();
-    } catch (e) { alert('Failed to update major class: ' + e.message); }
+    } catch (e) { alert(t('Failed to update major class: {{message}}', { message: e.message })); }
     finally { setLoading(false); }
   };
 
   const handleMoveStudent = async () => {
     if (!moveStudentData.studentId || !moveStudentData.toSection) {
-      alert('Please select both student and target section');
+      alert(t('Please select both student and target section'));
       return;
     }
     setLoading(true);
     try {
       await api.adminMoveStudentSection(moveStudentData);
-      alert('Student moved successfully');
+      alert(t('Student moved successfully'));
       setMoveStudentData({ studentId: '', toSection: '' });
       setMoveStudentSearch('');
       loadClassSectionsForYear(selectedYear);
       loadData();
-    } catch (e) { alert('Failed to move student: ' + e.message); }
+    } catch (e) { alert(t('Failed to move student: {{message}}', { message: e.message })); }
     finally { setLoading(false); }
   };
 
@@ -566,23 +569,23 @@ function AdminDashboard({ user, onLogout }) {
 
   // Tab Sidebar Layout Helpers
   const sidebarLinks = [
-    { key: 'overview', label: 'Overview', icon: 'dashboard', count: null },
-    { key: 'new', label: 'New Registrations', icon: 'group_add', count: stats.pending, section: 'Student Management' },
-    { key: 'details', label: 'Details Review', icon: 'fact_check', count: stats.detailsSubmitted },
-    { key: 'payment', label: 'Payment Desk', icon: 'payments', count: stats.paymentPending + stats.paymentDone },
-    { key: 'enrolled', label: 'Enrolled List', icon: 'school', count: stats.enrolled, section: 'Academic' },
-    { key: 'all', label: 'Full Directory', icon: 'groups', count: null },
-    { key: 'composer', label: 'Form Designer', icon: 'settings_applications', count: null, section: 'System' },
-    { key: 'class-sections', label: 'Section Config', icon: 'grid_view', count: null },
-    { key: 'term-management', label: 'Term Management', icon: 'calendar_today', count: null },
+    { key: 'overview', label: t('Overview'), icon: 'dashboard', count: null },
+    { key: 'new', label: t('New Registrations'), icon: 'group_add', count: stats.pending, section: t('Student Management') },
+    { key: 'details', label: t('Details Review'), icon: 'fact_check', count: stats.detailsSubmitted },
+    { key: 'payment', label: t('Payment Desk'), icon: 'payments', count: stats.paymentPending + stats.paymentDone },
+    { key: 'enrolled', label: t('Enrolled List'), icon: 'school', count: stats.enrolled, section: t('Academic') },
+    { key: 'all', label: t('Full Directory'), icon: 'groups', count: null },
+    { key: 'composer', label: t('Form Designer'), icon: 'settings_applications', count: null, section: t('System') },
+    { key: 'class-sections', label: t('Section Config'), icon: 'grid_view', count: null },
+    { key: 'term-management', label: t('Term Management'), icon: 'calendar_today', count: null },
     ];
   const kpis = [
-    { label: "TOTAL REGISTRATIONS", value: stats.total, icon: "groups", tone: "primary", hint: "Active system records" },
-    { label: "PENDING APPROVAL", value: stats.pending, icon: "hourglass_empty", tone: "amber", hint: "Waiting for review" },
-    { label: "SUCCESSFULLY ENROLLED", value: stats.enrolled, icon: "verified", tone: "emerald", hint: "Current semester" },
-    { label: "FINANCIAL AID", value: stats.benefit, icon: "payments", tone: "indigo", hint: "Benefit students" },
-    { label: "HOSTEL RESIDENTS", value: stats.hostel, icon: "home", tone: "cyan", hint: "On-campus stay" },
-    { label: "ON ACADEMIC BREAK", value: stats.onBreak, icon: "pause_circle", tone: "rose", hint: "Inactive status" },
+    { label: t("TOTAL REGISTRATIONS"), value: stats.total, icon: "groups", tone: "primary", hint: t("Active system records") },
+    { label: t("PENDING APPROVAL"), value: stats.pending, icon: "hourglass_empty", tone: "amber", hint: t("Waiting for review") },
+    { label: t("SUCCESSFULLY ENROLLED"), value: stats.enrolled, icon: "verified", tone: "emerald", hint: t("Current semester") },
+    { label: t("FINANCIAL AID"), value: stats.benefit, icon: "payments", tone: "indigo", hint: t("Benefit students") },
+    { label: t("HOSTEL RESIDENTS"), value: stats.hostel, icon: "home", tone: "cyan", hint: t("On-campus stay") },
+    { label: t("ON ACADEMIC BREAK"), value: stats.onBreak, icon: "pause_circle", tone: "rose", hint: t("Inactive status") },
   ];
 
   // Generate username from English name + batch year
@@ -876,7 +879,7 @@ function AdminDashboard({ user, onLogout }) {
                 <React.Fragment key={link.key}>
                     {link.section && (
                         <div className="pt-8 pb-3 px-4">
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">{link.section}</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">{t(link.section)}</p>
                         </div>
                     )}
                     <button
@@ -889,7 +892,7 @@ function AdminDashboard({ user, onLogout }) {
                         )}
                     >
                         <span className="material-icons-outlined text-[22px] mr-4 transition-transform group-hover:scale-110 duration-300">{link.icon}</span>
-                        <span className="text-sm font-bold tracking-tight">{link.label}</span>
+                        <span className="text-sm font-bold tracking-tight">{t(link.label)}</span>
                         {link.count > 0 && (
                             <span className="ml-auto rounded-lg bg-teal-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-teal-600 dark:bg-teal-950 dark:text-teal-400 border border-teal-100 dark:border-teal-900">
                                 {link.count}
@@ -925,9 +928,10 @@ function AdminDashboard({ user, onLogout }) {
         <header className="flex h-20 items-center justify-between border-b border-slate-100 bg-white/80 px-10 dark:border-slate-800 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
             <div className="flex flex-col">
                 <h1 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase tracking-widest text-[11px] opacity-40 mb-0.5">NAVIGATION CONTEXT</h1>
-                <p className="text-sm font-bold text-slate-500 dark:text-slate-400 capitalize">Registration Dashboard • {activeTab.replace('-', ' ')}</p>
+                <p className="text-sm font-bold text-slate-500 dark:text-slate-400 capitalize">{t("Registration Dashboard")} • {t(activeTab.replace('-', ' '))}</p>
             </div>
             <div className="flex items-center gap-6">
+                <LanguageSwitcher />
                 <button className="relative rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700">
                     <span className="material-icons-outlined">notifications</span>
                     <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-slate-950"></span>
@@ -991,53 +995,52 @@ function AdminDashboard({ user, onLogout }) {
                                         <span className="material-icons-outlined text-teal-600 text-2xl">analytics</span>
                                     </div>
                                     <div>
-                                        <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">System Summary</h3>
-                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Real-time Registration Pulse</p>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="bg-slate-50/50 dark:bg-slate-950/50 rounded-[32px] p-8 border border-slate-100 dark:border-slate-800 relative group overflow-hidden transition-all hover:shadow-lg">
-                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 px-1">Performance Metrics</h4>
+                                        <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{t("System Summary")}</h3>
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("Real-time Registration Pulse")}</p>
+                                        </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="bg-slate-50/50 dark:bg-slate-950/50 rounded-[32px] p-8 border border-slate-100 dark:border-slate-800 relative group overflow-hidden transition-all hover:shadow-lg">
+                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 px-1">{t("Performance Metrics")}</h4>
                                         <div className="space-y-4">
-                                            {[
-                                                { l: "Total Registrations", v: stats.total, c: "teal" },
-                                                { l: "Successfully Approved", v: stats.approved, c: "emerald" },
-                                                { l: "Successfully Enrolled", v: stats.enrolled, c: "cyan" },
-                                                { l: "Verification Pending", v: stats.pending + stats.detailsSubmitted, c: "rose" }
-                                            ].map((row, i) => (
-                                                <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:translate-x-1">
-                                                    <span className="text-sm font-bold text-slate-600 dark:text-slate-400">{row.l}</span>
-                                                    <span className={cn("text-xl font-black", `text-${row.c}-600 dark:text-${row.c}-400`)}>{row.v}</span>
-                                                </div>
-                                            ))}
+                                           {[
+                                               { l: t("Total Registrations"), v: stats.total, c: "teal" },
+                                               { l: t("Successfully Approved"), v: stats.approved, c: "emerald" },
+                                               { l: t("Successfully Enrolled"), v: stats.enrolled, c: "cyan" },
+                                               { l: t("Verification Pending"), v: stats.pending + stats.detailsSubmitted, c: "rose" }
+                                           ].map((row, i) => (
+                                               <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:translate-x-1">
+                                                   <span className="text-sm font-bold text-slate-600 dark:text-slate-400">{row.l}</span>
+                                                   <span className={cn("text-xl font-black", `text-${row.c}-600 dark:text-${row.c}-400`)}>{row.v}</span>
+                                               </div>
+                                           ))}
                                         </div>
                                         <div className="absolute top-0 right-0 h-32 w-32 bg-teal-500/5 rounded-bl-full transform group-hover:scale-110 transition-transform" />
-                                    </div>
-                                    <div className="bg-slate-50/50 dark:bg-slate-950/50 rounded-[32px] p-8 border border-slate-100 dark:border-slate-800 relative group overflow-hidden transition-all hover:shadow-lg">
-                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 px-1">Demographics</h4>
+                                        </div>
+                                        <div className="bg-slate-50/50 dark:bg-slate-950/50 rounded-[32px] p-8 border border-slate-100 dark:border-slate-800 relative group overflow-hidden transition-all hover:shadow-lg">
+                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 px-1">{t("Demographics")}</h4>
                                         <div className="space-y-4">
-                                            {[
-                                                { l: "Financial Aid Required", v: stats.benefit, c: "indigo" },
-                                                { l: "On-Campus Hostel", v: stats.hostel, c: "cyan" },
-                                                { l: "Academic Leave", v: stats.onBreak, c: "amber" }
-                                            ].map((row, i) => (
-                                                <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:translate-x-1">
-                                                    <span className="text-sm font-bold text-slate-600 dark:text-slate-400">{row.l}</span>
-                                                    <span className={cn("text-xl font-black", `text-${row.c}-600 dark:text-${row.c}-400`)}>{row.v}</span>
-                                                </div>
-                                            ))}
+                                           {[
+                                               { l: t("Financial Aid Required"), v: stats.benefit, c: "indigo" },
+                                               { l: t("On-Campus Hostel"), v: stats.hostel, c: "cyan" },
+                                               { l: t("Academic Leave"), v: stats.onBreak, c: "amber" }
+                                           ].map((row, i) => (
+                                               <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:translate-x-1">
+                                                   <span className="text-sm font-bold text-slate-600 dark:text-slate-400">{row.l}</span>
+                                                   <span className={cn("text-xl font-black", `text-${row.c}-600 dark:text-${row.c}-400`)}>{row.v}</span>
+                                               </div>
+                                           ))}
                                         </div>
                                         <div className="absolute top-0 right-0 h-32 w-32 bg-indigo-500/5 rounded-bl-full transform group-hover:scale-110 transition-transform" />
-                                    </div>
-                                </div>
-
+                                        </div>
+                                        </div>
                                 {/* Recent Activity Section */}
                                 <div className="bg-slate-50/30 dark:bg-slate-950/30 rounded-[32px] p-10 border border-slate-100 dark:border-slate-800 relative group overflow-hidden">
                                     <div className="flex items-center gap-4 mb-8">
                                         <div className="h-10 w-10 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center text-teal-600 border border-slate-100 dark:border-slate-800 shadow-sm">
                                             <span className="material-icons-outlined">history</span>
                                         </div>
-                                        <h4 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase">Recent Registration Activity</h4>
+                                        <h4 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase">{t("Recent Registration Activity")}</h4>
                                     </div>
                                     
                                     <div className="space-y-3">
@@ -1047,12 +1050,12 @@ function AdminDashboard({ user, onLogout }) {
                                                     <div key={i} className="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-2 shadow-sm hover:border-teal-500/30 transition-all cursor-default group/item">
                                                         <div className="h-1.5 w-1.5 rounded-full bg-teal-500 animate-pulse" />
                                                         {student.namemm}
-                                                        <span className="text-[10px] opacity-40 font-black tracking-widest">{student.status || 'PENDING'}</span>
+                                                        <span className="text-[10px] opacity-40 font-black tracking-widest">{t(student.status || 'PENDING')}</span>
                                                     </div>
                                                 ))}
                                             </div>
                                         ) : (
-                                            <p className="text-xs font-black text-slate-300 uppercase tracking-widest">No recent synchronization events recorded.</p>
+                                            <p className="text-xs font-black text-slate-300 uppercase tracking-widest">{t("No recent synchronization events recorded.")}</p>
                                         )}
                                     </div>
                                     <div className="absolute top-0 right-0 h-24 w-24 bg-teal-500/5 rounded-bl-full transform group-hover:scale-110 transition-transform" />
@@ -1062,8 +1065,9 @@ function AdminDashboard({ user, onLogout }) {
                         {activeTab === 'new' && (
                             <div className="space-y-8 animate-in fade-in duration-700">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">New Student Registrations</h3>
-                                    <span className="px-4 py-1.5 rounded-full bg-teal-50 dark:bg-teal-900/30 text-teal-600 text-[10px] font-black uppercase tracking-widest border border-teal-100 dark:border-teal-800">{newRegistrations.length} PENDING</span>
+                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{t("New Student Registrations")}</h3>
+                                    <span className="px-4 py-1.5 rounded-full bg-teal-50 dark:bg-teal-900/30 text-teal-600 text-[10px] font-black uppercase tracking-widest border border-teal-100 dark:border-teal-800">{newRegistrations.length} {t("PENDING")}</span>
+
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                                     {newRegistrations.map((student, i) => (
@@ -1741,8 +1745,8 @@ function AdminDashboard({ user, onLogout }) {
                                                     <div className="h-16 w-16 rounded-3xl bg-white dark:bg-slate-800 mx-auto flex items-center justify-center text-slate-300 dark:text-slate-600 mb-6 border border-slate-100 dark:border-slate-700/50">
                                                         <span className="material-icons-outlined text-3xl">info</span>
                                                     </div>
-                                                    <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">Management Protocol</h4>
-                                                    <p className="text-xs font-medium text-slate-400 max-w-xs mx-auto leading-relaxed">Changes to section capacity or lock status will take effect immediately for all new student registrations.</p>
+                                                    <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">{t("Management Protocol")}</h4>
+                                                    <p className="text-xs font-medium text-slate-400 max-w-xs mx-auto leading-relaxed">{t("Changes to section capacity or lock status will take effect immediately for all new student registrations.")}</p>
                                                 </div>
                                                 <div className="absolute -bottom-10 -right-10 h-40 w-40 bg-slate-900/5 rounded-full transform group-hover:scale-110 transition-transform" />
                                             </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import '../styles/SubmittedDetailsReview.css';
 
@@ -30,9 +31,9 @@ function toBoolean(value) {
   return !!value;
 }
 
-function formatYesNo(value) {
+function formatYesNo(value, t) {
   if (!hasMeaningfulValue(value)) return '-';
-  return toBoolean(value) ? 'Yes' : 'No';
+  return toBoolean(value) ? t('Yes') : t('No');
 }
 
 function asObject(value) {
@@ -72,30 +73,30 @@ function sortRegistrationsByRecent(registrations) {
   });
 }
 
-function formatFinancialSupporter(value) {
+function formatFinancialSupporter(value, t) {
   const normalized = String(value || '').trim().toLowerCase();
   if (!normalized) return '-';
-  if (normalized === 'father') return 'Father';
-  if (normalized === 'mother') return 'Mother';
-  if (normalized === 'other') return 'Other';
+  if (normalized === 'father') return t('Father');
+  if (normalized === 'mother') return t('Mother');
+  if (normalized === 'other') return t('Other');
   return value;
 }
 
-function ImageCard({ label, url, alt }) {
+function ImageCard({ label, url, alt, t }) {
   return (
     <div className="submitted-image-card">
-      <h4>{label}</h4>
+      <h4>{t(label)}</h4>
       {url ? (
         <>
           <a href={url} target="_blank" rel="noreferrer">
             <img src={url} alt={alt || label} />
           </a>
           <a className="open-link" href={url} target="_blank" rel="noreferrer">
-            Open Full Image
+            {t('Open Full Image')}
           </a>
         </>
       ) : (
-        <p className="missing">Not submitted</p>
+        <p className="missing">{t('Not submitted')}</p>
       )}
     </div>
   );
@@ -105,6 +106,7 @@ function SubmittedDetailsReview() {
   const navigate = useNavigate();
   const location = useLocation();
   const { studentId } = useParams();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [student, setStudent] = useState(location.state?.studentRecord || null);
   const [parents, setParents] = useState([]);
@@ -311,27 +313,28 @@ function SubmittedDetailsReview() {
         <div className="submitted-review-wrap">
           <header className="submitted-review-header">
             <div>
-              <h1>Payment Submission Review</h1>
-              <p>Verify student payment screenshot</p>
+              <h1>{t('Payment Submission Review')}</h1>
+              <p>{t('Verify student payment screenshot')}</p>
             </div>
             <button className="submitted-btn" onClick={() => navigate('/admin/dashboard')}>
-              Back
+              {t('Back')}
             </button>
           </header>
 
           <section className="submitted-section">
-            <h3>Student Information</h3>
-            <p><strong>Name:</strong> {displayStudentName}</p>
-            <p><strong>Username:</strong> {displayUsername}</p>
+            <h3>{t('Student Information')}</h3>
+            <p><strong>{t('Name')}:</strong> {displayStudentName}</p>
+            <p><strong>{t('Username')}:</strong> {displayUsername}</p>
           </section>
 
           <section className="submitted-section">
-            <h3>Payment Screenshot</h3>
+            <h3>{t('Payment Screenshot')}</h3>
             <div className="submitted-image-grid two">
               <ImageCard
                 label="Payment Receipt"
                 url={paymentReceiptUrl}
                 alt="Payment receipt screenshot"
+                t={t}
               />
             </div>
           </section>
@@ -345,137 +348,145 @@ function SubmittedDetailsReview() {
       <div className="submitted-review-wrap">
         <header className="submitted-review-header">
           <div>
-            <h1>Submitted Details Review</h1>
-            <p>Staged details from registration sections</p>
+            <h1>{t('Submitted Details Review')}</h1>
+            <p>{t('Staged details from registration sections')}</p>
           </div>
           <button className="submitted-btn" onClick={() => navigate('/admin/dashboard')}>
-            Back
+            {t('Back')}
           </button>
         </header>
 
         <section className="submitted-highlight">
           <div className="status">{String(student.status || 'DETAILS_SUBMITTED').toUpperCase()}</div>
           <h2>{displayStudentName}</h2>
-          <p>Submitted at: {formatDate(pick(declaration.submittedAt, student.updatedAt, student.createdAt))}</p>
-          <p>Registration ID: {registrationId || '-'}</p>
+          <p>{t('Submitted at')}: {formatDate(pick(declaration.submittedAt, student.updatedAt, student.createdAt))}</p>
+          <p>{t('Registration ID')}: {registrationId || '-'}</p>
         </section>
 
         <section className="submitted-grid two-col">
           <div className="submitted-section">
-            <h3>Student Information</h3>
-            <p><strong>Name (MM):</strong> {pick(personal.nameMm, personal.studentNameMM, personal.studentName, personal.name_mm, student.namemm, student.name_mm) || '-'}</p>
-            <p><strong>Name (EN):</strong> {pick(personal.nameEn, personal.studentNameEN, personal.studentNameEn, personal.name_en, student.nameen, student.name_en) || '-'}</p>
-            <p><strong>Gender:</strong> {pick(personal.gender, personal.sex, contact.gender, student.gender) || '-'}</p>
-            <p><strong>Date of Birth:</strong> {formatDate(pick(personal.dateOfBirth, personal.dob, personal.birthDate, student.date_of_birth, student.dateOfBirth))}</p>
-            <p><strong>NRC Number:</strong> {pick(personal.nrcNumber, personal.nrc, student.nrc_number, student.nrcNumber) || '-'}</p>
-            <p><strong>Religion:</strong> {pick(personal.religion, contact.religion, student.religion) || '-'}</p>
-            <p><strong>Ethnic:</strong> {pick(personal.ethnic, personal.ethnicity, student.ethnic) || '-'}</p>
-            <p><strong>Birthplace:</strong> {pick(personal.birthplace, personal.placeOfBirth, student.birthplace, student.place_of_birth) || '-'}</p>
-            <p><strong>Blood Type:</strong> {pick(personal.bloodType, personal.blood_group, student.bloodType, student.blood_type) || '-'}</p>
+            <h3>{t('Student Information')}</h3>
+            <p><strong>{t('Name (MM)')}:</strong> {pick(personal.nameMm, personal.studentNameMM, personal.studentName, personal.name_mm, student.namemm, student.name_mm) || '-'}</p>
+            <p><strong>{t('Name (EN)')}:</strong> {pick(personal.nameEn, personal.studentNameEN, personal.studentNameEn, personal.name_en, student.nameen, student.name_en) || '-'}</p>
+            <p><strong>{t('Gender')}:</strong> {pick(personal.gender, personal.sex, contact.gender, student.gender) || '-'}</p>
+            <p><strong>{t('Date of Birth')}:</strong> {formatDate(pick(personal.dateOfBirth, personal.dob, personal.birthDate, student.date_of_birth, student.dateOfBirth))}</p>
+            <p><strong>{t('NRC Number')}:</strong> {pick(personal.nrcNumber, personal.nrc, student.nrc_number, student.nrcNumber) || '-'}</p>
+            <p><strong>{t('Religion')}:</strong> {pick(personal.religion, contact.religion, student.religion) || '-'}</p>
+            <p><strong>{t('Ethnic')}:</strong> {pick(personal.ethnic, personal.ethnicity, student.ethnic) || '-'}</p>
+            <p><strong>{t('Birthplace')}:</strong> {pick(personal.birthplace, personal.placeOfBirth, student.birthplace, student.place_of_birth) || '-'}</p>
+            <p><strong>{t('Blood Type')}:</strong> {pick(personal.bloodType, personal.blood_group, student.bloodType, student.blood_type) || '-'}</p>
           </div>
 
           <div className="submitted-section">
-            <h3>Contact & Academic</h3>
-            <p><strong>Email:</strong> {pick(contact.email, personal.email, student.email) || '-'}</p>
-            <p><strong>Phone:</strong> {pick(contact.phone, personal.phone, student.phone) || '-'}</p>
-            <p><strong>Division/State:</strong> {pick(contact.divisionOrState, contact.division, contact.region, student.division_or_state, student.divisionOrState) || '-'}</p>
-            <p><strong>Township:</strong> {pick(contact.township, contact.townshipCode, student.township) || '-'}</p>
-            <p><strong>Address:</strong> {pick(contact.address, personal.address, student.address) || '-'}</p>
-            <p><strong>Current Year:</strong> {pick(academic.currentYear, academic.current_year, student.currentyear, student.current_year) ?? '-'}</p>
-            <p><strong>Semester:</strong> {pick(academic.academicSemester, academic.semester, student.academic_semester, student.academicSemester) || '-'}</p>
-            <p><strong>Major:</strong> {pick(academic.major, academic.majorCode, student.major) || '-'}</p>
-            <p><strong>Matric Roll No:</strong> {pick(academic.matriculationRollNo, personal.matriculationRollNo, student.matriculation_rollno, student.matriculation_roll_no, student.matriculationRollNo) || '-'}</p>
-            <p><strong>Matric Passed Year:</strong> {pick(academic.matriculationPassedYear, academic.matriculationYear, personal.matriculationPassedYear, personal.matriculationYear, student.matriculation_passed_year, student.matriculationPassedYear, student.matriculation_year, student.matriculationYear) || '-'}</p>
-            <p><strong>Financial Aid:</strong> {formatYesNo(pick(guardian.needsFinancialAid, guardian.needFinancialAid, student.is_benefit_student, student.isBenefitStudent))}</p>
-            <p><strong>Hostel Requested:</strong> {formatYesNo(pick(guardian.needsHostel, guardian.needHostel, student.is_hostel_student, student.isHostelStudent))}</p>
+            <h3>{t('Contact & Academic')}</h3>
+            <p><strong>{t('Email')}:</strong> {pick(contact.email, personal.email, student.email) || '-'}</p>
+            <p><strong>{t('Phone')}:</strong> {pick(contact.phone, personal.phone, student.phone) || '-'}</p>
+            <p><strong>{t('Division/State')}:</strong> {pick(contact.divisionOrState, contact.division, contact.region, student.division_or_state, student.divisionOrState) || '-'}</p>
+            <p><strong>{t('Township')}:</strong> {pick(contact.township, contact.townshipCode, student.township) || '-'}</p>
+            <p><strong>{t('Address')}:</strong> {pick(contact.address, personal.address, student.address) || '-'}</p>
+            <p><strong>{t('Current Year')}:</strong> {pick(academic.currentYear, academic.current_year, student.currentyear, student.current_year) ?? '-'}</p>
+            <p><strong>{t('Semester')}:</strong> {pick(academic.academicSemester, academic.semester, student.academic_semester, student.academicSemester) || '-'}</p>
+            <p><strong>{t('Major')}:</strong> {pick(academic.major, academic.majorCode, student.major) || '-'}</p>
+            <p><strong>{t('Matric Roll No')}:</strong> {pick(academic.matriculationRollNo, personal.matriculationRollNo, student.matriculation_rollno, student.matriculation_roll_no, student.matriculationRollNo) || '-'}</p>
+            <p><strong>{t('Matric Passed Year')}:</strong> {pick(academic.matriculationPassedYear, academic.matriculationYear, personal.matriculationPassedYear, personal.matriculationYear, student.matriculation_passed_year, student.matriculationPassedYear, student.matriculation_year, student.matriculationYear) || '-'}</p>
+            <p><strong>{t('Financial Aid')}:</strong> {formatYesNo(pick(guardian.needsFinancialAid, guardian.needFinancialAid, student.is_benefit_student, student.isBenefitStudent), t)}</p>
+            <p><strong>{t('Hostel Requested')}:</strong> {formatYesNo(pick(guardian.needsHostel, guardian.needHostel, student.is_hostel_student, student.isHostelStudent), t)}</p>
           </div>
         </section>
 
         <section className="submitted-section">
-          <h3>Student NRC / Photo</h3>
+          <h3>{t('Student NRC / Photo')}</h3>
           <div className="submitted-image-grid">
             <ImageCard
               label="Passport Photo"
               url={pick(documents.passportPhoto, documents.passportPhotoUrl, student.passportphoto, student.passportPhoto, student.passport_photo)}
               alt="Passport photo"
+              t={t}
             />
             <ImageCard
               label="Student NRC Front"
               url={pick(documents.studentNrcFront, documents.nrcFrontImage, student.nrcfrontimage, student.nrcFrontImage, student.nrc_front_image)}
               alt="Student NRC front"
+              t={t}
             />
             <ImageCard
               label="Student NRC Back"
               url={pick(documents.studentNrcBack, documents.nrcBackImage, student.nrcbackimage, student.nrcBackImage, student.nrc_back_image)}
               alt="Student NRC back"
+              t={t}
             />
           </div>
         </section>
 
         <section className="submitted-grid two-col">
           <div className="submitted-section">
-            <h3>Father Information</h3>
-            <p><strong>Name:</strong> {pick(father?.nameMm, father?.nameMM, father?.nameEn, father?.name, father?.full_name, student.father_name, student.fatherName) || '-'}</p>
-            <p><strong>Relation:</strong> {pick(father?.relation, 'Father')}</p>
-            <p><strong>Occupation:</strong> {pick(father?.occupation, father?.job_position) || '-'}</p>
-            <p><strong>Phone:</strong> {pick(father?.phone, father?.phone_number) || '-'}</p>
-            <p><strong>Address:</strong> {pick(father?.address) || '-'}</p>
-            <p><strong>Ethnic:</strong> {pick(father?.ethnic) || '-'}</p>
-            <p><strong>Religion:</strong> {pick(father?.religion) || '-'}</p>
-            <p><strong>Birthplace:</strong> {pick(father?.birthplace) || '-'}</p>
-            <p><strong>NRC Number:</strong> {pick(father?.nrcNumber, father?.nrc_number) || '-'}</p>
+            <h3>{t('Father Information')}</h3>
+            <p><strong>{t('Name')}:</strong> {pick(father?.nameMm, father?.nameMM, father?.nameEn, father?.name, father?.full_name, student.father_name, student.fatherName) || '-'}</p>
+            <p><strong>{t('Relation')}:</strong> {pick(father?.relation, t('Father'))}</p>
+            <p><strong>{t('Occupation')}:</strong> {pick(father?.occupation, father?.job_position) || '-'}</p>
+            <p><strong>{t('Phone')}:</strong> {pick(father?.phone, father?.phone_number) || '-'}</p>
+            <p><strong>{t('Address')}:</strong> {pick(father?.address) || '-'}</p>
+            <p><strong>{t('Ethnic')}:</strong> {pick(father?.ethnic) || '-'}</p>
+            <p><strong>{t('Religion')}:</strong> {pick(father?.religion) || '-'}</p>
+            <p><strong>{t('Birthplace')}:</strong> {pick(father?.birthplace) || '-'}</p>
+            <p><strong>{t('NRC Number')}:</strong> {pick(father?.nrcNumber, father?.nrc_number) || '-'}</p>
             <div className="submitted-image-grid two">
               <ImageCard
                 label="Father NRC Front"
                 url={pick(documents.fatherNrcFront, father?.nrcFront, father?.nrcFrontImage, father?.nrc_front_image)}
                 alt="Father NRC front"
+                t={t}
               />
               <ImageCard
                 label="Father NRC Back"
                 url={pick(documents.fatherNrcBack, father?.nrcBack, father?.nrcBackImage, father?.nrc_back_image)}
                 alt="Father NRC back"
+                t={t}
               />
             </div>
           </div>
 
           <div className="submitted-section">
-            <h3>Mother Information</h3>
-            <p><strong>Name:</strong> {pick(mother?.nameMm, mother?.nameMM, mother?.nameEn, mother?.name, mother?.full_name, student.mother_name, student.motherName) || '-'}</p>
-            <p><strong>Relation:</strong> {pick(mother?.relation, 'Mother')}</p>
-            <p><strong>Occupation:</strong> {pick(mother?.occupation, mother?.job_position) || '-'}</p>
-            <p><strong>Phone:</strong> {pick(mother?.phone, mother?.phone_number) || '-'}</p>
-            <p><strong>Address:</strong> {pick(mother?.address) || '-'}</p>
-            <p><strong>Ethnic:</strong> {pick(mother?.ethnic) || '-'}</p>
-            <p><strong>Religion:</strong> {pick(mother?.religion) || '-'}</p>
-            <p><strong>Birthplace:</strong> {pick(mother?.birthplace) || '-'}</p>
-            <p><strong>NRC Number:</strong> {pick(mother?.nrcNumber, mother?.nrc_number) || '-'}</p>
+            <h3>{t('Mother Information')}</h3>
+            <p><strong>{t('Name')}:</strong> {pick(mother?.nameMm, mother?.nameMM, mother?.nameEn, mother?.name, mother?.full_name, student.mother_name, student.motherName) || '-'}</p>
+            <p><strong>{t('Relation')}:</strong> {pick(mother?.relation, t('Mother'))}</p>
+            <p><strong>{t('Occupation')}:</strong> {pick(mother?.occupation, mother?.job_position) || '-'}</p>
+            <p><strong>{t('Phone')}:</strong> {pick(mother?.phone, mother?.phone_number) || '-'}</p>
+            <p><strong>{t('Address')}:</strong> {pick(mother?.address) || '-'}</p>
+            <p><strong>{t('Ethnic')}:</strong> {pick(mother?.ethnic) || '-'}</p>
+            <p><strong>{t('Religion')}:</strong> {pick(mother?.religion) || '-'}</p>
+            <p><strong>{t('Birthplace')}:</strong> {pick(mother?.birthplace) || '-'}</p>
+            <p><strong>{t('NRC Number')}:</strong> {pick(mother?.nrcNumber, mother?.nrc_number) || '-'}</p>
             <div className="submitted-image-grid two">
               <ImageCard
                 label="Mother NRC Front"
                 url={pick(documents.motherNrcFront, mother?.nrcFront, mother?.nrcFrontImage, mother?.nrc_front_image)}
                 alt="Mother NRC front"
+                t={t}
               />
               <ImageCard
                 label="Mother NRC Back"
                 url={pick(documents.motherNrcBack, mother?.nrcBack, mother?.nrcBackImage, mother?.nrc_back_image)}
                 alt="Mother NRC back"
+                t={t}
               />
             </div>
           </div>
         </section>
 
         <section className="submitted-section">
-          <h3>Agreement</h3>
-          <p><strong>Financial Supporter:</strong> {formatFinancialSupporter(pick(guardian.financialSupporter, guardian.financial_supporter))}</p>
-          <p><strong>Needs Financial Aid:</strong> {formatYesNo(pick(guardian.needsFinancialAid, guardian.needFinancialAid))}</p>
-          <p><strong>Needs Hostel:</strong> {formatYesNo(pick(guardian.needsHostel, guardian.needHostel))}</p>
-          <p><strong>School Terms Accepted:</strong> {formatYesNo(pick(declaration.schoolTermsAccepted, declaration.termsAccepted, declaration.school_terms_accepted))}</p>
-          <p><strong>Confession Accepted:</strong> {formatYesNo(pick(declaration.confessionAccepted, declaration.confession_accepted))}</p>
+          <h3>{t('Agreement')}</h3>
+          <p><strong>{t('Financial Supporter')}:</strong> {formatFinancialSupporter(pick(guardian.financialSupporter, guardian.financial_supporter), t)}</p>
+          <p><strong>{t('Needs Financial Aid')}:</strong> {formatYesNo(pick(guardian.needsFinancialAid, guardian.needFinancialAid), t)}</p>
+          <p><strong>{t('Needs Hostel')}:</strong> {formatYesNo(pick(guardian.needsHostel, guardian.needHostel), t)}</p>
+          <p><strong>{t('School Terms Accepted')}:</strong> {formatYesNo(pick(declaration.schoolTermsAccepted, declaration.termsAccepted, declaration.school_terms_accepted), t)}</p>
+          <p><strong>{t('Confession Accepted')}:</strong> {formatYesNo(pick(declaration.confessionAccepted, declaration.confession_accepted), t)}</p>
           <div className="submitted-image-grid two">
             <ImageCard
               label="Family Registration"
               url={pick(documents.familyRegistration, guardian.familyRegistration)}
               alt="Family registration"
+              t={t}
             />
           </div>
         </section>

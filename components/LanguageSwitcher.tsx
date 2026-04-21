@@ -8,7 +8,7 @@ export const LanguageSwitcher: React.FC = () => {
     i18n.changeLanguage(lng);
   };
   
-  const isMy = i18n.language?.startsWith('my');
+  const isMy = i18n.language === 'my';
 
   return (
     <div className="flex items-center bg-slate-100 dark:bg-slate-900/50 rounded-xl p-1 border border-slate-200/60 dark:border-slate-800 transition-all">

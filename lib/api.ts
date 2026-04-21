@@ -395,6 +395,7 @@ export type AdminAnnouncementBulkPayload = {
 // ---------------------------
 export const api = {
   // Public student registration
+  registerStudent: (body: any) => request("/api/auth/register", { method: "POST", body, backend: "spring" }),
   getRegistrationWindowSettings: () => request("/api/registration-window", { backend: "spring" }),
   updateRegistrationWindowSettings: (body: any) => request("/api/admin/registration-window", { method: "PUT", body, backend: "spring" }),
 
