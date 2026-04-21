@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from 'react-i18next';
 import FormDataC from "./form_data_C";
 import { api } from '../lib/api';
 
@@ -51,6 +52,7 @@ const minutesFromNow = (minutes) => {
 };
 
 const Composer_C = () => {
+    const { t } = useTranslation();
     const [windowSettings, setWindowSettings] = useState({
         isOpen: true,
         registrationDeadline: "",
@@ -141,8 +143,8 @@ const Composer_C = () => {
                     <div className="flex items-center gap-6 mb-5">
                         <IconBadge icon="timer" tone="primary" />
                         <div>
-                            <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Registration Window Control</h2>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Manage intake accessibility and deadlines</p>
+                            <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{t("Registration Window Control")}</h2>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{t("Manage intake accessibility and deadlines")}</p>
                         </div>
                     </div>
 
@@ -151,8 +153,8 @@ const Composer_C = () => {
                             <span className="material-icons-outlined text-lg">rocket_launch</span>
                         </div>
                         <div>
-                            <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-wider">Demo Mode</p>
-                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Quick-set deadlines to test system behavior.</p>
+                            <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-wider">{t("Demo Mode")}</p>
+                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{t("Quick-set deadlines to test system behavior.")}</p>
                         </div>
                     </div>
 
@@ -161,8 +163,8 @@ const Composer_C = () => {
                         <div className="space-y-3">
                             <label className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-pointer transition-all hover:border-teal-500/30">
                                 <div className="flex flex-col">
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">General Access</span>
-                                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Registration Open</span>
+                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t("General Access")}</span>
+                                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{t("Registration Open")}</span>
                                 </div>
                                 <input
                                     type="checkbox"
@@ -174,77 +176,78 @@ const Composer_C = () => {
                             </label>
                             
                             <label className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-pointer transition-all hover:border-teal-500/30">
-                                <div className="flex flex-col">
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Submission Policy</span>
-                                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Allow Edits</span>
-                                </div>
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t("Submission Policy")}</span>
+                                <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{t("Allow Edits")}</span>
+                            </div>
+                            <input
+                                type="checkbox"
+                                name="allowEditAfterSubmit"
+                                className="w-5 h-5 accent-teal-600 rounded-lg"
+                                checked={windowSettings.allowEditAfterSubmit}
+                                onChange={handleWindowChange}
+                            />
+                            </label>
+                            </div>
+
+                            {/* Deadlines */}
+                            <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                            {[
+                            { id: "registrationDeadline", label: t("Registration Deadline") },
+                            { id: "detailsDeadline", label: t("Details Submission") },
+                            { id: "paymentDeadline", label: t("Payment Deadline") }
+                            ].map((field) => (
+                            <div key={field.id} className="space-y-1.5">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">{field.label}</label>
                                 <input
-                                    type="checkbox"
-                                    name="allowEditAfterSubmit"
-                                    className="w-5 h-5 accent-teal-600 rounded-lg"
-                                    checked={windowSettings.allowEditAfterSubmit}
+                                    type="datetime-local"
+                                    name={field.id}
+                                    className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-xl text-sm font-bold outline-none focus:border-teal-500/50 transition-all text-slate-700 dark:text-slate-200"
+                                    value={windowSettings[field.id]}
                                     onChange={handleWindowChange}
                                 />
-                            </label>
-                        </div>
-
-                        {/* Deadlines */}
-                        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                            {[
-                                { id: "registrationDeadline", label: "Registration Deadline" },
-                                { id: "detailsDeadline", label: "Details Submission" },
-                                { id: "paymentDeadline", label: "Payment Deadline" }
-                            ].map((field) => (
-                                <div key={field.id} className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">{field.label}</label>
-                                    <input
-                                        type="datetime-local"
-                                        name={field.id}
-                                        className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-xl text-sm font-bold outline-none focus:border-teal-500/50 transition-all text-slate-700 dark:text-slate-200"
-                                        value={windowSettings[field.id]}
-                                        onChange={handleWindowChange}
-                                    />
-                                    <div className="flex flex-wrap gap-1.5 pt-0.5">
-                                        {[2, 5, 10, 30, 60].map((m) => (
-                                            <button 
-                                                key={m} 
-                                                type="button" 
-                                                onClick={() => setDeadlineFromNow(field.id, m)}
-                                                className="px-2 py-1 text-[8px] font-black uppercase tracking-widest rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-400 hover:text-teal-600 hover:border-teal-500/30 transition-all active:scale-95"
-                                            >
-                                                {m < 60 ? `${m}m` : "1h"}
-                                            </button>
-                                        ))}
-                                    </div>
+                                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                    {[2, 5, 10, 30, 60].map((m) => (
+                                        <button 
+                                            key={m} 
+                                            type="button" 
+                                            onClick={() => setDeadlineFromNow(field.id, m)}
+                                            className="px-2 py-1 text-[8px] font-black uppercase tracking-widest rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-400 hover:text-teal-600 hover:border-teal-500/30 transition-all active:scale-95"
+                                        >
+                                            {m < 60 ? `${m}m` : "1h"}
+                                        </button>
+                                    ))}
                                 </div>
+                            </div>
                             ))}
-                        </div>
-                    </div>
+                            </div>
+                            </div>
 
-                    <div className="mt-6 flex justify-end pt-6 border-t border-slate-50 dark:border-slate-800">
-                        <button
+                            <div className="mt-6 flex justify-end pt-6 border-t border-slate-50 dark:border-slate-800">
+                            <button
                             type="button"
                             onClick={handleSaveWindow}
                             disabled={savingWindow}
                             className="px-8 py-3.5 bg-slate-900 dark:bg-teal-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:shadow-teal-500/20 active:scale-95 disabled:opacity-50 transition-all"
-                        >
-                            {savingWindow ? "Syncing..." : "Save Window Settings"}
-                        </button>
-                    </div>
-                </div>
-                <div className="absolute top-0 right-0 h-32 w-32 bg-teal-500/5 rounded-bl-full transform translate-x-8 -translate-y-8 group-hover:scale-110 transition-transform" />
-            </div>
+                            >
+                            {savingWindow ? t("Syncing...") : t("Save Window Settings")}
+                            </button>
+                            </div>
+                            </div>
+                            <div className="absolute top-0 right-0 h-32 w-32 bg-teal-500/5 rounded-bl-full transform translate-x-8 -translate-y-8 group-hover:scale-110 transition-transform" />
+                            </div>
 
-            {/* Config Section */}
-            <div className="bg-slate-50 dark:bg-slate-950/40 rounded-[40px] p-0.5 border border-slate-100 dark:border-slate-800">
-                <div className="p-7">
-                    <div className="flex items-center gap-5 mb-6">
-                        <IconBadge icon="settings" tone="indigo" />
-                        <div>
-                            <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Configure Registration</h2>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Academic tiers, majors, and fee structures</p>
-                        </div>
-                    </div>
+                            {/* Config Section */}
+                            <div className="bg-slate-50 dark:bg-slate-950/40 rounded-[40px] p-0.5 border border-slate-100 dark:border-slate-800">
+                            <div className="p-7">
+                            <div className="flex items-center gap-5 mb-6">
+                            <IconBadge icon="settings" tone="indigo" />
+                            <div>
+                            <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{t("Configure Registration")}</h2>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{t("Academic tiers, majors, and fee structures")}</p>
+                            </div>
+                            </div>
+
                     <FormDataC />
                 </div>
             </div>

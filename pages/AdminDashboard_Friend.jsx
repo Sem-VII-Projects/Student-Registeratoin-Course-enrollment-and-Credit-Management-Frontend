@@ -7,7 +7,7 @@ import AdminTermManagement_Friend from '../components/AdminTermManagement_Friend
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import * as XLSX from 'xlsx';
 
-// UI Components to match project style
+// UI Components
 function cn(...classes) {
   return classes.filter(Boolean).join(" ");
 }
@@ -262,9 +262,7 @@ function AdminDashboard({ user, onLogout }) {
   const [refreshing, setRefreshing] = useState(false);
   
   const [rejectDialog, setRejectDialog] = useState({ open: false, student: null, reason: '' });
-  const [detailsRejectDialog, setDetailsRejectDialog] = useState({ open: false, student: null, reason: '' });
-  const [paymentRejectDialog, setPaymentRejectDialog] = useState({ open: false, student: null, reason: '' });
-
+  
   const openRejectDialog = (student) => {
     setRejectDialog({ open: true, student, reason: '' });
   };
@@ -311,31 +309,26 @@ function AdminDashboard({ user, onLogout }) {
     }
   };
 
-  // Data states
   const [students, setStudents] = useState([]);
   const [newRegistrations, setNewRegistrations] = useState([]);
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, detailsSubmitted: 0, paymentPending: 0, paymentDone: 0, enrolled: 0, benefit: 0, hostel: 0, onBreak: 0 });
 
-  // Filter states
   const [filters, setFilters] = useState({ search: '', year: '', batch: '', semester: '', status: '' });
   const [paymentFilters, setPaymentFilters] = useState({ search: '', year: '', batch: '', semester: '', paymentStatus: '' });
   const [enrolledFilters, setEnrolledFilters] = useState({ search: '', year: '', batch: '', semester: '', class: '' });
   
   const [currentTerm, setCurrentTerm] = useState(null);
   const [termEnrolledStudents, setTermEnrolledStudents] = useState([]);
-  const [enrolledMajorClasses, setEnrolledMajorClasses] = useState([]);
-  const [registrationConfig, setRegistrationConfig] = useState(null);
   const [availableYears, setAvailableYears] = useState(DEFAULT_CONFIG_YEARS);
   
   const [classSections, setClassSections] = useState([]);
   const [majorClassesByYear, setMajorClassesByYear] = useState({});
-  const [sectionConfigTab, setSectionConfigTab] = useState('foundation'); // 'foundation' or 'major'
+  const [sectionConfigTab, setSectionConfigTab] = useState('foundation');
   const [selectedYear, setSelectedYear] = useState(1);
   const [editingSection, setEditingSection] = useState({});
   const [moveStudentData, setMoveStudentData] = useState({ studentId: '', toSection: '' });
   const [moveStudentSearch, setMoveStudentSearch] = useState('');
 
-  // Derived options for filters
   const allStudentYearOptions = useMemo(() => toUniqueSortedYears(availableYears).length > 0 ? toUniqueSortedYears(availableYears) : DEFAULT_CONFIG_YEARS, [availableYears]);
   const allStudentStatusOptions = useMemo(() => buildStatusOptions(students.map(s => ({ status: s.status }))), [students]);
 
@@ -346,7 +339,6 @@ function AdminDashboard({ user, onLogout }) {
         const parsed = JSON.parse(savedConfig);
         const latestConfig = Array.isArray(parsed) ? parsed[parsed.length - 1] : parsed;
         if (latestConfig?.header) {
-          setRegistrationConfig(latestConfig);
           const configuredYears = readConfigYears(latestConfig);
           if (configuredYears.length > 0) setAvailableYears(configuredYears);
         }
@@ -364,14 +356,12 @@ function AdminDashboard({ user, onLogout }) {
   }, []);
 
   const handleAuthError = useCallback(() => {
-    // Navigate to admin login specifically, don't trigger global logout which wipes storage
     navigate('/admin-login');
   }, [navigate]);
 
   const initialLoadRef = React.useRef(false);
 
   const loadData = useCallback(async (mode = "initial") => {
-    // Only show full loading skeletons if we haven't completed the first load
     if (mode !== "refresh" && !initialLoadRef.current) setLoading(true);
     if (mode === "refresh") setRefreshing(true);
     
@@ -444,7 +434,7 @@ function AdminDashboard({ user, onLogout }) {
         onBreak: (sortedStudents || []).filter(s => s && (s.isOnBreak || s.is_on_break)).length
       });
       loadRegistrationConfig();
-      initialLoadRef.current = true; // Mark initial load as complete
+      initialLoadRef.current = true; 
     } catch (error) { 
       console.error("[CRITICAL] loadData crashed during execution:", error);
       if (error?.status === 401 || error?.status === 403) {
@@ -454,7 +444,7 @@ function AdminDashboard({ user, onLogout }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [loadRegistrationConfig, navigate, handleAuthError]); // students.length removed to break loop
+  }, [loadRegistrationConfig, navigate, handleAuthError]); 
 
   const loadClassSectionsForYear = useCallback(async (year) => {
     try {
@@ -471,7 +461,6 @@ function AdminDashboard({ user, onLogout }) {
   const handleInitializeSections = async () => {
     setLoading(true);
     try {
-      // Backend expects PUT /api/admin/class-sections for each section
       const sectionsToCreate = ['A', 'B', 'C', 'D'];
       for (const section of sectionsToCreate) {
         await api.adminUpdateClassSection({
@@ -482,7 +471,7 @@ function AdminDashboard({ user, onLogout }) {
           isLocked: false
         });
       }
-      alert(`Default sections (A,B,C,D) initialized for Year ${selectedYear}`);
+      alert(t('Default sections (A,B,C,D) initialized for Year {{year}}', { year: selectedYear }));
       loadClassSectionsForYear(selectedYear);
     } catch (e) { 
       alert(t('Failed to initialize: {{message}}', { message: e.message })); 
@@ -567,7 +556,6 @@ function AdminDashboard({ user, onLogout }) {
     }
   }, [activeTab, selectedYear, loadClassSectionsForYear, loadMajorClasses]);
 
-  // Tab Sidebar Layout Helpers
   const sidebarLinks = [
     { key: 'overview', label: t('Overview'), icon: 'dashboard', count: null },
     { key: 'new', label: t('New Registrations'), icon: 'group_add', count: stats.pending, section: t('Student Management') },
@@ -588,28 +576,24 @@ function AdminDashboard({ user, onLogout }) {
     { label: t("ON ACADEMIC BREAK"), value: stats.onBreak, icon: "pause_circle", tone: "rose", hint: t("Inactive status") },
   ];
 
-  // Generate username from English name + batch year
   const generateUsername = (student) => {
-    // Determine batch year from academic year entered
     const yearEntered = parseInt(student.academicyearentered || student.academic_year_entered || 0);
     const batch = yearEntered > 2000 ? yearEntered - 2012 : 0;
     
     let englishName = student.nameen || student.nameEn || student.englishName;
     
-    // If no English name, prompt admin to enter it
     if (!englishName || englishName.trim() === '') {
       englishName = prompt(
-        `Enter English name for ${student.namemm}:\n\n` +
-        `(Example: thantzin, aungaung, myomyo)\n\n` +
-        `Please type the English name:`
+        t('Enter English name for {{name}}:', { name: student.namemm }) + '\n\n' +
+        t('(Example: thantzin, aungaung, myomyo)') + '\n\n' +
+        t('Please type the English name:')
       );
       if (!englishName) {
-        alert('English name is required!');
+        alert(t('English name is required!'));
         return null;
       }
     }
     
-    // Clean: lowercase, remove spaces/special chars
     const cleanName = englishName
       .toLowerCase()
       .trim()
@@ -619,7 +603,6 @@ function AdminDashboard({ user, onLogout }) {
     return batch > 0 ? `b${batch}-${cleanName}` : cleanName;
   };
 
-  // Generate strong 16-character password
   const generateStrongPassword = (length = 16) => {
     const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
     const lower = 'abcdefghijkmnopqrstuvwxyz';
@@ -636,7 +619,6 @@ function AdminDashboard({ user, onLogout }) {
       return charset[Math.floor(Math.random() * charset.length)];
     };
 
-    // Ensure at least one of each type
     const chars = [
       pickRandom(upper),
       pickRandom(lower),
@@ -644,12 +626,10 @@ function AdminDashboard({ user, onLogout }) {
       pickRandom(symbols)
     ];
 
-    // Fill remaining with random chars
     for (let i = chars.length; i < length; i += 1) {
       chars.push(pickRandom(all));
     }
 
-    // Fisher-Yates shuffle
     for (let i = chars.length - 1; i > 0; i -= 1) {
       const j = window.crypto?.getRandomValues
         ? (() => { const arr = new Uint32Array(1); window.crypto.getRandomValues(arr); return arr[0] % (i + 1); })()
@@ -677,74 +657,69 @@ function AdminDashboard({ user, onLogout }) {
   const approveStudent = async (student) => {
     const studentId = student.studentid || student.id;
     if (!studentId) {
-      alert('Cannot approve: no student ID found.');
+      alert(t('Cannot approve: no student ID found.'));
       return;
     }
 
-    // 1. Generate username (prompts for English name if needed)
     const suggestedUsername = generateUsername(student);
     if (!suggestedUsername) return;
 
-    // 2. Allow admin to modify username
-    const usernameInput = prompt('Enter username for student:', suggestedUsername);
+    const usernameInput = prompt(t('Enter username for student:'), suggestedUsername);
     if (!usernameInput || !usernameInput.trim()) {
-      alert('Username is required.');
+      alert(t('Username is required.'));
       return;
     }
     const username = usernameInput.trim();
 
-    // 3. Generate strong password
     const password = generateStrongPassword(16);
 
-    // 4. Confirm action
     const confirmApprove = window.confirm(
-      `Approve ${student.namemm}?\n\n` +
-      `Username: ${username}\n` +
-      `Password: ${password}\n\n` +
-      `Email will be sent to: ${student.email}\n\nContinue?`
+      t('Approve {{name}}?', { name: student.namemm }) + '\n\n' +
+      t('Username: {{u}}', { u: username }) + '\n' +
+      t('Password: {{p}}', { p: password }) + '\n\n' +
+      t('Email will be sent to: {{e}}', { e: student.email || '-' }) + '\n\n' +
+      t('Continue?')
     );
 
     if (!confirmApprove) return;
 
     setLoading(true);
     try {
-      // 5. Call API - updates student status, creates user account, sends email
       const result = await api.approveStudent(studentId, {
         username: username,
         password: password
       });
 
-      // 6. Show result
       const emailStatus = result?.emailSent 
-        ? 'Email sent successfully.' 
-        : `Email status: ${result?.emailError || 'Process completed'}`;
+        ? t('Email sent successfully.') 
+        : t('Email status: {{e}}', { e: result?.emailError || t('Process completed') });
       
       alert(
-        `Approved ${student.namemm}!\n\n` +
-        `Username: ${username}\n` +
-        `Password: ${password}\n\n` +
+        t('Approved {{name}}!', { name: student.namemm }) + '\n\n' +
+        t('Username: {{u}}', { u: username }) + '\n' +
+        t('Password: {{p}}', { p: password }) + '\n\n' +
         `${emailStatus}\n` +
-        `Recipient: ${student.email || '-'}`
+        t('Recipient: {{r}}', { r: student.email || '-' })
       );
 
-      loadData(); // Refresh data
+      loadData(); 
     } catch (error) {
       console.error('Approve error:', error);
-      alert('Error: ' + (error.message || 'Verification failed'));
+      alert(t('Error: ') + (error.message || t('Verification failed')));
     } finally {
       setLoading(false);
     }
   };
 
   const approveDetails = async (student) => {
-    const confirm = window.confirm(`Approve ${student.namemm}'s details?`);
+    const confirm = window.confirm(t('Approve {{name}}\'s details?', { name: student.namemm }));
     if (!confirm) return;
     setLoading(true);
     try { await api.updateStudent(student.studentid || student.id, { status: 'PAYMENT_REQUIRED' }); loadData(); } catch (e) { alert(e.message); } finally { setLoading(false); }
   };
 
   const approvePayment = async (student) => {
-    const confirm = window.confirm(`Approve payment for ${student.namemm}?`);
+    const confirm = window.confirm(t('Approve payment for {{name}}?', { name: student.namemm }));
     if (!confirm) return;
     setLoading(true);
     try { await api.updateStudent(student.studentid || student.id, { status: 'PAYMENT_DONE' }); loadData(); } catch (e) { alert(e.message); } finally { setLoading(false); }
@@ -753,67 +728,57 @@ function AdminDashboard({ user, onLogout }) {
   const exportPaymentStudentsToExcel = () => {
     const filtered = getFilteredPaymentStudents();
     if (filtered.length === 0) {
-      alert("No data available to export.");
+      alert(t("No data available."));
       return;
     }
 
-    // Map data to array of objects (keys = column headers)
     const exportData = filtered.map(student => ({
-      "Name": student.namemm || "-",
-      "Username": student.user_name || "-",
-      "Email": student.email || "-",
-      "Phone": student.phone || "-",
-      "Year": getResolvedYearValue(student) || "-",
-      "Academic Year": getResolvedAcademicYearValue(student, currentTerm),
-      "Semester": getResolvedSemesterValue(student, currentTerm),
-      "Payment Status": normalizePaymentSessionStatus(student),
-      "Benefit Student": (student.isBenefitStudent || student.is_benefit_student) ? "Yes" : "No",
-      "Hostel Student": (student.isHostelStudent || student.is_hostel_student) ? "Yes" : "No"
+      [t("Name")]: student.namemm || "-",
+      [t("Username")]: student.user_name || "-",
+      [t("Email")]: student.email || "-",
+      [t("Phone")]: student.phone || "-",
+      [t("Year")]: getResolvedYearValue(student) || "-",
+      [t("Academic Year")]: getResolvedAcademicYearValue(student, currentTerm),
+      [t("Semester")]: getResolvedSemesterValue(student, currentTerm),
+      [t("Payment Status")]: normalizePaymentSessionStatus(student),
+      [t("Benefit")]: (student.isBenefitStudent || student.is_benefit_student) ? t("YES") : t("NO"),
+      [t("Hostel")]: (student.isHostelStudent || student.is_hostel_student) ? t("YES") : t("NO")
     }));
 
-    // Convert to worksheet
     const ws = XLSX.utils.json_to_sheet(exportData);
-    // Create workbook
     const wb = XLSX.utils.book_new();
-    // Append sheet
-    XLSX.utils.book_append_sheet(wb, ws, "Payment Desk");
-    // Trigger browser download
-    XLSX.writeFile(wb, `Payment_Verification_List_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, t("Payment Desk"));
+    XLSX.writeFile(wb, `${t("Payment_Verification_List")}_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const exportStudentsToExcel = () => {
     const filtered = getFilteredStudents();
     if (filtered.length === 0) {
-      alert("No data available to export.");
+      alert(t("No data available."));
       return;
     }
 
-    // Map data to array of objects (keys = column headers)
     const exportData = filtered.map(student => ({
-      "Name": student.namemm || "-",
-      "Username": student.user_name || "-",
-      "Email": student.email || "-",
-      "Phone": student.phone || "-",
-      "Year": getResolvedYearValue(student) || "-",
-      "Academic Year": getResolvedAcademicYearValue(student, currentTerm),
-      "Semester": getResolvedSemesterValue(student, currentTerm),
-      "Status": student.status || "-",
-      "Benefit Student": (student.isBenefitStudent || student.is_benefit_student) ? "Yes" : "No",
-      "Hostel Student": (student.isHostelStudent || student.is_hostel_student) ? "Yes" : "No",
-      "On Break": (student.isOnBreak || student.is_on_break) ? "Yes" : "No",
-      "Address": student.address || "-",
-      "NRC": student.nrc || student.nrc_number || "-",
-      "Date of Birth": formatDate(student.date_of_birth || student.dateOfBirth)
+      [t("Name")]: student.namemm || "-",
+      [t("Username")]: student.user_name || "-",
+      [t("Email")]: student.email || "-",
+      [t("Phone")]: student.phone || "-",
+      [t("Year")]: getResolvedYearValue(student) || "-",
+      [t("Academic Year")]: getResolvedAcademicYearValue(student, currentTerm),
+      [t("Semester")]: getResolvedSemesterValue(student, currentTerm),
+      [t("Status")]: student.status || "-",
+      [t("Benefit")]: (student.isBenefitStudent || student.is_benefit_student) ? t("YES") : t("NO"),
+      [t("Hostel")]: (student.isHostelStudent || student.is_hostel_student) ? t("YES") : t("NO"),
+      [t("Break")]: (student.isOnBreak || student.is_on_break) ? t("YES") : t("NO"),
+      [t("Address")]: student.address || "-",
+      [t("NRC")]: student.nrc || student.nrc_number || "-",
+      [t("Date of Birth")]: formatDate(student.date_of_birth || student.dateOfBirth)
     }));
 
-    // Convert to worksheet
     const ws = XLSX.utils.json_to_sheet(exportData);
-    // Create workbook
     const wb = XLSX.utils.book_new();
-    // Append sheet
-    XLSX.utils.book_append_sheet(wb, ws, "Student Directory");
-    // Trigger browser download
-    XLSX.writeFile(wb, `Student_Directory_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, t("Student Directory"));
+    XLSX.writeFile(wb, `${t("Student_Directory")}_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const getFilteredStudents = () => {
@@ -863,7 +828,7 @@ function AdminDashboard({ user, onLogout }) {
     return filtered;
   };
 
-  if (!admin) return <div className="flex h-screen items-center justify-center bg-white dark:bg-slate-950 font-black text-teal-600 uppercase tracking-widest text-xs animate-pulse">Synchronizing System...</div>;
+  if (!admin) return <div className="flex h-screen items-center justify-center bg-white dark:bg-slate-950 font-black text-teal-600 uppercase tracking-widest text-xs animate-pulse">{t("Synchronizing...")}</div>;
 
   return (
     <div className="flex h-full w-full bg-white dark:bg-slate-950 overflow-hidden font-roboto">
@@ -916,7 +881,7 @@ function AdminDashboard({ user, onLogout }) {
                 </div>
                 <button onClick={onLogout} className="w-full flex items-center justify-center gap-3 py-3 rounded-xl bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 border border-slate-100 dark:border-slate-800 transition-all text-xs font-black uppercase tracking-widest shadow-sm active:scale-[0.98]">
                     <span className="material-icons-round text-sm">logout</span>
-                    <span>Sign Out</span>
+                    <span>{t("Sign Out")}</span>
                 </button>
             </div>
         </div>
@@ -927,7 +892,7 @@ function AdminDashboard({ user, onLogout }) {
         {/* HEADER */}
         <header className="flex h-20 items-center justify-between border-b border-slate-100 bg-white/80 px-10 dark:border-slate-800 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
             <div className="flex flex-col">
-                <h1 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase tracking-widest text-[11px] opacity-40 mb-0.5">NAVIGATION CONTEXT</h1>
+                <h1 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase tracking-widest text-[11px] opacity-40 mb-0.5">{t("NAVIGATION CONTEXT")}</h1>
                 <p className="text-sm font-bold text-slate-500 dark:text-slate-400 capitalize">{t("Registration Dashboard")} • {t(activeTab.replace('-', ' '))}</p>
             </div>
             <div className="flex items-center gap-6">
@@ -997,44 +962,43 @@ function AdminDashboard({ user, onLogout }) {
                                     <div>
                                         <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{t("System Summary")}</h3>
                                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("Real-time Registration Pulse")}</p>
-                                        </div>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <div className="bg-slate-50/50 dark:bg-slate-950/50 rounded-[32px] p-8 border border-slate-100 dark:border-slate-800 relative group overflow-hidden transition-all hover:shadow-lg">
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="bg-slate-50/50 dark:bg-slate-950/50 rounded-[32px] p-8 border border-slate-100 dark:border-slate-800 relative group overflow-hidden transition-all hover:shadow-lg">
                                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 px-1">{t("Performance Metrics")}</h4>
                                         <div className="space-y-4">
-                                           {[
-                                               { l: t("Total Registrations"), v: stats.total, c: "teal" },
-                                               { l: t("Successfully Approved"), v: stats.approved, c: "emerald" },
-                                               { l: t("Successfully Enrolled"), v: stats.enrolled, c: "cyan" },
-                                               { l: t("Verification Pending"), v: stats.pending + stats.detailsSubmitted, c: "rose" }
-                                           ].map((row, i) => (
-                                               <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:translate-x-1">
-                                                   <span className="text-sm font-bold text-slate-600 dark:text-slate-400">{row.l}</span>
-                                                   <span className={cn("text-xl font-black", `text-${row.c}-600 dark:text-${row.c}-400`)}>{row.v}</span>
-                                               </div>
-                                           ))}
+                                            {[
+                                                { l: t("Total Registrations"), v: stats.total, c: "teal" },
+                                                { l: t("Successfully Approved"), v: stats.approved, c: "emerald" },
+                                                { l: t("Successfully Enrolled"), v: stats.enrolled, c: "cyan" },
+                                                { l: t("Verification Pending"), v: stats.pending + stats.detailsSubmitted, c: "rose" }
+                                            ].map((row, i) => (
+                                                <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:translate-x-1">
+                                                    <span className="text-sm font-bold text-slate-600 dark:text-slate-400">{row.l}</span>
+                                                    <span className={cn("text-xl font-black", `text-${row.c}-600 dark:text-${row.c}-400`)}>{row.v}</span>
+                                                </div>
+                                            ))}
                                         </div>
                                         <div className="absolute top-0 right-0 h-32 w-32 bg-teal-500/5 rounded-bl-full transform group-hover:scale-110 transition-transform" />
-                                        </div>
-                                        <div className="bg-slate-50/50 dark:bg-slate-950/50 rounded-[32px] p-8 border border-slate-100 dark:border-slate-800 relative group overflow-hidden transition-all hover:shadow-lg">
+                                    </div>
+                                    <div className="bg-slate-50/50 dark:bg-slate-950/50 rounded-[32px] p-8 border border-slate-100 dark:border-slate-800 relative group overflow-hidden transition-all hover:shadow-lg">
                                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 px-1">{t("Demographics")}</h4>
                                         <div className="space-y-4">
-                                           {[
-                                               { l: t("Financial Aid Required"), v: stats.benefit, c: "indigo" },
-                                               { l: t("On-Campus Hostel"), v: stats.hostel, c: "cyan" },
-                                               { l: t("Academic Leave"), v: stats.onBreak, c: "amber" }
-                                           ].map((row, i) => (
-                                               <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:translate-x-1">
-                                                   <span className="text-sm font-bold text-slate-600 dark:text-slate-400">{row.l}</span>
-                                                   <span className={cn("text-xl font-black", `text-${row.c}-600 dark:text-${row.c}-400`)}>{row.v}</span>
-                                               </div>
-                                           ))}
+                                            {[
+                                                { l: t("Financial Aid Required"), v: stats.benefit, c: "indigo" },
+                                                { l: t("On-Campus Hostel"), v: stats.hostel, c: "cyan" },
+                                                { l: t("Academic Leave"), v: stats.onBreak, c: "amber" }
+                                            ].map((row, i) => (
+                                                <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:translate-x-1">
+                                                    <span className="text-sm font-bold text-slate-600 dark:text-slate-400">{row.l}</span>
+                                                    <span className={cn("text-xl font-black", `text-${row.c}-600 dark:text-${row.c}-400`)}>{row.v}</span>
+                                                </div>
+                                            ))}
                                         </div>
                                         <div className="absolute top-0 right-0 h-32 w-32 bg-indigo-500/5 rounded-bl-full transform group-hover:scale-110 transition-transform" />
-                                        </div>
-                                        </div>
-                                {/* Recent Activity Section */}
+                                    </div>
+                                </div>
                                 <div className="bg-slate-50/30 dark:bg-slate-950/30 rounded-[32px] p-10 border border-slate-100 dark:border-slate-800 relative group overflow-hidden">
                                     <div className="flex items-center gap-4 mb-8">
                                         <div className="h-10 w-10 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center text-teal-600 border border-slate-100 dark:border-slate-800 shadow-sm">
@@ -1067,7 +1031,6 @@ function AdminDashboard({ user, onLogout }) {
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{t("New Student Registrations")}</h3>
                                     <span className="px-4 py-1.5 rounded-full bg-teal-50 dark:bg-teal-900/30 text-teal-600 text-[10px] font-black uppercase tracking-widest border border-teal-100 dark:border-teal-800">{newRegistrations.length} {t("PENDING")}</span>
-
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                                     {newRegistrations.map((student, i) => (
@@ -1080,29 +1043,30 @@ function AdminDashboard({ user, onLogout }) {
                                             
                                             <div className="space-y-3 mb-8">
                                                 <div className="flex flex-col gap-0.5">
-                                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Email</span>
+                                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{t("Email")}</span>
                                                     <span className="text-xs font-bold text-slate-600 dark:text-slate-300 truncate">{student.email || '-'}</span>
                                                 </div>
                                                 <div className="flex flex-col gap-0.5">
-                                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Phone</span>
+                                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{t("Phone")}</span>
                                                     <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{student.phone || '-'}</span>
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800/50">
                                                     <div className="flex flex-col gap-0.5">
-                                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Matric Roll</span>
+                                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{t("Matric Roll No")}</span>
                                                         <span className="text-xs font-bold text-slate-900 dark:text-white">{student.matriculation_rollno || '-'}</span>
                                                     </div>
                                                     <div className="flex flex-col gap-0.5">
-                                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Total Marks</span>
+                                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{t("Total Marks")}</span>
                                                         <span className="text-xs font-bold text-slate-900 dark:text-white">{student.totalmarks_obtained || '-'}</span>
                                                     </div>
                                                 </div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-3 mb-3">
-                                                <button onClick={() => approveStudent(student)} className="bg-teal-600 hover:bg-teal-700 text-white text-[10px] font-black uppercase tracking-widest py-3 rounded-xl shadow-md shadow-teal-500/10 active:scale-95 transition-all">Verify</button>
-                                                <button onClick={() => openRejectDialog(student)} className="bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest py-3 rounded-xl hover:bg-slate-50 transition-all active:scale-95">Decline</button>
+                                                <button onClick={() => approveStudent(student)} className="bg-teal-600 hover:bg-teal-700 text-white text-[10px] font-black uppercase tracking-widest py-3 rounded-xl shadow-md shadow-teal-500/10 active:scale-95 transition-all">{t("Verify")}</button>
+                                                <button onClick={() => openRejectDialog(student)} className="bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest py-3 rounded-xl hover:bg-slate-50 transition-all active:scale-95">{t("Decline")}</button>
                                             </div>
-                                            <button onClick={() => openDraftDetail(student)} className="w-full bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-[10px] font-black uppercase tracking-widest py-3 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95">Detail</button>
+                                            <button onClick={() => openDraftDetail(student)} className="w-full bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-[10px] font-black uppercase tracking-widest py-3 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95">{t("Detail")}</button>
+
                                             <div className="absolute top-0 right-0 h-20 w-20 bg-teal-500/5 rounded-bl-full transform group-hover:scale-110 transition-transform" />
                                         </div>
                                     ))}
@@ -1111,7 +1075,7 @@ function AdminDashboard({ user, onLogout }) {
                         )}
                         {activeTab === 'details' && (
                             <div className="space-y-8 animate-in fade-in duration-700">
-                                <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Details Verification Queue</h3>
+                                <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{t("Details Verification Queue")}</h3>
                                 <div className="grid grid-cols-1 gap-4">
                                     {students.filter(s => String(s.status || '').toUpperCase() === 'DETAILS_SUBMITTED').map((student, i) => (
                                         <div key={i} className="flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl hover:shadow-lg transition-all">
@@ -1119,14 +1083,14 @@ function AdminDashboard({ user, onLogout }) {
                                                 <div className="h-12 w-12 rounded-2xl bg-white dark:bg-slate-800 grid place-items-center text-teal-600 font-black border border-slate-100 dark:border-slate-800 shadow-sm">{student.namemm?.charAt(0)}</div>
                                                 <div>
                                                     <div className="font-black text-slate-900 dark:text-white">{student.namemm}</div>
-                                                    <div className="text-xs font-bold text-slate-400">{student.user_name} • {student.email}</div>
+                                                    <div className="text-xs font-bold text-slate-400">{student.user_name || '-'} • {student.email}</div>
                                                 </div>
                                             </div>
-                                            <button onClick={() => approveDetails(student)} className="px-6 py-3 bg-teal-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-teal-700 active:scale-95 transition-all">Review & Approve</button>
+                                            <button onClick={() => approveDetails(student)} className="px-6 py-3 bg-teal-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-teal-700 active:scale-95 transition-all">{t("Review & Approve")}</button>
                                         </div>
                                     ))}
                                     {students.filter(s => String(s.status || '').toUpperCase() === 'DETAILS_SUBMITTED').length === 0 && (
-                                        <div className="p-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[32px]">No details pending verification</div>
+                                        <div className="p-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[32px]">{t("No details pending verification")}</div>
                                     )}
                                 </div>
                             </div>
@@ -1135,17 +1099,17 @@ function AdminDashboard({ user, onLogout }) {
                             <div className="space-y-8 animate-in fade-in duration-700">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                     <div className="flex flex-col gap-2">
-                                        <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Payment Verification Desk</h3>
+                                        <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{t("Payment Verification Desk")}</h3>
                                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                            Current Term: {currentTerm?.academicYear || '-'} | Semester {currentTerm?.semester || '-'}
+                                            {t("Current Term")}: {currentTerm?.academicYear || '-'} | {t("Semester")} {currentTerm?.semester || '-'}
                                         </p>
                                     </div>
-                                    <button 
-                                        onClick={() => exportPaymentStudentsToExcel()} 
+                                    <button
+                                        onClick={() => exportPaymentStudentsToExcel()}
                                         className="inline-flex items-center gap-2 bg-slate-900 dark:bg-teal-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:shadow-xl active:scale-95 transition-all w-fit"
                                     >
                                         <span className="material-icons-outlined text-sm">download</span>
-                                        Export to Excel
+                                        {t("Export to Excel")}
                                     </button>
                                 </div>
 
@@ -1153,62 +1117,61 @@ function AdminDashboard({ user, onLogout }) {
                                 <div className="bg-slate-50 dark:bg-slate-950/50 p-4 rounded-[24px] border border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-3 shadow-sm">
                                     <div className="relative group flex-1 min-w-[300px]">
                                         <span className="material-icons-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-teal-500 transition-colors text-sm">search</span>
-                                        <input 
-                                            type="text" 
-                                            placeholder="Search by name, username, email..."
+                                        <input
+                                            type="text"
+                                            placeholder={t("Search by name, username, email...")}
                                             className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/30 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                                             value={paymentFilters.search}
                                             onChange={(e) => setPaymentFilters({...paymentFilters, search: e.target.value})}
                                         />
                                     </div>
-                                    <select 
+                                    <select
                                         value={paymentFilters.year}
                                         onChange={(e) => setPaymentFilters({...paymentFilters, year: e.target.value})}
                                         className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[140px]"
                                     >
-                                        <option value="" className="dark:bg-slate-900">All Years</option>
-                                        {allStudentYearOptions.map(y => <option key={y} value={y} className="dark:bg-slate-900">Year {y}</option>)}
+                                        <option value="" className="dark:bg-slate-900">{t("All Years")}</option>
+                                        {allStudentYearOptions.map(y => <option key={y} value={y} className="dark:bg-slate-900">{t("Year {{n}}", { n: y })}</option>)}
                                     </select>
-                                    <select 
+                                    <select
                                         value={paymentFilters.batch}
                                         onChange={(e) => setPaymentFilters({...paymentFilters, batch: e.target.value})}
                                         className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[140px]"
                                     >
-                                        <option value="" className="dark:bg-slate-900">All Academic Years</option>
+                                        <option value="" className="dark:bg-slate-900">{t("All Academic Years")}</option>
                                         {currentTerm?.academicYear && <option value={currentTerm.academicYear} className="dark:bg-slate-900">{currentTerm.academicYear}</option>}
                                     </select>
-                                    <select 
+                                    <select
                                         value={paymentFilters.semester}
                                         onChange={(e) => setPaymentFilters({...paymentFilters, semester: e.target.value})}
                                         className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[100px]"
                                     >
-                                        <option value="" className="dark:bg-slate-900">Semester</option>
-                                        {[1,2].map(s => <option key={s} value={s} className="dark:bg-slate-900">{s}</option>)}
+                                        <option value="" className="dark:bg-slate-900">{t("Semester")}</option>
+                                        {[1,2].map(s => <option key={s} value={s} className="dark:bg-slate-900">{t("Semester {{s}}", { s })}</option>)}
                                     </select>
-                                    <select 
+                                    <select
                                         value={paymentFilters.paymentStatus}
                                         onChange={(e) => setPaymentFilters({...paymentFilters, paymentStatus: e.target.value})}
                                         className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[180px]"
                                     >
-                                        <option value="" className="dark:bg-slate-900">All Payment Status</option>
+                                        <option value="" className="dark:bg-slate-900">{t("All Payment Status")}</option>
                                         <option value="PAYMENT_PENDING" className="dark:bg-slate-900">PAYMENT_PENDING</option>
                                         <option value="PAYMENT_DONE" className="dark:bg-slate-900">PAYMENT_DONE</option>
                                     </select>
                                 </div>
-
                                 {/* Detailed Table */}
                                 <div className="bg-white dark:bg-slate-950/50 rounded-[32px] border border-slate-100 dark:border-slate-800 overflow-x-auto shadow-sm scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
                                     <table className="w-full border-collapse min-w-[1000px]">
                                         <thead>
                                             <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
-                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Name</th>
-                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Username</th>
-                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Email</th>
-                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Year</th>
-                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Academic Year</th>
-                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Semester</th>
-                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Payment Status</th>
-                                                <th className="px-6 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Actions</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t("Name")}</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t("Username")}</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t("Email")}</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t("Year")}</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">{t("Academic Year")}</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">{t("Semester")}</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t("Status")}</th>
+                                                <th className="px-6 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t("Actions")}</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -1234,13 +1197,13 @@ function AdminDashboard({ user, onLogout }) {
                                                                 onClick={() => approvePayment(student)}
                                                                 className="px-4 py-2 bg-teal-600 text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-teal-700 shadow-md shadow-teal-500/10 active:scale-95 transition-all"
                                                             >
-                                                                Verify Payment
+                                                                {t("Verify Payment")}
                                                             </button>
                                                         ) : (
                                                             <div className="flex justify-end gap-2">
                                                                 <button 
-                                                                                                                            onClick={() => navigate(`/admin/submitted-details-review/${student.studentid || student.id}`, { state: { studentRecord: student } })}
-                                                                                                                            className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-teal-600 transition-all"><span className="material-icons-outlined text-sm">visibility</span></button>
+                                                                    onClick={() => navigate(`/admin/submitted-details-review/${student.studentid || student.id}`, { state: { studentRecord: student } })}
+                                                                    className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-teal-600 transition-all"><span className="material-icons-outlined text-sm">visibility</span></button>
                                                                 <button className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-emerald-600 border border-emerald-100 dark:border-emerald-900/30 transition-all"><span className="material-icons-outlined text-sm">check_circle</span></button>
                                                             </div>
                                                         )}
@@ -1249,7 +1212,7 @@ function AdminDashboard({ user, onLogout }) {
                                             ))}
                                             {getFilteredPaymentStudents().length === 0 && (
                                                 <tr>
-                                                    <td colSpan={8} className="p-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs">No matching records found in desk</td>
+                                                    <td colSpan={8} className="p-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs">{t("No matching records found")}</td>
                                                 </tr>
                                             )}
                                         </tbody>
@@ -1260,7 +1223,7 @@ function AdminDashboard({ user, onLogout }) {
                         {activeTab === 'enrolled' && (
                             <div className="space-y-8 animate-in fade-in duration-700">
                                 <div className="flex flex-col gap-6">
-                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Enrolled Students Archive</h3>
+                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{t("Enrolled Students Archive")}</h3>
                                     
                                     {/* Filter Bar */}
                                     <div className="bg-slate-50 dark:bg-slate-950/50 p-4 rounded-[24px] border border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-3 shadow-sm">
@@ -1268,7 +1231,7 @@ function AdminDashboard({ user, onLogout }) {
                                             <span className="material-icons-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-teal-500 transition-colors text-sm">search</span>
                                             <input 
                                                 type="text" 
-                                                placeholder="Search by name..."
+                                                placeholder={t("Search by name...")}
                                                 className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/30 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                                                 value={enrolledFilters.search}
                                                 onChange={(e) => setEnrolledFilters({...enrolledFilters, search: e.target.value})}
@@ -1279,15 +1242,15 @@ function AdminDashboard({ user, onLogout }) {
                                             onChange={(e) => setEnrolledFilters({...enrolledFilters, year: e.target.value})}
                                             className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[120px]"
                                         >
-                                            <option value="" className="dark:bg-slate-900">Year</option>
-                                            {DEFAULT_CONFIG_YEARS.map(y => <option key={y} value={y} className="dark:bg-slate-900">{y}</option>)}
+                                            <option value="" className="dark:bg-slate-900">{t("Year")}</option>
+                                            {DEFAULT_CONFIG_YEARS.map(y => <option key={y} value={y} className="dark:bg-slate-900">{t("Year {{n}}", { n: y })}</option>)}
                                         </select>
                                         <select 
                                             value={enrolledFilters.batch}
                                             onChange={(e) => setEnrolledFilters({...enrolledFilters, batch: e.target.value})}
                                             className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[140px]"
                                         >
-                                            <option value="" className="dark:bg-slate-900">Academic Year</option>
+                                            <option value="" className="dark:bg-slate-900">{t("Academic Year")}</option>
                                             {currentTerm?.academicYear && <option value={currentTerm.academicYear} className="dark:bg-slate-900">{currentTerm.academicYear}</option>}
                                         </select>
                                         <select 
@@ -1295,15 +1258,15 @@ function AdminDashboard({ user, onLogout }) {
                                             onChange={(e) => setEnrolledFilters({...enrolledFilters, semester: e.target.value})}
                                             className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[100px]"
                                         >
-                                            <option value="" className="dark:bg-slate-900">Semester</option>
-                                            {[1,2].map(s => <option key={s} value={s} className="dark:bg-slate-900">{s}</option>)}
+                                            <option value="" className="dark:bg-slate-900">{t("Semester")}</option>
+                                            {[1,2].map(s => <option key={s} value={s} className="dark:bg-slate-900">{t("Semester {{s}}", { s })}</option>)}
                                         </select>
                                         <select 
                                             value={enrolledFilters.class}
                                             onChange={(e) => setEnrolledFilters({...enrolledFilters, class: e.target.value})}
                                             className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[100px]"
                                         >
-                                            <option value="" className="dark:bg-slate-900">Class</option>
+                                            <option value="" className="dark:bg-slate-900">{t("Class")}</option>
                                             {BASE_CLASS_OPTIONS.map(c => <option key={c} value={c} className="dark:bg-slate-900">{c}</option>)}
                                         </select>
                                     </div>
@@ -1313,15 +1276,15 @@ function AdminDashboard({ user, onLogout }) {
                                     <table className="w-full border-collapse min-w-[1000px]">
                                         <thead>
                                             <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
-                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Name</th>
-                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Username</th>
-                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Email</th>
-                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Year</th>
-                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Academic Year</th>
-                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Semester</th>
-                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Class</th>
-                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Status</th>
-                                                <th className="px-6 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Actions</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t("Name")}</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t("Username")}</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t("Email")}</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t("Year")}</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">{t("Academic Year")}</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">{t("Semester")}</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t("Class")}</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t("Status")}</th>
+                                                <th className="px-6 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t("Actions")}</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -1337,7 +1300,7 @@ function AdminDashboard({ user, onLogout }) {
                                                     <td className="px-6 py-6 text-[11px] font-bold text-slate-500 text-center whitespace-nowrap">{student.termSemester || '-'}</td>
                                                     <td className="px-6 py-6 text-[11px] font-black text-slate-500 text-center whitespace-nowrap">{student.classDisplay || '-'}</td>
                                                     <td className="px-6 py-6 whitespace-nowrap">
-                                                        <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase tracking-widest rounded-lg border border-emerald-100">ENROLLED</span>
+                                                        <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase tracking-widest rounded-lg border border-emerald-100">{t("ENROLLED")}</span>
                                                     </td>
                                                     <td className="px-6 py-6 text-right whitespace-nowrap">
                                                         <button 
@@ -1348,7 +1311,7 @@ function AdminDashboard({ user, onLogout }) {
                                             ))}
                                             {getFilteredEnrolledStudents().length === 0 && (
                                                 <tr>
-                                                    <td colSpan={9} className="p-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs">No matching records found</td>
+                                                    <td colSpan={9} className="p-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs">{t("No records found")}</td>
                                                 </tr>
                                             )}
                                         </tbody>
@@ -1360,18 +1323,18 @@ function AdminDashboard({ user, onLogout }) {
                             <div className="space-y-8 animate-in fade-in duration-700">
                                 <div className="flex flex-col gap-6">
                                     <div>
-                                        <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">All Students</h3>
+                                        <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{t("All Students")}</h3>
                                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-                                            Current Term: {currentTerm?.academicYear || '-'} | Semester {currentTerm?.semester || '-'}
+                                            {t("Current Term")}: {currentTerm?.academicYear || '-'} | {t("Semester")} {currentTerm?.semester || '-'}
                                         </p>
                                     </div>
-                                    
+
                                     <div className="bg-slate-50 dark:bg-slate-950/50 p-4 rounded-[24px] border border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-3 shadow-sm">
                                         <div className="relative group flex-1 min-w-[300px]">
                                             <span className="material-icons-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-teal-500 transition-colors text-sm">search</span>
                                             <input 
                                                 type="text" 
-                                                placeholder="Search by name, username, email..."
+                                                placeholder={t("Search by name, username, email...")}
                                                 className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/30 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                                                 value={filters.search}
                                                 onChange={(e) => setFilters({...filters, search: e.target.value})}
@@ -1382,15 +1345,15 @@ function AdminDashboard({ user, onLogout }) {
                                             onChange={(e) => setFilters({...filters, year: e.target.value})}
                                             className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[140px]"
                                         >
-                                            <option value="" className="dark:bg-slate-900">All Years</option>
-                                            {allStudentYearOptions.map(y => <option key={y} value={y} className="dark:bg-slate-900">Year {y}</option>)}
+                                            <option value="" className="dark:bg-slate-900">{t("All Years")}</option>
+                                            {allStudentYearOptions.map(y => <option key={y} value={y} className="dark:bg-slate-900">{t("Year {{n}}", { n: y })}</option>)}
                                         </select>
                                         <select 
                                             value={filters.batch}
                                             onChange={(e) => setFilters({...filters, batch: e.target.value})}
                                             className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[180px]"
                                         >
-                                            <option value="" className="dark:bg-slate-900">All Academic Years</option>
+                                            <option value="" className="dark:bg-slate-900">{t("All Academic Years")}</option>
                                             {currentTerm?.academicYear && <option value={currentTerm.academicYear} className="dark:bg-slate-900">{currentTerm.academicYear}</option>}
                                         </select>
                                         <select 
@@ -1398,23 +1361,23 @@ function AdminDashboard({ user, onLogout }) {
                                             onChange={(e) => setFilters({...filters, semester: e.target.value})}
                                             className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[140px]"
                                         >
-                                            <option value="" className="dark:bg-slate-900">All Semesters</option>
-                                            {[1,2].map(s => <option key={s} value={String(s)} className="dark:bg-slate-900">Semester {s}</option>)}
+                                            <option value="" className="dark:bg-slate-900">{t("All Semesters")}</option>
+                                            {[1,2].map(s => <option key={s} value={String(s)} className="dark:bg-slate-900">{t("Semester {{s}}", { s })}</option>)}
                                         </select>
                                         <select 
                                             value={filters.status}
                                             onChange={(e) => setFilters({...filters, status: e.target.value})}
                                             className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[160px]"
                                         >
-                                            <option value="" className="dark:bg-slate-900">All Status</option>
-                                            {allStudentStatusOptions.map(s => <option key={s} value={s} className="dark:bg-slate-900">{s}</option>)}
+                                            <option value="" className="dark:bg-slate-900">{t("All Status")}</option>
+                                            {allStudentStatusOptions.map(s => <option key={s} value={s} className="dark:bg-slate-900">{t(s)}</option>)}
                                         </select>
                                         <button 
                                             onClick={() => exportStudentsToExcel()} 
                                             className="inline-flex items-center gap-2 bg-slate-900 dark:bg-teal-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:shadow-xl active:scale-95 transition-all w-fit ml-auto"
                                         >
                                             <span className="material-icons-outlined text-sm">download</span>
-                                            Export to Excel
+                                            {t("Export to Excel")}
                                         </button>
                                     </div>
                                 </div>
@@ -1423,17 +1386,17 @@ function AdminDashboard({ user, onLogout }) {
                                     <table className="w-full border-collapse min-w-[1200px]">
                                         <thead>
                                             <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
-                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Name</th>
-                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Username</th>
-                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Email</th>
-                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Year</th>
-                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Academic Year</th>
-                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Semester</th>
-                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Status</th>
-                                                <th className="px-4 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Benefit</th>
-                                                <th className="px-4 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Hostel</th>
-                                                <th className="px-4 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Break</th>
-                                                <th className="px-6 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Actions</th>
+                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t("Name")}</th>
+                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t("Username")}</th>
+                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t("Email")}</th>
+                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t("Year")}</th>
+                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">{t("Academic Year")}</th>
+                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">{t("Semester")}</th>
+                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t("Status")}</th>
+                                                    <th className="px-4 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t("Benefit")}</th>
+                                                    <th className="px-4 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t("Hostel")}</th>
+                                                    <th className="px-4 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t("Break")}</th>
+                                                    <th className="px-6 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{t("Actions")}</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -1477,7 +1440,7 @@ function AdminDashboard({ user, onLogout }) {
                                             ))}
                                             {getFilteredStudents().length === 0 && (
                                                 <tr>
-                                                    <td colSpan={11} className="p-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs">No records found in student directory</td>
+                                                    <td colSpan={11} className="p-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs">{t("No records found in student directory")}</td>
                                                 </tr>
                                             )}
                                         </tbody>
@@ -1496,371 +1459,360 @@ function AdminDashboard({ user, onLogout }) {
                             <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
                                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                                     <div className="space-y-1">
-                                        <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Section Management</h3>
-                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Configure capacities and enrollment locks</p>
+                                        <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">{t("Section Management")}</h3>
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("Configure capacities and enrollment locks")}</p>
                                     </div>
                                     <div className="flex items-center gap-4 p-2 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
                                         <button 
                                             onClick={() => setSectionConfigTab('foundation')}
                                             className={cn(
                                                 "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                                sectionConfigTab === 'foundation' ? "bg-slate-900 text-white shadow-lg dark:bg-teal-600" : "text-slate-400 hover:text-slate-600"
+                                                sectionConfigTab === 'foundation' ? "bg-slate-900 text-white shadow-lg dark:bg-teal-600" : "text-slate-400 hover:bg-slate-600"
                                             )}
-                                        >Foundation</button>
+                                        >{t("Foundation")}</button>
                                         <button 
                                             onClick={() => setSectionConfigTab('major')}
                                             className={cn(
                                                 "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                                sectionConfigTab === 'major' ? "bg-slate-900 text-white shadow-lg dark:bg-teal-600" : "text-slate-400 hover:text-slate-600"
+                                                sectionConfigTab === 'major' ? "bg-slate-900 text-white shadow-lg dark:bg-teal-600" : "text-slate-400 hover:bg-slate-600"
                                             )}
-                                        >Major Classes</button>
+                                        >{t("Major Classes")}</button>
                                         <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 mx-2" />
                                         <div className="px-4 py-2">
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Target Academic Year</p>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{t("Target Academic Year")}</p>
                                             <select 
                                                 value={selectedYear} 
                                                 onChange={(e) => setSelectedYear(parseInt(e.target.value))} 
                                                 className="bg-transparent text-sm font-black text-teal-600 outline-none cursor-pointer"
                                             >
-                                                {[1,2,3,4,5].map(y => <option key={y} value={y}>Year {y}</option>)}
+                                                {[1,2,3,4,5].map(y => <option key={y} value={y}>{t("Year {{n}}", { n: y })}</option>)}
                                             </select>
                                         </div>
                                     </div>
                                 </div>
-
                                 {sectionConfigTab === 'foundation' ? (
-                                    <>
-                                        {/* Foundation Sections Table */}
-                                        <div className="bg-white dark:bg-slate-950/50 rounded-[40px] border border-slate-100 dark:border-slate-800 overflow-x-auto shadow-sm scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
-                                            <table className="w-full border-collapse min-w-[1000px]">
-                                                <thead>
-                                                    <tr className="bg-slate-900 dark:bg-slate-800 text-white">
-                                                        <th className="px-10 py-6 text-left text-sm font-bold tracking-tight">Section</th>
-                                                        <th className="px-10 py-6 text-left text-sm font-bold tracking-tight">Max Capacity</th>
-                                                        <th className="px-10 py-6 text-center text-sm font-bold tracking-tight">Enrolled</th>
-                                                        <th className="px-10 py-6 text-center text-sm font-bold tracking-tight">Remaining</th>
-                                                        <th className="px-10 py-6 text-center text-sm font-bold tracking-tight">Locked</th>
-                                                        <th className="px-10 py-6 text-right text-sm font-bold tracking-tight">Actions</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                                    {classSections.filter(s => s.yearLevel === selectedYear || s.year === selectedYear).map((sec, idx) => {
-                                                        const secYear = sec.yearLevel || sec.year;
-                                                        const isEditing = !!editingSection.section && 
-                                                                         editingSection.section === sec.section && 
-                                                                         (editingSection.yearLevel === secYear || editingSection.year === secYear);
-                                                        
-                                                        const maxCap = sec.maxCapacity || sec.max_capacity || 40;
-                                                        const remaining = maxCap - (sec.currentEnrolled || 0);
-                                                        
-                                                        const enterEdit = () => setEditingSection({...sec, yearLevel: secYear, year: secYear, maxCapacity: maxCap});
+                                    <div className="bg-white dark:bg-slate-950/50 rounded-[40px] border border-slate-100 dark:border-slate-800 overflow-x-auto shadow-sm scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
+                                        <table className="w-full border-collapse min-w-[1000px]">
+                                            <thead>
+                                                <tr className="bg-slate-900 dark:bg-slate-800 text-white">
+                                                    <th className="px-10 py-6 text-left text-sm font-bold tracking-tight uppercase">{t("Section")}</th>
+                                                    <th className="px-10 py-6 text-left text-sm font-bold tracking-tight uppercase">{t("Max Capacity")}</th>
+                                                    <th className="px-10 py-6 text-center text-sm font-bold tracking-tight uppercase">{t("Enrolled")}</th>
+                                                    <th className="px-10 py-6 text-center text-sm font-bold tracking-tight uppercase">{t("Remaining")}</th>
+                                                    <th className="px-10 py-6 text-center text-sm font-bold tracking-tight uppercase">{t("Locked")}</th>
+                                                    <th className="px-10 py-6 text-right text-sm font-bold tracking-tight uppercase">{t("Actions")}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                                {classSections.filter(s => s.yearLevel === selectedYear || s.year === selectedYear).map((sec, idx) => {
+                                                    const secYear = sec.yearLevel || sec.year;
+                                                    const isEditing = !!editingSection.section && 
+                                                                     editingSection.section === sec.section && 
+                                                                     (editingSection.yearLevel === secYear || editingSection.year === secYear);
+                                                    
+                                                    const maxCap = sec.maxCapacity || sec.max_capacity || 40;
+                                                    const remaining = maxCap - (sec.currentEnrolled || 0);
+                                                    
+                                                    const enterEdit = () => setEditingSection({...sec, yearLevel: secYear, year: secYear, maxCapacity: maxCap});
 
-                                                        return (
-                                                            <tr key={idx} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/30 transition-colors group">
-                                                                <td className="px-10 py-8">
-                                                                    <div className="h-10 w-10 rounded-xl bg-slate-900 dark:bg-teal-600 text-white flex items-center justify-center font-black text-sm shadow-lg shadow-slate-200 dark:shadow-teal-900/20">{sec.section}</div>
-                                                                </td>
-                                                                <td className="px-10 py-8 cursor-pointer" onClick={!isEditing ? enterEdit : undefined}>
-                                                                    {isEditing ? (
+                                                    return (
+                                                        <tr key={idx} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/30 transition-colors group">
+                                                            <td className="px-10 py-8">
+                                                                <div className="h-10 w-10 rounded-xl bg-slate-900 dark:bg-teal-600 text-white flex items-center justify-center font-black text-sm shadow-lg shadow-slate-200 dark:shadow-teal-900/20">{sec.section}</div>
+                                                            </td>
+                                                            <td className="px-10 py-8 cursor-pointer" onClick={!isEditing ? enterEdit : undefined}>
+                                                                {isEditing ? (
+                                                                    <input 
+                                                                        type="number" 
+                                                                        className="w-24 px-4 py-2 bg-white dark:bg-slate-900 border border-teal-500 rounded-xl text-sm font-black outline-none focus:ring-4 focus:ring-teal-500/10 transition-all shadow-sm"
+                                                                        value={editingSection.maxCapacity}
+                                                                        autoFocus
+                                                                        onChange={(e) => setEditingSection({...editingSection, maxCapacity: parseInt(e.target.value) || 0})}
+                                                                    />
+                                                                ) : (
+                                                                    <div className="flex items-center gap-2 group/val">
+                                                                        <span className="text-lg font-black text-slate-900 dark:text-white">{maxCap}</span>
+                                                                        <span className="material-icons-outlined text-[14px] text-slate-300 opacity-0 group-hover/val:opacity-100 transition-opacity">edit</span>
+                                                                    </div>
+                                                                )}
+                                                            </td>
+                                                            <td className="px-10 py-8 text-center">
+                                                                <span className="text-sm font-bold text-slate-500">{sec.currentEnrolled || 0}</span>
+                                                            </td>
+                                                            <td className="px-10 py-8 text-center">
+                                                                <span className={cn(
+                                                                    "text-sm font-black",
+                                                                    remaining <= 5 ? "text-rose-500" : "text-emerald-500"
+                                                                )}>{remaining}</span>
+                                                            </td>
+                                                            <td className="px-10 py-8 text-center cursor-pointer" onClick={!isEditing ? enterEdit : undefined}>
+                                                                {isEditing ? (
+                                                                    <label className="relative inline-flex items-center cursor-pointer group/toggle">
                                                                         <input 
-                                                                            type="number" 
-                                                                            className="w-24 px-4 py-2 bg-white dark:bg-slate-900 border border-teal-500 rounded-xl text-sm font-black outline-none focus:ring-4 focus:ring-teal-500/10 transition-all shadow-sm"
-                                                                            value={editingSection.maxCapacity}
-                                                                            autoFocus
-                                                                            onChange={(e) => setEditingSection({...editingSection, maxCapacity: parseInt(e.target.value) || 0})}
+                                                                            type="checkbox" 
+                                                                            className="sr-only peer" 
+                                                                            checked={editingSection.isLocked}
+                                                                            onChange={(e) => setEditingSection({...editingSection, isLocked: e.target.checked})}
                                                                         />
-                                                                    ) : (
-                                                                        <div className="flex items-center gap-2 group/val">
-                                                                            <span className="text-lg font-black text-slate-900 dark:text-white">{maxCap}</span>
-                                                                            <span className="material-icons-outlined text-[14px] text-slate-300 opacity-0 group-hover/val:opacity-100 transition-opacity">edit</span>
-                                                                        </div>
-                                                                    )}
-                                                                </td>
-                                                                <td className="px-10 py-8 text-center">
-                                                                    <span className="text-sm font-bold text-slate-500">{sec.currentEnrolled || 0}</span>
-                                                                </td>
-                                                                <td className="px-10 py-8 text-center">
+                                                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600 rounded-full" />
+                                                                        <span className="ml-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">{editingSection.isLocked ? t('Locked') : t('Open')}</span>
+                                                                    </label>
+                                                                ) : (
                                                                     <span className={cn(
-                                                                        "text-sm font-black",
-                                                                        remaining <= 5 ? "text-rose-500" : "text-emerald-500"
-                                                                    )}>{remaining}</span>
-                                                                </td>
-                                                                <td className="px-10 py-8 text-center cursor-pointer" onClick={!isEditing ? enterEdit : undefined}>
-                                                                    {isEditing ? (
-                                                                        <label className="relative inline-flex items-center cursor-pointer group/toggle">
-                                                                            <input 
-                                                                                type="checkbox" 
-                                                                                className="sr-only peer" 
-                                                                                checked={editingSection.isLocked}
-                                                                                onChange={(e) => setEditingSection({...editingSection, isLocked: e.target.checked})}
-                                                                            />
-                                                                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600 rounded-full" />
-                                                                            <span className="ml-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">{editingSection.isLocked ? 'Locked' : 'Open'}</span>
-                                                                        </label>
-                                                                    ) : (
-                                                                        <span className={cn(
-                                                                            "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all hover:scale-105",
-                                                                            sec.isLocked 
-                                                                                ? "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:border-rose-900/50" 
-                                                                                : "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-900/50"
-                                                                        )}>
-                                                                            {sec.isLocked ? 'Locked' : 'Active'}
-                                                                        </span>
-                                                                    )}
-                                                                </td>
-                                                                <td className="px-10 py-8 text-right">
-                                                                    {isEditing ? (
-                                                                        <div className="flex justify-end gap-2">
-                                                                            <button 
-                                                                                onClick={() => setEditingSection({})}
-                                                                                className="h-10 px-4 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
-                                                                            >Cancel</button>
-                                                                            <button 
-                                                                                onClick={() => handleUpdateSection(editingSection)}
-                                                                                className="h-10 px-6 bg-teal-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-teal-500/20 hover:bg-teal-700 transition-all"
-                                                                            >Save</button>
-                                                                        </div>
-                                                                    ) : (
+                                                                        "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all hover:scale-105",
+                                                                        sec.isLocked 
+                                                                            ? "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:border-rose-900/50" 
+                                                                            : "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-900/50"
+                                                                    )}>
+                                                                        {sec.isLocked ? t('Locked') : t('Active')}
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                            <td className="px-10 py-8 text-right">
+                                                                {isEditing ? (
+                                                                    <div className="flex justify-end gap-2">
                                                                         <button 
-                                                                            onClick={enterEdit}
-                                                                            className="h-10 w-10 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-teal-600 rounded-xl flex items-center justify-center transition-all shadow-sm border border-slate-100 dark:border-slate-700/50"
-                                                                        >
-                                                                            <span className="material-icons-outlined text-sm">edit</span>
-                                                                        </button>
-                                                                    )}
-                                                                </td>
-                                                            </tr>
-                                                        );
-                                                    })}
-                                                    {classSections.filter(s => s.yearLevel === selectedYear || s.year === selectedYear).length === 0 && (
-                                                        <tr>
-                                                            <td colSpan={6} className="p-20 text-center border-dashed border-2 border-slate-100 dark:border-slate-800 rounded-[40px]">
-                                                                <div className="flex flex-col items-center gap-4">
-                                                                    <p className="text-slate-300 font-black uppercase tracking-widest text-xs">No sections found for Year {selectedYear}</p>
+                                                                            onClick={() => setEditingSection({})}
+                                                                            className="h-10 px-4 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
+                                                                        >{t("Cancel")}</button>
+                                                                        <button 
+                                                                            onClick={() => handleUpdateSection(editingSection)}
+                                                                            className="h-10 px-6 bg-teal-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-teal-500/20 hover:bg-teal-700 transition-all"
+                                                                        >{t("Save")}</button>
+                                                                    </div>
+                                                                ) : (
                                                                     <button 
-                                                                        onClick={handleInitializeSections}
-                                                                        className="px-8 py-3 bg-teal-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-teal-500/20 hover:bg-teal-700 transition-all active:scale-95"
-                                                                    >Initialize Default Sections (A,B,C,D)</button>
-                                                                </div>
+                                                                        onClick={enterEdit}
+                                                                        className="h-10 w-10 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-teal-600 rounded-xl flex items-center justify-center transition-all shadow-sm border border-slate-100 dark:border-slate-700/50"
+                                                                    >
+                                                                        <span className="material-icons-outlined text-sm">edit</span>
+                                                                    </button>
+                                                                )}
                                                             </td>
                                                         </tr>
-                                                    )}
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                                    );
+                                                })}
+                                                {classSections.filter(s => s.yearLevel === selectedYear || s.year === selectedYear).length === 0 && (
+                                                    <tr>
+                                                        <td colSpan={6} className="p-20 text-center border-dashed border-2 border-slate-100 dark:border-slate-800 rounded-[40px] m-4">
+                                                            <div className="flex flex-col items-center gap-4">
+                                                                <p className="text-slate-300 font-black uppercase tracking-widest text-xs">{t("No sections found for Year {{n}}", { n: selectedYear })}</p>
+                                                                <button 
+                                                                    onClick={handleInitializeSections}
+                                                                    className="px-8 py-3 bg-teal-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-teal-500/20 hover:bg-teal-700 transition-all active:scale-95"
+                                                                >{t("Initialize Default Sections (A,B,C,D)")}</button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="bg-white dark:bg-slate-950/50 rounded-[40px] border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm">
+                                        <table className="w-full border-collapse">
+                                            <thead>
+                                                <tr className="bg-slate-900 dark:bg-slate-800 text-white">
+                                                    <th className="px-10 py-6 text-left text-sm font-bold tracking-tight uppercase">{t("Major Class")}</th>
+                                                    <th className="px-10 py-6 text-left text-sm font-bold tracking-tight uppercase">{t("Max Capacity")}</th>
+                                                    <th className="px-10 py-6 text-center text-sm font-bold tracking-tight uppercase">{t("Enrolled")}</th>
+                                                    <th className="px-10 py-6 text-center text-sm font-bold tracking-tight uppercase">{t("Remaining")}</th>
+                                                    <th className="px-10 py-6 text-center text-sm font-bold tracking-tight uppercase">{t("Status")}</th>
+                                                    <th className="px-10 py-6 text-right text-sm font-bold tracking-tight uppercase">{t("Actions")}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                                {(majorClassesByYear[selectedYear] || []).map((mc, idx) => {
+                                                    const isEditing = editingSection.id === mc.id;
+                                                    const remaining = (mc.maxCapacity || 0) - (mc.currentEnrolled || 0);
 
-                                        {/* Student Movement Console */}
-                                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                                            <div className="bg-slate-900 dark:bg-slate-950 rounded-[40px] p-10 text-white relative overflow-hidden group">
-                                                <div className="relative z-10">
-                                                    <div className="flex items-center gap-4 mb-8">
-                                                        <div className="h-12 w-12 rounded-2xl bg-teal-500/10 flex items-center justify-center text-teal-400 border border-teal-500/20">
-                                                            <span className="material-icons-outlined text-2xl">sync_alt</span>
-                                                        </div>
-                                                        <div>
-                                                            <h4 className="text-xl font-black tracking-tight uppercase">Student Relocation</h4>
-                                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Move student between academic sections</p>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="space-y-6">
-                                                        <div className="grid gap-2">
-                                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Find Student</label>
-                                                            <div className="relative">
-                                                                <span className="material-icons-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 text-sm">search</span>
-                                                                <input 
-                                                                    type="text" 
-                                                                    placeholder="Search by ID, Name or Email..."
-                                                                    className="w-full pl-12 pr-4 py-4 bg-white/5 dark:bg-slate-900 border border-white/10 dark:border-slate-800 rounded-2xl text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-700"
-                                                                    value={moveStudentSearch}
-                                                                    onChange={(e) => setMoveStudentSearch(e.target.value)}
-                                                                />
-                                                                {moveStudentSearch.length > 2 && (
-                                                                    <div className="absolute top-full left-0 right-0 mt-4 bg-slate-800 rounded-3xl border border-slate-700 shadow-2xl z-50 overflow-hidden max-h-64 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-300">
-                                                                        {students.filter(s => 
-                                                                            s.namemm?.toLowerCase().includes(moveStudentSearch.toLowerCase()) || 
-                                                                            s.user_name?.toLowerCase().includes(moveStudentSearch.toLowerCase()) ||
-                                                                            String(s.studentid || s.id).includes(moveStudentSearch)
-                                                                        ).map((s, idx) => (
-                                                                            <button 
-                                                                                key={idx}
-                                                                                onClick={() => {
-                                                                                    setMoveStudentData({...moveStudentData, studentId: s.studentid || s.id});
-                                                                                    setMoveStudentSearch('');
-                                                                                }}
-                                                                                className="w-full px-8 py-5 text-left hover:bg-slate-700/50 transition-all border-b border-slate-700/50 flex items-center justify-between group/result cursor-pointer"
-                                                                            >
-                                                                                <div>
-                                                                                    <p className="text-sm font-black text-white group-hover/result:text-teal-400 transition-colors">{s.namemm}</p>
-                                                                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">{s.user_name || s.id}</p>
-                                                                                </div>
-                                                                                <span className="text-[10px] font-black text-teal-500 bg-teal-500/10 px-2 py-1 rounded-lg uppercase tracking-widest">{s.section || 'NO SEC'}</span>
-                                                                            </button>
-                                                                        ))}
+                                                    return (
+                                                        <tr key={idx} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/30 transition-colors group">     
+                                                            <td className="px-10 py-8">
+                                                                <div className="flex items-center gap-4">
+                                                                    <div className="h-10 w-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-lg shadow-indigo-200 dark:shadow-indigo-900/20">{mc.majorCode || 'M'}</div>
+                                                                    <div>
+                                                                        <p className="text-sm font-black text-slate-900 dark:text-white">{mc.label || mc.name}</p>
+                                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t("Major Specialization")}</p>
                                                                     </div>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-10 py-8">
+                                                                {isEditing ? (
+                                                                    <input
+                                                                        type="number" 
+                                                                        className="w-24 px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-teal-500/30 rounded-xl text-sm font-black outline-none focus:ring-4 focus:ring-teal-500/5 transition-all"
+                                                                        value={editingSection.maxCapacity}
+                                                                        onChange={(e) => setEditingSection({...editingSection, maxCapacity: parseInt(e.target.value)})}
+                                                                    />
+                                                                ) : (
+                                                                    <span className="text-lg font-black text-slate-900 dark:text-white tabular-nums">{mc.maxCapacity}</span>
                                                                 )}
-                                                                </div>
-                                                                </div>
+                                                            </td>
+                                                            <td className="px-10 py-8 text-center">
+                                                                <span className="text-sm font-bold text-slate-500 tabular-nums">{mc.currentEnrolled || 0}</span>
+                                                            </td>
+                                                            <td className="px-10 py-8 text-center">
+                                                                <span className={cn(
+                                                                    "text-sm font-black tabular-nums",
+                                                                    remaining <= 5 ? "text-rose-500" : "text-emerald-500"
+                                                                )}>{remaining}</span>
+                                                            </td>
+                                                            <td className="px-10 py-8 text-center">
+                                                                {isEditing ? (
+                                                                    <label className="relative inline-flex items-center cursor-pointer group/toggle">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            className="sr-only peer"
+                                                                            checked={editingSection.isLocked}
+                                                                            onChange={(e) => setEditingSection({...editingSection, isLocked: e.target.checked})}
+                                                                        />
+                                                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600 rounded-full" />
+                                                                        <span className="ml-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">{editingSection.isLocked ? t('Locked') : t('Open')}</span>
+                                                                    </label>
+                                                                ) : (
+                                                                    <span className={cn(
+                                                                        "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all hover:scale-105",
+                                                                        mc.isLocked
+                                                                            ? "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:border-rose-900/50"
+                                                                            : "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-900/50"
+                                                                    )}>
+                                                                        {mc.isLocked ? t('Locked') : t('Active')}
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                            <td className="px-10 py-8 text-right">
+                                                                {isEditing ? (
+                                                                    <div className="flex justify-end gap-2">
+                                                                        <button
+                                                                            onClick={() => setEditingSection({})}
+                                                                            className="h-10 px-4 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
+                                                                        >{t("Cancel")}</button>
+                                                                        <button
+                                                                            onClick={() => handleUpdateMajorClass(editingSection)}
+                                                                            className="h-10 px-6 bg-teal-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-teal-500/20 hover:bg-teal-700 transition-all"
+                                                                        >{t("Save")}</button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <button
+                                                                        onClick={() => setEditingSection({...mc})}
+                                                                        className="h-10 w-10 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-teal-600 rounded-xl flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+                                                                    >
+                                                                        <span className="material-icons-outlined text-sm">edit</span>
+                                                                    </button>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                                {(majorClassesByYear[selectedYear] || []).length === 0 && (
+                                                    <tr>
+                                                        <td colSpan={6} className="p-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs border-dashed border-2 border-slate-50 rounded-[40px] m-4">{t("No major classes configured for this level")}</td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                                
+                                {/* Student Movement Console */}
+                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                                    <div className="bg-slate-900 dark:bg-slate-950 rounded-[40px] p-10 text-white">
+                                        <div className="z-10">
+                                            <div className="flex items-center gap-4 mb-8">
+                                                <div className="h-12 w-12 rounded-2xl bg-teal-500/10 flex items-center justify-center text-teal-400 border border-teal-500/20">
+                                                    <span className="material-icons-outlined text-2xl">sync_alt</span>
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-xl font-black tracking-tight uppercase">{t("Student Relocation")}</h4>
+                                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1.5">{t("Move student between academic sections")}</p>
+                                                </div>
+                                            </div>
 
-                                                                {moveStudentData.studentId && (
-                                                                <div className="flex items-center justify-between p-4 bg-teal-500/10 border border-teal-500/20 rounded-2xl animate-in zoom-in-95 duration-300">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="h-2 w-2 rounded-full bg-teal-500 animate-pulse" />
-                                                                    <p className="text-xs font-black uppercase tracking-widest text-teal-400">
-                                                                        Target: {students.find(s => (s.studentid || s.id) === moveStudentData.studentId)?.namemm || 'Selected Student'}
-                                                                    </p>
-                                                                </div>
-                                                                <button onClick={() => {setMoveStudentData({...moveStudentData, studentId: ''}); setMoveStudentSearch('');}} className="text-[10px] font-black text-slate-500 hover:text-white uppercase">Clear</button>
-                                                                </div>
-                                                                )}
-                                                                <div className="grid gap-2">                                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Target Section</label>
-                                                            <div className="grid grid-cols-4 gap-3">
-                                                                {['A','B','C','D'].map(sec => (
+                                            <div className="space-y-6">
+                                                <div className="grid gap-2">
+                                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">{t("Find Student")}</label>
+                                                    <div className="relative">
+                                                        <span className="material-icons-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 text-sm">search</span>
+                                                        <input 
+                                                            type="text" 
+                                                            placeholder={t("Search by ID, Name or Email...")}
+                                                            className="w-full pl-12 pr-4 py-4 bg-white/5 dark:bg-slate-900 border border-white/10 dark:border-slate-800 rounded-2xl text-sm font-bold text-white outline-none focus:ring-2 focus:ring-teal-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-700"
+                                                            value={moveStudentSearch}
+                                                            onChange={(e) => setMoveStudentSearch(e.target.value)}
+                                                        />
+                                                        {moveStudentSearch.length > 2 && (
+                                                            <div className="absolute top-full left-0 right-0 mt-4 bg-slate-800 rounded-3xl border border-slate-700 shadow-2xl z-50 overflow-hidden max-h-64 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-300">
+                                                                {students.filter(s => 
+                                                                    s.namemm?.toLowerCase().includes(moveStudentSearch.toLowerCase()) || 
+                                                                    s.user_name?.toLowerCase().includes(moveStudentSearch.toLowerCase()) ||
+                                                                    String(s.studentid || s.id).includes(moveStudentSearch)
+                                                                ).map((s, idx) => (
                                                                     <button 
-                                                                        key={sec}
-                                                                        onClick={() => setMoveStudentData({...moveStudentData, toSection: sec})}
-                                                                        className={cn(
-                                                                            "py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all border",
-                                                                            moveStudentData.toSection === sec 
-                                                                                ? "bg-teal-600 border-teal-500 text-white shadow-lg shadow-teal-900/40" 
-                                                                                : "bg-white/5 border-white/10 text-slate-400 hover:bg-white/10"
-                                                                        )}
-                                                                    >Section {sec}</button>
+                                                                        key={idx}
+                                                                        onClick={() => {
+                                                                            setMoveStudentData({...moveStudentData, studentId: s.studentid || s.id});
+                                                                            setMoveStudentSearch('');
+                                                                        }}
+                                                                        className="w-full px-8 py-5 text-left hover:bg-slate-700/50 transition-all border-b border-slate-700/50 flex items-center justify-between group/result cursor-pointer"
+                                                                    >
+                                                                        <div>
+                                                                            <p className="text-sm font-black text-white group-hover/result:text-teal-400 transition-colors">{s.namemm}</p>
+                                                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">{s.user_name || s.id}</p>
+                                                                        </div>
+                                                                        <span className="text-[10px] font-black text-teal-500 bg-teal-500/10 px-2 py-1 rounded-lg uppercase tracking-widest">{s.section || t('NO SEC')}</span>
+                                                                    </button>
                                                                 ))}
                                                             </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {moveStudentData.studentId && (
+                                                    <div className="flex items-center justify-between p-4 bg-teal-500/10 border border-teal-500/20 rounded-2xl animate-in zoom-in-95 duration-300">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="h-2 w-2 rounded-full bg-teal-500 animate-pulse" />
+                                                            <p className="text-xs font-black uppercase tracking-widest text-teal-400">
+                                                                {t("Target: {{name}}", { name: students.find(s => (s.studentid || s.id) === moveStudentData.studentId)?.namemm || t('Selected Student') })}
+                                                            </p>
                                                         </div>
-
-                                                        <button 
-                                                            onClick={handleMoveStudent}
-                                                            className="w-full py-5 bg-white text-slate-900 rounded-[24px] text-[10px] font-black uppercase tracking-widest hover:bg-teal-50 hover:text-teal-600 transition-all shadow-xl active:scale-95 disabled:opacity-50"
-                                                            disabled={!moveStudentData.studentId || !moveStudentData.toSection}
-                                                        >Initiate Relocation Protocol</button>
+                                                        <button onClick={() => {setMoveStudentData({...moveStudentData, studentId: ''}); setMoveStudentSearch('');}} className="text-[10px] font-black text-slate-500 hover:text-white uppercase">{t("Clear")}</button>
+                                                    </div>
+                                                )}
+                                                <div className="grid gap-2">
+                                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">{t("Target Section")}</label>
+                                                    <div className="grid grid-cols-4 gap-3">
+                                                        {['A','B','C','D'].map(sec => (
+                                                            <button 
+                                                                key={sec}
+                                                                onClick={() => setMoveStudentData({...moveStudentData, toSection: sec})}
+                                                                className={cn(
+                                                                    "py-4 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all border",
+                                                                    moveStudentData.toSection === sec 
+                                                                        ? "bg-teal-600 border-teal-500 text-white shadow-lg shadow-teal-900/40" 
+                                                                        : "bg-white/5 border-white/10 text-slate-400 hover:bg-white/10"
+                                                                )}
+                                                            >{t("Section {{s}}", { s: sec })}</button>
+                                                        ))}
                                                     </div>
                                                 </div>
-                                                <div className="absolute top-0 right-0 h-40 w-40 bg-teal-500/5 rounded-bl-full transform group-hover:scale-110 transition-transform" />
-                                            </div>
 
-                                            <div className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[40px] p-10 flex flex-col justify-center text-center relative group overflow-hidden">
-                                                <div className="relative z-10">
-                                                    <div className="h-16 w-16 rounded-3xl bg-white dark:bg-slate-800 mx-auto flex items-center justify-center text-slate-300 dark:text-slate-600 mb-6 border border-slate-100 dark:border-slate-700/50">
-                                                        <span className="material-icons-outlined text-3xl">info</span>
-                                                    </div>
-                                                    <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">{t("Management Protocol")}</h4>
-                                                    <p className="text-xs font-medium text-slate-400 max-w-xs mx-auto leading-relaxed">{t("Changes to section capacity or lock status will take effect immediately for all new student registrations.")}</p>
-                                                </div>
-                                                <div className="absolute -bottom-10 -right-10 h-40 w-40 bg-slate-900/5 rounded-full transform group-hover:scale-110 transition-transform" />
+                                                <button 
+                                                    onClick={handleMoveStudent}
+                                                    className="w-full py-5 bg-white text-slate-900 rounded-[24px] text-[10px] font-black uppercase tracking-widest hover:bg-teal-50 hover:text-teal-600 transition-all shadow-xl active:scale-95 disabled:opacity-50"
+                                                    disabled={!moveStudentData.studentId || !moveStudentData.toSection}
+                                                >{t("Initiate Relocation Protocol")}</button>
                                             </div>
                                         </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        {/* Major Classes Table */}
-                                        <div className="bg-white dark:bg-slate-950/50 rounded-[40px] border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm">
-                                            <table className="w-full border-collapse">
-                                                <thead>
-                                                    <tr className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
-                                                        <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Major Class</th>
-                                                        <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Max Capacity</th>
-                                                        <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Enrolled</th>
-                                                        <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Remaining</th>
-                                                        <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
-                                                        <th className="px-10 py-6 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                                    {(majorClassesByYear[selectedYear] || []).map((mc, idx) => {
-                                                        const isEditing = editingSection.id === mc.id;
-                                                        const remaining = (mc.maxCapacity || 0) - (mc.currentEnrolled || 0);
-                                                        
-                                                        return (
-                                                            <tr key={idx} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/30 transition-colors group">
-                                                                <td className="px-10 py-8">
-                                                                    <div className="flex items-center gap-4">
-                                                                        <div className="h-10 w-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-lg shadow-indigo-200 dark:shadow-indigo-900/20">{mc.majorCode || 'M'}</div>
-                                                                        <div>
-                                                                            <p className="text-sm font-black text-slate-900 dark:text-white">{mc.label || mc.name}</p>
-                                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Major Specialization</p>
-                                                                        </div>
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-10 py-8">
-                                                                    {isEditing ? (
-                                                                        <input 
-                                                                            type="number" 
-                                                                            className="w-24 px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-teal-500/30 rounded-xl text-sm font-black outline-none focus:ring-4 focus:ring-teal-500/5 transition-all"
-                                                                            value={editingSection.maxCapacity}
-                                                                            onChange={(e) => setEditingSection({...editingSection, maxCapacity: parseInt(e.target.value)})}
-                                                                        />
-                                                                    ) : (
-                                                                        <span className="text-lg font-black text-slate-900 dark:text-white tabular-nums">{mc.maxCapacity}</span>
-                                                                    )}
-                                                                </td>
-                                                                <td className="px-10 py-8 text-center">
-                                                                    <span className="text-sm font-bold text-slate-500 tabular-nums">{mc.currentEnrolled || 0}</span>
-                                                                </td>
-                                                                <td className="px-10 py-8 text-center">
-                                                                    <span className={cn(
-                                                                        "text-sm font-black tabular-nums",
-                                                                        remaining <= 5 ? "text-rose-500" : "text-emerald-500"
-                                                                    )}>{remaining}</span>
-                                                                </td>
-                                                                <td className="px-10 py-8 text-center">
-                                                                    {isEditing ? (
-                                                                        <label className="relative inline-flex items-center cursor-pointer group/toggle">
-                                                                            <input 
-                                                                                type="checkbox" 
-                                                                                className="sr-only peer" 
-                                                                                checked={editingSection.isLocked}
-                                                                                onChange={(e) => setEditingSection({...editingSection, isLocked: e.target.checked})}
-                                                                            />
-                                                                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600 rounded-full" />
-                                                                            <span className="ml-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">{editingSection.isLocked ? 'Locked' : 'Open'}</span>
-                                                                        </label>
-                                                                    ) : (
-                                                                        <span className={cn(
-                                                                            "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
-                                                                            mc.isLocked 
-                                                                                ? "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:border-rose-900/50" 
-                                                                                : "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-900/50"
-                                                                        )}>
-                                                                            {mc.isLocked ? 'Locked' : 'Active'}
-                                                                        </span>
-                                                                    )}
-                                                                </td>
-                                                                <td className="px-10 py-8 text-right">
-                                                                    {isEditing ? (
-                                                                        <div className="flex justify-end gap-2">
-                                                                            <button 
-                                                                                onClick={() => setEditingSection({})}
-                                                                                className="h-10 px-4 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
-                                                                            >Cancel</button>
-                                                                            <button 
-                                                                                onClick={() => handleUpdateMajorClass(editingSection)}
-                                                                                className="h-10 px-6 bg-teal-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-teal-500/20 hover:bg-teal-700 transition-all"
-                                                                            >Save</button>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <button 
-                                                                            onClick={() => setEditingSection({...mc})}
-                                                                            className="h-10 w-10 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-teal-600 rounded-xl flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
-                                                                        >
-                                                                            <span className="material-icons-outlined text-sm">edit</span>
-                                                                        </button>
-                                                                    )}
-                                                                </td>
-                                                            </tr>
-                                                        );
-                                                    })}
-                                                    {(majorClassesByYear[selectedYear] || []).length === 0 && (
-                                                        <tr>
-                                                            <td colSpan={6} className="p-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs border-dashed border-2 border-slate-50 rounded-[40px] m-4">No major classes configured for this level</td>
-                                                        </tr>
-                                                    )}
-                                                </tbody>
-                                            </table>
+                                    </div>
+                                    <div className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[40px] p-10 flex flex-col justify-center text-center">
+                                        <div className="h-16 w-16 rounded-3xl bg-white dark:bg-slate-800 mx-auto flex items-center justify-center text-slate-300 dark:text-slate-600 mb-6 border border-slate-100 dark:border-slate-700/50">
+                                            <span className="material-icons-outlined text-3xl">info</span>
                                         </div>
-                                    </>
-                                )}
+                                        <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">{t("Management Protocol")}</h4>
+                                        <p className="text-xs font-medium text-slate-400 max-w-xs mx-auto leading-relaxed">{t("Changes to section capacity or lock status will take effect immediately for all new student registrations.")}</p>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -1880,20 +1832,20 @@ function AdminDashboard({ user, onLogout }) {
                             <span className="material-icons-outlined text-2xl">cancel</span>
                         </div>
                         <div>
-                            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight leading-none">Reject Registration</h3>
+                            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight leading-none">{t("Reject Registration")}</h3>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">{rejectDialog.student?.namemm}</p>
                         </div>
                     </div>
 
                     <div className="space-y-6">
                         <div className="flex flex-col gap-2">
-                            <label htmlFor="reject-reason" className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Rejection Protocol Reason</label>
+                            <label htmlFor="reject-reason" className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t("Rejection Protocol Reason")}</label>
                             <textarea
                                 id="reject-reason"
                                 className="w-full p-6 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-3xl text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-4 focus:ring-rose-500/5 focus:border-rose-500/30 transition-all placeholder:text-slate-300 min-h-[160px] resize-none"
                                 value={rejectDialog.reason}
                                 onChange={(e) => setRejectDialog((prev) => ({ ...prev, reason: e.target.value }))}
-                                placeholder="State the reason for declining this registration. This will be visible to the student..."
+                                placeholder={t("State the reason for declining this registration. This will be visible to the student...")}
                             />
                         </div>
 
@@ -1903,14 +1855,14 @@ function AdminDashboard({ user, onLogout }) {
                                 disabled={loading}
                                 className="flex-1 h-14 bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all active:scale-95"
                             >
-                                Cancel
+                                {t("Cancel")}
                             </button>
                             <button 
                                 onClick={handleRejectStudent}
                                 disabled={loading || !rejectDialog.reason.trim()}
                                 className="flex-[2] h-14 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-rose-500/20 active:scale-95 transition-all disabled:opacity-50 disabled:shadow-none"
                             >
-                                {loading ? 'Processing...' : 'Confirm Rejection'}
+                                {loading ? t('Processing...') : t('Confirm Rejection')}
                             </button>
                         </div>
                     </div>
