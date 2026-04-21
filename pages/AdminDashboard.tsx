@@ -677,7 +677,7 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                   </div>
 
                   <div className="relative overflow-hidden rounded-3xl border border-amber-100/50 bg-amber-50/30 p-6 dark:border-amber-900/20 dark:bg-amber-900/10 transition-all hover:bg-amber-50/50 dark:hover:bg-amber-900/20">
-                    <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-amber-200/20 dark:bg-amber-500/5" />
+                    <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-amber-200/20 dark:bg-emerald-500/5" />
                     <div className="relative flex items-start justify-between gap-2">
                       <div className="flex items-center gap-4">
                         <IconBadge icon="history_edu" tone="amber" />

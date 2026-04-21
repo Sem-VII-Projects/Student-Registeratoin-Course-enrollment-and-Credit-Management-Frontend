@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/client';
 import Composer from '../components/Composer'
+import AdminTermManagement_Friend from '../components/AdminTermManagement_Friend';
 import * as XLSX from 'xlsx';
 
 // UI Components to match project style
@@ -48,6 +49,13 @@ const BASE_STATUS_OPTIONS = [
 ];
 
 const normalizeStatusValue = (value) => String(value || '').trim().toUpperCase();
+
+const formatDate = (raw) => {
+  if (!raw) return '-';
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return String(raw);
+  return date.toLocaleDateString();
+};
 
 const buildStatusOptions = (students) => {
   const knownBase = new Set(BASE_STATUS_OPTIONS);
@@ -150,13 +158,19 @@ const hasValues = (record) => Object.values(asObject(record)).some((value) => va
 const getRegistrationId = (record) => record?.registrationId || record?.registrationid || record?.registration_id || record?.id || null;
 
 const normalizePaymentSessionStatus = (record) => {
-  const paymentStatus = String(record?.payment_status || record?.paymentStatus || '').toUpperCase();
-  if (['PAYMENT_PENDING', 'PENDING', 'SUBMITTED'].includes(paymentStatus)) return 'PAYMENT_PENDING';
-  if (['PAYMENT_DONE', 'APPROVED', 'PAID'].includes(paymentStatus)) return 'PAYMENT_DONE';
+  const paymentStatus = String(record?.payment_status || record?.paymentStatus || record?.status || record?.globalStatus || '').toUpperCase();
+  if (['PAYMENT_PENDING', 'PENDING', 'SUBMITTED', 'PAYMENT_REQUIRED'].includes(paymentStatus)) return 'PAYMENT_PENDING';
+  if (['PAYMENT_DONE', 'APPROVED', 'PAID', 'PAYMENT_SUCCESS'].includes(paymentStatus)) return 'PAYMENT_DONE';
   return '';
 };
 
 const isPaymentSessionStudentRecord = (record) => PAYMENT_SESSION_STATUSES.includes(normalizePaymentSessionStatus(record));
+
+const isEnrolledStudentRecord = (record) => {
+  if (!record) return false;
+  const status = String(record.status || record.termStatus || record.globalStatus || '').toUpperCase();
+  return status === 'ENROLLED' || status === 'COMPLETED' || status === 'GRADUATED';
+};
 
 const getPaymentSessionCounts = (records) => (Array.isArray(records) ? records : []).reduce((acc, record) => {
   const normalized = normalizePaymentSessionStatus(record);
@@ -312,6 +326,7 @@ function AdminDashboard({ user, onLogout }) {
   
   const [classSections, setClassSections] = useState([]);
   const [majorClassesByYear, setMajorClassesByYear] = useState({});
+  const [sectionConfigTab, setSectionConfigTab] = useState('foundation'); // 'foundation' or 'major'
   const [selectedYear, setSelectedYear] = useState(1);
   const [editingSection, setEditingSection] = useState({});
   const [moveStudentData, setMoveStudentData] = useState({ studentId: '', toSection: '' });
@@ -350,16 +365,43 @@ function AdminDashboard({ user, onLogout }) {
     navigate('/admin-login');
   }, [navigate]);
 
+  const initialLoadRef = React.useRef(false);
+
   const loadData = useCallback(async (mode = "initial") => {
-    mode === "refresh" ? setRefreshing(true) : setLoading(true);
+    // Only show full loading skeletons if we haven't completed the first load
+    if (mode !== "refresh" && !initialLoadRef.current) setLoading(true);
+    if (mode === "refresh") setRefreshing(true);
+    
     try {
-      const [allStudents, normalizedTerm] = await Promise.all([api.getStudents(), refreshCurrentTerm()]);
+      const [allStudents, payloadTerm] = await Promise.all([
+        api.getStudents(undefined, "spring"),
+        api.getCurrentTerm("spring")
+      ]);
+
+      const normalizedTerm = normalizeTermConfig(payloadTerm);
+      setCurrentTerm(prev => {
+        if (JSON.stringify(prev) === JSON.stringify(normalizedTerm)) return prev;
+        return normalizedTerm;
+      });
+      
       let termEnrollmentPayload = [];
       if (normalizedTerm?.academicYear && normalizedTerm?.semester) {
-        try { termEnrollmentPayload = await api.adminListTermEnrollments({ academicYear: normalizedTerm.academicYear, semester: normalizedTerm.semester, status: 'ENROLLED' }); } catch (e) {}
+        try { 
+          termEnrollmentPayload = await api.adminListTermEnrollments({ 
+            academicYear: normalizedTerm.academicYear, 
+            semester: normalizedTerm.semester, 
+            status: 'ENROLLED' 
+          }, "spring"); 
+        } catch (e) { console.warn("Term sync failed"); }
       }
+      
       let pendingRegistrations = [];
-      try { const regResponse = await api.adminListRegistrations(); pendingRegistrations = Array.isArray(regResponse) ? regResponse : (regResponse?.registrations || regResponse?.data || []); } catch (err) { try { pendingRegistrations = await api.listRegistrations(); } catch (e) { pendingRegistrations = []; } }
+      try { 
+        const regResponse = await api.adminListRegistrations(undefined, "spring"); 
+        pendingRegistrations = Array.isArray(regResponse) ? regResponse : (regResponse?.registrations || regResponse?.data || []); 
+      } catch (err) { 
+        try { pendingRegistrations = await api.listRegistrations(); } catch (e) { pendingRegistrations = []; } 
+      }
 
       const sortedStudents = [...(allStudents || [])].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
       const byStudentId = new Map(sortedStudents.filter(s => s?.studentid || s?.id).map(s => [String(s.studentid || s.id), s]));
@@ -377,8 +419,9 @@ function AdminDashboard({ user, onLogout }) {
       setStudents(sortedStudents);
 
       const mergedNewRegs = new Map();
-      [...sortedStudents.filter(s => AWAITING_APPROVAL_STATUSES.includes((s.status || 'DRAFT').toUpperCase())), ...pendingRegistrations.filter(r => AWAITING_APPROVAL_STATUSES.includes(String(r?.status || 'PENDING').toUpperCase()))].forEach(item => {
-        const key = String(item.studentid || item.registrationid || item.email || '').trim().toLowerCase();
+      [...(sortedStudents || []).filter(s => s && AWAITING_APPROVAL_STATUSES.includes(String(s.status || s.globalStatus || s.global_status || 'DRAFT').toUpperCase())), ...(pendingRegistrations || []).filter(r => r && AWAITING_APPROVAL_STATUSES.includes(String(r.status || 'PENDING').toUpperCase()))].forEach(item => {
+        if (!item) return;
+        const key = String(item.studentid || item.studentId || item.id || item.registrationid || item.registrationId || item.email || '').trim().toLowerCase();
         if (key) mergedNewRegs.set(key, { ...mergedNewRegs.get(key), ...item });
       });
       const newRegs = Array.from(mergedNewRegs.values());
@@ -386,24 +429,121 @@ function AdminDashboard({ user, onLogout }) {
 
       const paymentSessionCounts = getPaymentSessionCounts(sortedStudents);
       setStats({
-        total: sortedStudents.filter(s => String(s.status || '').toUpperCase() !== 'REJECTED').length,
+        total: (sortedStudents || []).filter(s => s && String(s.status || s.globalStatus || s.global_status || '').toUpperCase() !== 'REJECTED').length,
         pending: newRegs.length,
-        approved: sortedStudents.filter(s => String(s.status || '').toUpperCase() === 'APPROVED').length,
-        detailsSubmitted: sortedStudents.filter(s => String(s.status || '').toUpperCase() === 'DETAILS_SUBMITTED').length,
-        paymentPending: paymentSessionCounts.paymentPending,
-        paymentDone: paymentSessionCounts.paymentDone,
-        enrolled: normalizedEnrolledStudents.length || sortedStudents.filter(s => isEnrolledStudentRecord(s)).length,
-        benefit: sortedStudents.filter(s => s.isBenefitStudent || s.is_benefit_student).length,
-        hostel: sortedStudents.filter(s => s.isHostelStudent || s.is_hostel_student).length,
-        onBreak: sortedStudents.filter(s => s.isOnBreak || s.is_on_break).length
+        approved: (sortedStudents || []).filter(s => s && String(s.status || s.globalStatus || s.global_status || '').toUpperCase() === 'APPROVED').length,
+        detailsSubmitted: (sortedStudents || []).filter(s => s && String(s.status || s.globalStatus || s.global_status || '').toUpperCase() === 'DETAILS_SUBMITTED').length,
+        paymentPending: paymentSessionCounts?.paymentPending || 0,
+        paymentDone: paymentSessionCounts?.paymentDone || 0,
+        enrolled: normalizedEnrolledStudents.length || (sortedStudents || []).filter(s => s && isEnrolledStudentRecord(s)).length,
+        benefit: (sortedStudents || []).filter(s => s && (s.isBenefitStudent || s.is_benefit_student)).length,
+        hostel: (sortedStudents || []).filter(s => s && (s.isHostelStudent || s.is_hostel_student)).length,
+        onBreak: (sortedStudents || []).filter(s => s && (s.isOnBreak || s.is_on_break)).length
       });
       loadRegistrationConfig();
+      initialLoadRef.current = true; // Mark initial load as complete
     } catch (error) { 
+      console.error("[CRITICAL] loadData crashed during execution:", error);
       if (error?.status === 401 || error?.status === 403) {
         handleAuthError();
       } 
-    } finally { mode === "refresh" ? setRefreshing(false) : setLoading(false); }
-  }, [loadRegistrationConfig, navigate, refreshCurrentTerm, handleAuthError]);
+    } finally { 
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [loadRegistrationConfig, navigate, handleAuthError]); // students.length removed to break loop
+
+  const loadClassSectionsForYear = useCallback(async (year) => {
+    try {
+      const data = await api.getClassSections(year);
+      setClassSections(Array.isArray(data) ? data : []);
+    } catch (e) { 
+      console.error('Failed to load class sections:', e);
+      if (e.status === 409) {
+        setClassSections([]);
+      }
+    }
+  }, []);
+
+  const handleInitializeSections = async () => {
+    setLoading(true);
+    try {
+      // Backend expects PUT /api/admin/class-sections for each section
+      const sectionsToCreate = ['A', 'B', 'C', 'D'];
+      for (const section of sectionsToCreate) {
+        await api.adminUpdateClassSection({
+          yearLevel: selectedYear,
+          year: selectedYear,
+          section: section,
+          maxCapacity: 40,
+          isLocked: false
+        });
+      }
+      alert(`Default sections (A,B,C,D) initialized for Year ${selectedYear}`);
+      loadClassSectionsForYear(selectedYear);
+    } catch (e) { 
+      alert('Failed to initialize: ' + e.message); 
+    } finally { setLoading(false); }
+  };
+
+  const loadMajorClasses = useCallback(async () => {
+    if (!currentTerm?.academicYear) return;
+    try {
+      const data = await api.adminListMajorClasses({
+        academicYear: currentTerm.academicYear,
+        semester: currentTerm.semester
+      });
+      const grouped = (Array.isArray(data) ? data : []).reduce((acc, mc) => {
+        const year = mc.yearLevel || mc.year || 0;
+        if (!acc[year]) acc[year] = [];
+        acc[year].push(mc);
+        return acc;
+      }, {});
+      setMajorClassesByYear(grouped);
+    } catch (e) { 
+      console.error('Failed to load major classes:', e);
+      setMajorClassesByYear({});
+    }
+  }, [currentTerm?.academicYear, currentTerm?.semester]);
+
+  const handleUpdateSection = async (sectionData) => {
+    setLoading(true);
+    try {
+      await api.adminUpdateClassSection(sectionData);
+      alert('Section updated successfully');
+      setEditingSection({});
+      loadClassSectionsForYear(selectedYear);
+    } catch (e) { alert('Failed to update section: ' + e.message); }
+    finally { setLoading(false); }
+  };
+
+  const handleUpdateMajorClass = async (mcData) => {
+    setLoading(true);
+    try {
+      await api.adminUpdateMajorClass(mcData);
+      alert('Major class updated successfully');
+      setEditingSection({});
+      loadMajorClasses();
+    } catch (e) { alert('Failed to update major class: ' + e.message); }
+    finally { setLoading(false); }
+  };
+
+  const handleMoveStudent = async () => {
+    if (!moveStudentData.studentId || !moveStudentData.toSection) {
+      alert('Please select both student and target section');
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.adminMoveStudentSection(moveStudentData);
+      alert('Student moved successfully');
+      setMoveStudentData({ studentId: '', toSection: '' });
+      setMoveStudentSearch('');
+      loadClassSectionsForYear(selectedYear);
+      loadData();
+    } catch (e) { alert('Failed to move student: ' + e.message); }
+    finally { setLoading(false); }
+  };
 
   useEffect(() => {
     if (!admin) {
@@ -417,6 +557,13 @@ function AdminDashboard({ user, onLogout }) {
     loadData();
   }, [admin, loadData, handleAuthError]);
 
+  useEffect(() => {
+    if (activeTab === 'class-sections') {
+      loadClassSectionsForYear(selectedYear);
+      loadMajorClasses();
+    }
+  }, [activeTab, selectedYear, loadClassSectionsForYear, loadMajorClasses]);
+
   // Tab Sidebar Layout Helpers
   const sidebarLinks = [
     { key: 'overview', label: 'Overview', icon: 'dashboard', count: null },
@@ -427,8 +574,8 @@ function AdminDashboard({ user, onLogout }) {
     { key: 'all', label: 'Full Directory', icon: 'groups', count: null },
     { key: 'composer', label: 'Form Designer', icon: 'settings_applications', count: null, section: 'System' },
     { key: 'class-sections', label: 'Section Config', icon: 'grid_view', count: null },
-  ];
-
+    { key: 'term-management', label: 'Term Management', icon: 'calendar_today', count: null },
+    ];
   const kpis = [
     { label: "TOTAL REGISTRATIONS", value: stats.total, icon: "groups", tone: "primary", hint: "Active system records" },
     { label: "PENDING APPROVAL", value: stats.pending, icon: "hourglass_empty", tone: "amber", hint: "Waiting for review" },
@@ -644,12 +791,16 @@ function AdminDashboard({ user, onLogout }) {
       "Username": student.user_name || "-",
       "Email": student.email || "-",
       "Phone": student.phone || "-",
-      "Year": student.year || "-",
-      "Academic Year": student.academic_year || "-",
+      "Year": getResolvedYearValue(student) || "-",
+      "Academic Year": getResolvedAcademicYearValue(student, currentTerm),
+      "Semester": getResolvedSemesterValue(student, currentTerm),
       "Status": student.status || "-",
-      "Registration Type": student.registration_type || "-",
-      "NRC": student.nrc || "-",
-      "Date of Birth": student.date_of_birth || "-"
+      "Benefit Student": (student.isBenefitStudent || student.is_benefit_student) ? "Yes" : "No",
+      "Hostel Student": (student.isHostelStudent || student.is_hostel_student) ? "Yes" : "No",
+      "On Break": (student.isOnBreak || student.is_on_break) ? "Yes" : "No",
+      "Address": student.address || "-",
+      "NRC": student.nrc || student.nrc_number || "-",
+      "Date of Birth": formatDate(student.date_of_birth || student.dateOfBirth)
     }));
 
     // Convert to worksheet
@@ -664,8 +815,18 @@ function AdminDashboard({ user, onLogout }) {
 
   const getFilteredStudents = () => {
     let filtered = [...students];
-    if (filters.search) filtered = filtered.filter(s => s.namemm?.toLowerCase().includes(filters.search.toLowerCase()) || s.email?.toLowerCase().includes(filters.search.toLowerCase()));
-    if (filters.status) filtered = filtered.filter(s => s.status?.toUpperCase() === filters.status.toUpperCase());
+    if (filters.search) {
+      const search = filters.search.toLowerCase();
+      filtered = filtered.filter(s => 
+        (s.namemm?.toLowerCase().includes(search)) || 
+        (s.user_name?.toLowerCase().includes(search)) || 
+        (s.email?.toLowerCase().includes(search))
+      );
+    }
+    if (filters.year) filtered = filtered.filter(s => String(getResolvedYearValue(s)) === filters.year);
+    if (filters.batch) filtered = filtered.filter(s => getResolvedAcademicYearValue(s, currentTerm) === filters.batch);
+    if (filters.semester) filtered = filtered.filter(s => String(getResolvedSemesterValue(s, currentTerm)) === filters.semester);
+    if (filters.status) filtered = filtered.filter(s => normalizeStatusValue(s.status) === normalizeStatusValue(filters.status));
     return filtered;
   };
 
@@ -991,7 +1152,7 @@ function AdminDashboard({ user, onLogout }) {
                                         <input 
                                             type="text" 
                                             placeholder="Search by name, username, email..."
-                                            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold outline-none focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/30 transition-all"
+                                            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/30 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                                             value={paymentFilters.search}
                                             onChange={(e) => setPaymentFilters({...paymentFilters, search: e.target.value})}
                                         />
@@ -999,35 +1160,35 @@ function AdminDashboard({ user, onLogout }) {
                                     <select 
                                         value={paymentFilters.year}
                                         onChange={(e) => setPaymentFilters({...paymentFilters, year: e.target.value})}
-                                        className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[140px]"
+                                        className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[140px]"
                                     >
-                                        <option value="">All Years</option>
-                                        {allStudentYearOptions.map(y => <option key={y} value={y}>Year {y}</option>)}
+                                        <option value="" className="dark:bg-slate-900">All Years</option>
+                                        {allStudentYearOptions.map(y => <option key={y} value={y} className="dark:bg-slate-900">Year {y}</option>)}
                                     </select>
                                     <select 
                                         value={paymentFilters.batch}
                                         onChange={(e) => setPaymentFilters({...paymentFilters, batch: e.target.value})}
-                                        className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[140px]"
+                                        className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[140px]"
                                     >
-                                        <option value="">All Academic Years</option>
-                                        {currentTerm?.academicYear && <option value={currentTerm.academicYear}>{currentTerm.academicYear}</option>}
+                                        <option value="" className="dark:bg-slate-900">All Academic Years</option>
+                                        {currentTerm?.academicYear && <option value={currentTerm.academicYear} className="dark:bg-slate-900">{currentTerm.academicYear}</option>}
                                     </select>
                                     <select 
                                         value={paymentFilters.semester}
                                         onChange={(e) => setPaymentFilters({...paymentFilters, semester: e.target.value})}
-                                        className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[100px]"
+                                        className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[100px]"
                                     >
-                                        <option value="">Semester</option>
-                                        {[1,2].map(s => <option key={s} value={s}>{s}</option>)}
+                                        <option value="" className="dark:bg-slate-900">Semester</option>
+                                        {[1,2].map(s => <option key={s} value={s} className="dark:bg-slate-900">{s}</option>)}
                                     </select>
                                     <select 
                                         value={paymentFilters.paymentStatus}
                                         onChange={(e) => setPaymentFilters({...paymentFilters, paymentStatus: e.target.value})}
-                                        className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[180px]"
+                                        className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[180px]"
                                     >
-                                        <option value="">All Payment Status</option>
-                                        <option value="PAYMENT_PENDING">PAYMENT_PENDING</option>
-                                        <option value="PAYMENT_DONE">PAYMENT_DONE</option>
+                                        <option value="" className="dark:bg-slate-900">All Payment Status</option>
+                                        <option value="PAYMENT_PENDING" className="dark:bg-slate-900">PAYMENT_PENDING</option>
+                                        <option value="PAYMENT_DONE" className="dark:bg-slate-900">PAYMENT_DONE</option>
                                     </select>
                                 </div>
 
@@ -1074,7 +1235,7 @@ function AdminDashboard({ user, onLogout }) {
                                                         ) : (
                                                             <div className="flex justify-end gap-2">
                                                                 <button 
-                                                                                                                            onClick={() => navigate(`/admin/isolated-review/${student.studentid || student.id}`, { state: { studentRecord: student } })}
+                                                                                                                            onClick={() => navigate(`/admin/submitted-details-review/${student.studentid || student.id}`, { state: { studentRecord: student } })}
                                                                                                                             className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-teal-600 transition-all"><span className="material-icons-outlined text-sm">visibility</span></button>
                                                                 <button className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-emerald-600 border border-emerald-100 dark:border-emerald-900/30 transition-all"><span className="material-icons-outlined text-sm">check_circle</span></button>
                                                             </div>
@@ -1104,7 +1265,7 @@ function AdminDashboard({ user, onLogout }) {
                                             <input 
                                                 type="text" 
                                                 placeholder="Search by name..."
-                                                className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold outline-none focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/30 transition-all"
+                                                className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/30 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                                                 value={enrolledFilters.search}
                                                 onChange={(e) => setEnrolledFilters({...enrolledFilters, search: e.target.value})}
                                             />
@@ -1112,34 +1273,34 @@ function AdminDashboard({ user, onLogout }) {
                                         <select 
                                             value={enrolledFilters.year}
                                             onChange={(e) => setEnrolledFilters({...enrolledFilters, year: e.target.value})}
-                                            className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[120px]"
+                                            className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[120px]"
                                         >
-                                            <option value="">Year</option>
-                                            {DEFAULT_CONFIG_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                                            <option value="" className="dark:bg-slate-900">Year</option>
+                                            {DEFAULT_CONFIG_YEARS.map(y => <option key={y} value={y} className="dark:bg-slate-900">{y}</option>)}
                                         </select>
                                         <select 
                                             value={enrolledFilters.batch}
                                             onChange={(e) => setEnrolledFilters({...enrolledFilters, batch: e.target.value})}
-                                            className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[140px]"
+                                            className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[140px]"
                                         >
-                                            <option value="">Academic Year</option>
-                                            {currentTerm?.academicYear && <option value={currentTerm.academicYear}>{currentTerm.academicYear}</option>}
+                                            <option value="" className="dark:bg-slate-900">Academic Year</option>
+                                            {currentTerm?.academicYear && <option value={currentTerm.academicYear} className="dark:bg-slate-900">{currentTerm.academicYear}</option>}
                                         </select>
                                         <select 
                                             value={enrolledFilters.semester}
                                             onChange={(e) => setEnrolledFilters({...enrolledFilters, semester: e.target.value})}
-                                            className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[100px]"
+                                            className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[100px]"
                                         >
-                                            <option value="">Semester</option>
-                                            {[1,2].map(s => <option key={s} value={s}>{s}</option>)}
+                                            <option value="" className="dark:bg-slate-900">Semester</option>
+                                            {[1,2].map(s => <option key={s} value={s} className="dark:bg-slate-900">{s}</option>)}
                                         </select>
                                         <select 
                                             value={enrolledFilters.class}
                                             onChange={(e) => setEnrolledFilters({...enrolledFilters, class: e.target.value})}
-                                            className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[100px]"
+                                            className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[100px]"
                                         >
-                                            <option value="">Class</option>
-                                            {BASE_CLASS_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                                            <option value="" className="dark:bg-slate-900">Class</option>
+                                            {BASE_CLASS_OPTIONS.map(c => <option key={c} value={c} className="dark:bg-slate-900">{c}</option>)}
                                         </select>
                                     </div>
                                 </div>
@@ -1176,7 +1337,7 @@ function AdminDashboard({ user, onLogout }) {
                                                     </td>
                                                     <td className="px-6 py-6 text-right whitespace-nowrap">
                                                         <button 
-                                                            onClick={() => navigate(`/admin/isolated-review/${student.studentid || student.id}`, { state: { studentRecord: student } })}
+                                                            onClick={() => navigate(`/admin/submitted-details-review/${student.studentid || student.id}`, { state: { studentRecord: student } })}
                                                             className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-teal-600 transition-all"><span className="material-icons-outlined text-sm">visibility</span></button>
                                                     </td>
                                                 </tr>
@@ -1193,76 +1354,509 @@ function AdminDashboard({ user, onLogout }) {
                         )}
                         {activeTab === 'all' && (
                             <div className="space-y-8 animate-in fade-in duration-700">
-                                <div className="flex items-center justify-between">
+                                <div className="flex flex-col gap-6">
                                     <div>
-                                        <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Student Directory</h3>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Aggregate Records Archive</p>
+                                        <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">All Students</h3>
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                            Current Term: {currentTerm?.academicYear || '-'} | Semester {currentTerm?.semester || '-'}
+                                        </p>
                                     </div>
-                                    <button onClick={() => exportStudentsToExcel()} className="inline-flex items-center gap-2 bg-slate-900 dark:bg-teal-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:shadow-xl active:scale-95 transition-all">
-                                        <span className="material-icons-outlined text-sm">download</span>
-                                        Export Database
-                                    </button>
+                                    
+                                    <div className="bg-slate-50 dark:bg-slate-950/50 p-4 rounded-[24px] border border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-3 shadow-sm">
+                                        <div className="relative group flex-1 min-w-[300px]">
+                                            <span className="material-icons-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-teal-500 transition-colors text-sm">search</span>
+                                            <input 
+                                                type="text" 
+                                                placeholder="Search by name, username, email..."
+                                                className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-teal-500/5 focus:border-teal-500/30 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                                                value={filters.search}
+                                                onChange={(e) => setFilters({...filters, search: e.target.value})}
+                                            />
+                                        </div>
+                                        <select 
+                                            value={filters.year}
+                                            onChange={(e) => setFilters({...filters, year: e.target.value})}
+                                            className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[140px]"
+                                        >
+                                            <option value="" className="dark:bg-slate-900">All Years</option>
+                                            {allStudentYearOptions.map(y => <option key={y} value={y} className="dark:bg-slate-900">Year {y}</option>)}
+                                        </select>
+                                        <select 
+                                            value={filters.batch}
+                                            onChange={(e) => setFilters({...filters, batch: e.target.value})}
+                                            className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[180px]"
+                                        >
+                                            <option value="" className="dark:bg-slate-900">All Academic Years</option>
+                                            {currentTerm?.academicYear && <option value={currentTerm.academicYear} className="dark:bg-slate-900">{currentTerm.academicYear}</option>}
+                                        </select>
+                                        <select 
+                                            value={filters.semester}
+                                            onChange={(e) => setFilters({...filters, semester: e.target.value})}
+                                            className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[140px]"
+                                        >
+                                            <option value="" className="dark:bg-slate-900">All Semesters</option>
+                                            {[1,2].map(s => <option key={s} value={String(s)} className="dark:bg-slate-900">Semester {s}</option>)}
+                                        </select>
+                                        <select 
+                                            value={filters.status}
+                                            onChange={(e) => setFilters({...filters, status: e.target.value})}
+                                            className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/30 transition-all cursor-pointer min-w-[160px]"
+                                        >
+                                            <option value="" className="dark:bg-slate-900">All Status</option>
+                                            {allStudentStatusOptions.map(s => <option key={s} value={s} className="dark:bg-slate-900">{s}</option>)}
+                                        </select>
+                                        <button 
+                                            onClick={() => exportStudentsToExcel()} 
+                                            className="inline-flex items-center gap-2 bg-slate-900 dark:bg-teal-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:shadow-xl active:scale-95 transition-all w-fit ml-auto"
+                                        >
+                                            <span className="material-icons-outlined text-sm">download</span>
+                                            Export to Excel
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="bg-slate-50 dark:bg-slate-950/50 rounded-[32px] border border-slate-100 dark:border-slate-800 overflow-x-auto shadow-sm scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
-                                    <table className="w-full border-collapse min-w-[800px]">
+
+                                <div className="bg-white dark:bg-slate-950/50 rounded-[32px] border border-slate-100 dark:border-slate-800 overflow-x-auto shadow-sm scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
+                                    <table className="w-full border-collapse min-w-[1200px]">
                                         <thead>
-                                            <tr className="bg-white dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
-                                                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Full Name</th>
-                                                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Identification</th>
-                                                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                                                <th className="px-8 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Action</th>
+                                            <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Name</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Username</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Email</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Year</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Academic Year</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">Semester</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Status</th>
+                                                <th className="px-4 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Benefit</th>
+                                                <th className="px-4 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Hostel</th>
+                                                <th className="px-4 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Break</th>
+                                                <th className="px-6 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                            {getFilteredStudents().slice(0, 15).map((student, i) => (
-                                                <tr key={i} className="hover:bg-white dark:hover:bg-slate-900 transition-colors group">
-                                                    <td className="px-8 py-6">
-                                                        <div className="font-black text-slate-900 dark:text-white text-sm group-hover:text-teal-600 transition-colors">{student.namemm}</div>
-                                                        <div className="text-xs font-bold text-slate-400">{student.email}</div>
+                                            {getFilteredStudents().map((student, i) => (
+                                                <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-slate-900 transition-colors group">
+                                                    <td className="px-6 py-6 whitespace-nowrap">
+                                                        <div className="font-black text-slate-900 dark:text-white text-xs">{student.namemm}</div>
                                                     </td>
-                                                    <td className="px-8 py-6 text-xs font-black text-slate-500 uppercase tabular-nums tracking-tight">{student.studentid || student.id || 'N/A'}</td>
-                                                    <td className="px-8 py-6">
+                                                    <td className="px-6 py-6 text-[11px] font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap">{student.user_name || '-'}</td>
+                                                    <td className="px-6 py-6 text-[11px] font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap">{student.email}</td>
+                                                    <td className="px-6 py-6 text-[11px] font-black text-slate-500 uppercase text-center whitespace-nowrap">{getResolvedYearValue(student) || '-'}</td>
+                                                    <td className="px-6 py-6 text-[11px] font-bold text-slate-500 uppercase text-center tabular-nums whitespace-nowrap">{getResolvedAcademicYearValue(student, currentTerm)}</td>
+                                                    <td className="px-6 py-6 text-[11px] font-bold text-slate-500 text-center whitespace-nowrap">{getResolvedSemesterValue(student, currentTerm)}</td>
+                                                    <td className="px-6 py-6 whitespace-nowrap">
                                                         <span className={cn(
                                                             "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
-                                                            (student.status || '').toUpperCase() === 'ENROLLED' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-slate-100 text-slate-500 border-slate-200"
+                                                            normalizeStatusValue(student.status) === 'ENROLLED' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-slate-50 text-slate-500 border-slate-100"
                                                         )}>{student.status || 'ACTIVE'}</span>
                                                     </td>
-                                                    <td className="px-8 py-6 text-right">
+                                                    <td className="px-4 py-6 text-center whitespace-nowrap">
+                                                        <span className={cn("material-icons-outlined text-sm", (student.isBenefitStudent || student.is_benefit_student) ? "text-teal-500" : "text-slate-300 opacity-40")}>
+                                                            {(student.isBenefitStudent || student.is_benefit_student) ? "check_circle" : "cancel"}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-6 text-center whitespace-nowrap">
+                                                        <span className={cn("material-icons-outlined text-sm", (student.isHostelStudent || student.is_hostel_student) ? "text-indigo-500" : "text-slate-300 opacity-40")}>
+                                                            {(student.isHostelStudent || student.is_hostel_student) ? "check_circle" : "cancel"}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-6 text-center whitespace-nowrap">
+                                                        <span className={cn("material-icons-outlined text-sm", (student.isOnBreak || student.is_on_break) ? "text-amber-500" : "text-slate-300 opacity-40")}>
+                                                            {(student.isOnBreak || student.is_on_break) ? "check_circle" : "cancel"}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-6 text-right whitespace-nowrap">
                                                         <button 
-                                                        onClick={() => navigate(`/admin/isolated-review/${student.studentid || student.id}`, { state: { studentRecord: student } })}
-                                                        className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-teal-600 transition-all"><span className="material-icons-outlined text-sm">visibility</span></button>
-                                                        </td>
-                                                        </tr>
-
+                                                            onClick={() => navigate(`/admin/submitted-details-review/${student.studentid || student.id}`, { state: { studentRecord: student } })}
+                                                            className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-teal-600 transition-all"><span className="material-icons-outlined text-sm">visibility</span></button>
+                                                    </td>
+                                                </tr>
                                             ))}
+                                            {getFilteredStudents().length === 0 && (
+                                                <tr>
+                                                    <td colSpan={11} className="p-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs">No records found in student directory</td>
+                                                </tr>
+                                            )}
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
                         )}
                         {activeTab === 'composer' && <Composer />}
+                        {activeTab === 'term-management' && (
+                            <AdminTermManagement_Friend 
+                                admin={admin} 
+                                onBack={() => setActiveTab('overview')} 
+                            />
+                        )}
                         {activeTab === 'class-sections' && (
-                            <div className="space-y-8 animate-in fade-in duration-700">
-                                <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Section Configuration</h3>
-                                <div className="flex items-center gap-6 p-8 bg-slate-50 dark:bg-slate-900 rounded-[32px] border border-slate-100 dark:border-slate-800">
-                                    <div className="grid gap-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Target Year</label>
-                                        <select value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))} className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-sm font-bold outline-none focus:border-teal-500 transition-all">
-                                            {[1,2,3,4,5].map(y => <option key={y} value={y}>Level {y}</option>)}
-                                        </select>
+                            <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                                    <div className="space-y-1">
+                                        <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Section Management</h3>
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Configure capacities and enrollment locks</p>
                                     </div>
-                                    <div className="h-10 w-px bg-slate-200 dark:bg-slate-800 self-end mb-1" />
-                                    <p className="text-xs font-medium text-slate-400 self-end mb-3">Modify capacities and lock states for active academic sessions.</p>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                    {['A','B','C','D'].map(sec => (
-                                        <div key={sec} className="p-6 bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm hover:shadow-md transition-all">
-                                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Section {sec}</div>
-                                            <div className="text-2xl font-black text-slate-900 dark:text-white mb-6">40 <span className="text-[10px] text-slate-300">LIMIT</span></div>
-                                            <button className="w-full py-2 bg-slate-100 dark:bg-slate-800 text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-teal-50 hover:text-teal-600 transition-all">Update Protocol</button>
+                                    <div className="flex items-center gap-4 p-2 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                                        <button 
+                                            onClick={() => setSectionConfigTab('foundation')}
+                                            className={cn(
+                                                "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                                sectionConfigTab === 'foundation' ? "bg-slate-900 text-white shadow-lg dark:bg-teal-600" : "text-slate-400 hover:text-slate-600"
+                                            )}
+                                        >Foundation</button>
+                                        <button 
+                                            onClick={() => setSectionConfigTab('major')}
+                                            className={cn(
+                                                "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                                sectionConfigTab === 'major' ? "bg-slate-900 text-white shadow-lg dark:bg-teal-600" : "text-slate-400 hover:text-slate-600"
+                                            )}
+                                        >Major Classes</button>
+                                        <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 mx-2" />
+                                        <div className="px-4 py-2">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Target Academic Year</p>
+                                            <select 
+                                                value={selectedYear} 
+                                                onChange={(e) => setSelectedYear(parseInt(e.target.value))} 
+                                                className="bg-transparent text-sm font-black text-teal-600 outline-none cursor-pointer"
+                                            >
+                                                {[1,2,3,4,5].map(y => <option key={y} value={y}>Year {y}</option>)}
+                                            </select>
                                         </div>
-                                    ))}
+                                    </div>
                                 </div>
+
+                                {sectionConfigTab === 'foundation' ? (
+                                    <>
+                                        {/* Foundation Sections Table */}
+                                        <div className="bg-white dark:bg-slate-950/50 rounded-[40px] border border-slate-100 dark:border-slate-800 overflow-x-auto shadow-sm scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
+                                            <table className="w-full border-collapse min-w-[1000px]">
+                                                <thead>
+                                                    <tr className="bg-slate-900 dark:bg-slate-800 text-white">
+                                                        <th className="px-10 py-6 text-left text-sm font-bold tracking-tight">Section</th>
+                                                        <th className="px-10 py-6 text-left text-sm font-bold tracking-tight">Max Capacity</th>
+                                                        <th className="px-10 py-6 text-center text-sm font-bold tracking-tight">Enrolled</th>
+                                                        <th className="px-10 py-6 text-center text-sm font-bold tracking-tight">Remaining</th>
+                                                        <th className="px-10 py-6 text-center text-sm font-bold tracking-tight">Locked</th>
+                                                        <th className="px-10 py-6 text-right text-sm font-bold tracking-tight">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                                    {classSections.filter(s => s.yearLevel === selectedYear || s.year === selectedYear).map((sec, idx) => {
+                                                        const secYear = sec.yearLevel || sec.year;
+                                                        const isEditing = !!editingSection.section && 
+                                                                         editingSection.section === sec.section && 
+                                                                         (editingSection.yearLevel === secYear || editingSection.year === secYear);
+                                                        
+                                                        const maxCap = sec.maxCapacity || sec.max_capacity || 40;
+                                                        const remaining = maxCap - (sec.currentEnrolled || 0);
+                                                        
+                                                        const enterEdit = () => setEditingSection({...sec, yearLevel: secYear, year: secYear, maxCapacity: maxCap});
+
+                                                        return (
+                                                            <tr key={idx} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/30 transition-colors group">
+                                                                <td className="px-10 py-8">
+                                                                    <div className="h-10 w-10 rounded-xl bg-slate-900 dark:bg-teal-600 text-white flex items-center justify-center font-black text-sm shadow-lg shadow-slate-200 dark:shadow-teal-900/20">{sec.section}</div>
+                                                                </td>
+                                                                <td className="px-10 py-8 cursor-pointer" onClick={!isEditing ? enterEdit : undefined}>
+                                                                    {isEditing ? (
+                                                                        <input 
+                                                                            type="number" 
+                                                                            className="w-24 px-4 py-2 bg-white dark:bg-slate-900 border border-teal-500 rounded-xl text-sm font-black outline-none focus:ring-4 focus:ring-teal-500/10 transition-all shadow-sm"
+                                                                            value={editingSection.maxCapacity}
+                                                                            autoFocus
+                                                                            onChange={(e) => setEditingSection({...editingSection, maxCapacity: parseInt(e.target.value) || 0})}
+                                                                        />
+                                                                    ) : (
+                                                                        <div className="flex items-center gap-2 group/val">
+                                                                            <span className="text-lg font-black text-slate-900 dark:text-white">{maxCap}</span>
+                                                                            <span className="material-icons-outlined text-[14px] text-slate-300 opacity-0 group-hover/val:opacity-100 transition-opacity">edit</span>
+                                                                        </div>
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-10 py-8 text-center">
+                                                                    <span className="text-sm font-bold text-slate-500">{sec.currentEnrolled || 0}</span>
+                                                                </td>
+                                                                <td className="px-10 py-8 text-center">
+                                                                    <span className={cn(
+                                                                        "text-sm font-black",
+                                                                        remaining <= 5 ? "text-rose-500" : "text-emerald-500"
+                                                                    )}>{remaining}</span>
+                                                                </td>
+                                                                <td className="px-10 py-8 text-center cursor-pointer" onClick={!isEditing ? enterEdit : undefined}>
+                                                                    {isEditing ? (
+                                                                        <label className="relative inline-flex items-center cursor-pointer group/toggle">
+                                                                            <input 
+                                                                                type="checkbox" 
+                                                                                className="sr-only peer" 
+                                                                                checked={editingSection.isLocked}
+                                                                                onChange={(e) => setEditingSection({...editingSection, isLocked: e.target.checked})}
+                                                                            />
+                                                                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600 rounded-full" />
+                                                                            <span className="ml-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">{editingSection.isLocked ? 'Locked' : 'Open'}</span>
+                                                                        </label>
+                                                                    ) : (
+                                                                        <span className={cn(
+                                                                            "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all hover:scale-105",
+                                                                            sec.isLocked 
+                                                                                ? "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:border-rose-900/50" 
+                                                                                : "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-900/50"
+                                                                        )}>
+                                                                            {sec.isLocked ? 'Locked' : 'Active'}
+                                                                        </span>
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-10 py-8 text-right">
+                                                                    {isEditing ? (
+                                                                        <div className="flex justify-end gap-2">
+                                                                            <button 
+                                                                                onClick={() => setEditingSection({})}
+                                                                                className="h-10 px-4 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
+                                                                            >Cancel</button>
+                                                                            <button 
+                                                                                onClick={() => handleUpdateSection(editingSection)}
+                                                                                className="h-10 px-6 bg-teal-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-teal-500/20 hover:bg-teal-700 transition-all"
+                                                                            >Save</button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <button 
+                                                                            onClick={enterEdit}
+                                                                            className="h-10 w-10 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-teal-600 rounded-xl flex items-center justify-center transition-all shadow-sm border border-slate-100 dark:border-slate-700/50"
+                                                                        >
+                                                                            <span className="material-icons-outlined text-sm">edit</span>
+                                                                        </button>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                    {classSections.filter(s => s.yearLevel === selectedYear || s.year === selectedYear).length === 0 && (
+                                                        <tr>
+                                                            <td colSpan={6} className="p-20 text-center border-dashed border-2 border-slate-100 dark:border-slate-800 rounded-[40px]">
+                                                                <div className="flex flex-col items-center gap-4">
+                                                                    <p className="text-slate-300 font-black uppercase tracking-widest text-xs">No sections found for Year {selectedYear}</p>
+                                                                    <button 
+                                                                        onClick={handleInitializeSections}
+                                                                        className="px-8 py-3 bg-teal-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-teal-500/20 hover:bg-teal-700 transition-all active:scale-95"
+                                                                    >Initialize Default Sections (A,B,C,D)</button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {/* Student Movement Console */}
+                                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                                            <div className="bg-slate-900 dark:bg-slate-950 rounded-[40px] p-10 text-white relative overflow-hidden group">
+                                                <div className="relative z-10">
+                                                    <div className="flex items-center gap-4 mb-8">
+                                                        <div className="h-12 w-12 rounded-2xl bg-teal-500/10 flex items-center justify-center text-teal-400 border border-teal-500/20">
+                                                            <span className="material-icons-outlined text-2xl">sync_alt</span>
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="text-xl font-black tracking-tight uppercase">Student Relocation</h4>
+                                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Move student between academic sections</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-6">
+                                                        <div className="grid gap-2">
+                                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Find Student</label>
+                                                            <div className="relative">
+                                                                <span className="material-icons-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 text-sm">search</span>
+                                                                <input 
+                                                                    type="text" 
+                                                                    placeholder="Search by ID, Name or Email..."
+                                                                    className="w-full pl-12 pr-4 py-4 bg-white/5 dark:bg-slate-900 border border-white/10 dark:border-slate-800 rounded-2xl text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-teal-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-700"
+                                                                    value={moveStudentSearch}
+                                                                    onChange={(e) => setMoveStudentSearch(e.target.value)}
+                                                                />
+                                                                {moveStudentSearch.length > 2 && (
+                                                                    <div className="absolute top-full left-0 right-0 mt-4 bg-slate-800 rounded-3xl border border-slate-700 shadow-2xl z-50 overflow-hidden max-h-64 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-300">
+                                                                        {students.filter(s => 
+                                                                            s.namemm?.toLowerCase().includes(moveStudentSearch.toLowerCase()) || 
+                                                                            s.user_name?.toLowerCase().includes(moveStudentSearch.toLowerCase()) ||
+                                                                            String(s.studentid || s.id).includes(moveStudentSearch)
+                                                                        ).map((s, idx) => (
+                                                                            <button 
+                                                                                key={idx}
+                                                                                onClick={() => {
+                                                                                    setMoveStudentData({...moveStudentData, studentId: s.studentid || s.id});
+                                                                                    setMoveStudentSearch('');
+                                                                                }}
+                                                                                className="w-full px-8 py-5 text-left hover:bg-slate-700/50 transition-all border-b border-slate-700/50 flex items-center justify-between group/result cursor-pointer"
+                                                                            >
+                                                                                <div>
+                                                                                    <p className="text-sm font-black text-white group-hover/result:text-teal-400 transition-colors">{s.namemm}</p>
+                                                                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">{s.user_name || s.id}</p>
+                                                                                </div>
+                                                                                <span className="text-[10px] font-black text-teal-500 bg-teal-500/10 px-2 py-1 rounded-lg uppercase tracking-widest">{s.section || 'NO SEC'}</span>
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                                </div>
+                                                                </div>
+
+                                                                {moveStudentData.studentId && (
+                                                                <div className="flex items-center justify-between p-4 bg-teal-500/10 border border-teal-500/20 rounded-2xl animate-in zoom-in-95 duration-300">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="h-2 w-2 rounded-full bg-teal-500 animate-pulse" />
+                                                                    <p className="text-xs font-black uppercase tracking-widest text-teal-400">
+                                                                        Target: {students.find(s => (s.studentid || s.id) === moveStudentData.studentId)?.namemm || 'Selected Student'}
+                                                                    </p>
+                                                                </div>
+                                                                <button onClick={() => {setMoveStudentData({...moveStudentData, studentId: ''}); setMoveStudentSearch('');}} className="text-[10px] font-black text-slate-500 hover:text-white uppercase">Clear</button>
+                                                                </div>
+                                                                )}
+                                                                <div className="grid gap-2">                                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Target Section</label>
+                                                            <div className="grid grid-cols-4 gap-3">
+                                                                {['A','B','C','D'].map(sec => (
+                                                                    <button 
+                                                                        key={sec}
+                                                                        onClick={() => setMoveStudentData({...moveStudentData, toSection: sec})}
+                                                                        className={cn(
+                                                                            "py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all border",
+                                                                            moveStudentData.toSection === sec 
+                                                                                ? "bg-teal-600 border-teal-500 text-white shadow-lg shadow-teal-900/40" 
+                                                                                : "bg-white/5 border-white/10 text-slate-400 hover:bg-white/10"
+                                                                        )}
+                                                                    >Section {sec}</button>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+
+                                                        <button 
+                                                            onClick={handleMoveStudent}
+                                                            className="w-full py-5 bg-white text-slate-900 rounded-[24px] text-[10px] font-black uppercase tracking-widest hover:bg-teal-50 hover:text-teal-600 transition-all shadow-xl active:scale-95 disabled:opacity-50"
+                                                            disabled={!moveStudentData.studentId || !moveStudentData.toSection}
+                                                        >Initiate Relocation Protocol</button>
+                                                    </div>
+                                                </div>
+                                                <div className="absolute top-0 right-0 h-40 w-40 bg-teal-500/5 rounded-bl-full transform group-hover:scale-110 transition-transform" />
+                                            </div>
+
+                                            <div className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[40px] p-10 flex flex-col justify-center text-center relative group overflow-hidden">
+                                                <div className="relative z-10">
+                                                    <div className="h-16 w-16 rounded-3xl bg-white dark:bg-slate-800 mx-auto flex items-center justify-center text-slate-300 dark:text-slate-600 mb-6 border border-slate-100 dark:border-slate-700/50">
+                                                        <span className="material-icons-outlined text-3xl">info</span>
+                                                    </div>
+                                                    <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">Management Protocol</h4>
+                                                    <p className="text-xs font-medium text-slate-400 max-w-xs mx-auto leading-relaxed">Changes to section capacity or lock status will take effect immediately for all new student registrations.</p>
+                                                </div>
+                                                <div className="absolute -bottom-10 -right-10 h-40 w-40 bg-slate-900/5 rounded-full transform group-hover:scale-110 transition-transform" />
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        {/* Major Classes Table */}
+                                        <div className="bg-white dark:bg-slate-950/50 rounded-[40px] border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm">
+                                            <table className="w-full border-collapse">
+                                                <thead>
+                                                    <tr className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
+                                                        <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Major Class</th>
+                                                        <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Max Capacity</th>
+                                                        <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Enrolled</th>
+                                                        <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Remaining</th>
+                                                        <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
+                                                        <th className="px-10 py-6 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                                    {(majorClassesByYear[selectedYear] || []).map((mc, idx) => {
+                                                        const isEditing = editingSection.id === mc.id;
+                                                        const remaining = (mc.maxCapacity || 0) - (mc.currentEnrolled || 0);
+                                                        
+                                                        return (
+                                                            <tr key={idx} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/30 transition-colors group">
+                                                                <td className="px-10 py-8">
+                                                                    <div className="flex items-center gap-4">
+                                                                        <div className="h-10 w-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-lg shadow-indigo-200 dark:shadow-indigo-900/20">{mc.majorCode || 'M'}</div>
+                                                                        <div>
+                                                                            <p className="text-sm font-black text-slate-900 dark:text-white">{mc.label || mc.name}</p>
+                                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Major Specialization</p>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-10 py-8">
+                                                                    {isEditing ? (
+                                                                        <input 
+                                                                            type="number" 
+                                                                            className="w-24 px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-teal-500/30 rounded-xl text-sm font-black outline-none focus:ring-4 focus:ring-teal-500/5 transition-all"
+                                                                            value={editingSection.maxCapacity}
+                                                                            onChange={(e) => setEditingSection({...editingSection, maxCapacity: parseInt(e.target.value)})}
+                                                                        />
+                                                                    ) : (
+                                                                        <span className="text-lg font-black text-slate-900 dark:text-white tabular-nums">{mc.maxCapacity}</span>
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-10 py-8 text-center">
+                                                                    <span className="text-sm font-bold text-slate-500 tabular-nums">{mc.currentEnrolled || 0}</span>
+                                                                </td>
+                                                                <td className="px-10 py-8 text-center">
+                                                                    <span className={cn(
+                                                                        "text-sm font-black tabular-nums",
+                                                                        remaining <= 5 ? "text-rose-500" : "text-emerald-500"
+                                                                    )}>{remaining}</span>
+                                                                </td>
+                                                                <td className="px-10 py-8 text-center">
+                                                                    {isEditing ? (
+                                                                        <label className="relative inline-flex items-center cursor-pointer group/toggle">
+                                                                            <input 
+                                                                                type="checkbox" 
+                                                                                className="sr-only peer" 
+                                                                                checked={editingSection.isLocked}
+                                                                                onChange={(e) => setEditingSection({...editingSection, isLocked: e.target.checked})}
+                                                                            />
+                                                                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600 rounded-full" />
+                                                                            <span className="ml-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">{editingSection.isLocked ? 'Locked' : 'Open'}</span>
+                                                                        </label>
+                                                                    ) : (
+                                                                        <span className={cn(
+                                                                            "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
+                                                                            mc.isLocked 
+                                                                                ? "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:border-rose-900/50" 
+                                                                                : "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-900/50"
+                                                                        )}>
+                                                                            {mc.isLocked ? 'Locked' : 'Active'}
+                                                                        </span>
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-10 py-8 text-right">
+                                                                    {isEditing ? (
+                                                                        <div className="flex justify-end gap-2">
+                                                                            <button 
+                                                                                onClick={() => setEditingSection({})}
+                                                                                className="h-10 px-4 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
+                                                                            >Cancel</button>
+                                                                            <button 
+                                                                                onClick={() => handleUpdateMajorClass(editingSection)}
+                                                                                className="h-10 px-6 bg-teal-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-teal-500/20 hover:bg-teal-700 transition-all"
+                                                                            >Save</button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <button 
+                                                                            onClick={() => setEditingSection({...mc})}
+                                                                            className="h-10 w-10 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-teal-600 rounded-xl flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+                                                                        >
+                                                                            <span className="material-icons-outlined text-sm">edit</span>
+                                                                        </button>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                    {(majorClassesByYear[selectedYear] || []).length === 0 && (
+                                                        <tr>
+                                                            <td colSpan={6} className="p-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs border-dashed border-2 border-slate-50 rounded-[40px] m-4">No major classes configured for this level</td>
+                                                        </tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         )}
                     </div>

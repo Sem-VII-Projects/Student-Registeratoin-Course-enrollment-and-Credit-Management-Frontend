@@ -122,7 +122,7 @@ function normalizeStudent(student: any) {
     township: student.township || "",
     address: student.address || "",
     assigned_class: student.assigned_class || student.assignedClass || "",
-    status: student.status || "",
+    status: student.status || student.globalStatus || student.global_status || "",
     globalStatus: student.globalStatus || student.global_status || student.status || "",
     payment_status: student.payment_status || student.paymentStatus || "",
     payment_academic_year:
@@ -240,25 +240,40 @@ async function request<T = any>(path: string, options: RequestOptions = {}): Pro
   const backend = options.backend ?? "fastapi";
   const base = backend === "spring" ? SPRING_API_BASE_URL : API_BASE_URL;
 
-  // With the new path-based routing (/api/v1 -> fastapi, /api -> spring)
-  // we do not need the /spring-api prefix.
-  const fullPath = path;
+  // Use base only if provided, otherwise use relative path (for Vite proxy)
+  const fetchUrl = base ? `${base}${path}` : path;
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
 
-  // Preserve compatibility with older login flows while standardizing on access_token.
-  const token =
-    localStorage.getItem("access_token") ||
-    localStorage.getItem("authToken") ||
-    sessionStorage.getItem("adminAuthToken") ||
-    localStorage.getItem("adminAuthToken");
+  // Token resolution logic inspired by Temp/client.js
+  const isAdminUiRoute = typeof window !== 'undefined' && (window.location.pathname.startsWith('/admin') || window.location.hash.startsWith('#/admin'));
+  const hasAdminSession = Boolean(localStorage.getItem('adminData'));
+  
+  // For Spring backend, only /api/admin/ or /v1/admin/ are strictly "prefer admin token"
+  const isSpringAdminApi = backend === "spring" && (path.startsWith("/api/admin/") || path.startsWith("/v1/admin/"));
+  const preferAdminToken = hasAdminSession && (isAdminUiRoute || isSpringAdminApi);
+
+  let token: string | null = null;
+  if (preferAdminToken) {
+    token = sessionStorage.getItem("adminAuthToken") || 
+            localStorage.getItem("adminAuthToken") || 
+            localStorage.getItem("access_token");
+  }
+  
+  if (!token) {
+    token = localStorage.getItem("access_token") || 
+            localStorage.getItem("authToken") || 
+            sessionStorage.getItem("adminAuthToken") || 
+            localStorage.getItem("adminAuthToken");
+  }
+
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${base}${fullPath}`, {
+  const res = await fetch(fetchUrl, {
     method: options.method ?? "GET",
     headers,
     credentials: "include",
@@ -384,9 +399,19 @@ export const api = {
   updateRegistrationWindowSettings: (body: any) => request("/api/admin/registration-window", { method: "PUT", body, backend: "spring" }),
 
   // Spring Boot specific methods from client.js
-  adminListRegistrations: (status?: string) => {
+  adminListRegistrations: async (status?: string, backend: "fastapi" | "spring" = "fastapi") => {
     const query = status ? `?status=${encodeURIComponent(status)}` : '';
-    return request(`/v1/admin/registrations${query}`, { backend: "spring" });
+    // For FastAPI, the path might be different, but we'll try to maintain compatibility
+    const path = backend === "spring" ? `/v1/admin/registrations${query}` : `/api/v1/admin/registrations/${query}`;
+    const items = await request<any>(path, { backend });
+    if (Array.isArray(items)) return items;
+    if (Array.isArray(items?.registrations)) return items.registrations;
+    if (Array.isArray(items?.data)) return items.data;
+    if (Array.isArray(items?.content)) return items.content;
+    if (Array.isArray(items?.results)) return items.results;
+    if (Array.isArray(items?._embedded?.registrations)) return items._embedded.registrations;
+    if (Array.isArray(items?._embedded?.registrationList)) return items._embedded.registrationList;
+    return [];
   },
   adminApproveRegistration: (registrationId: string) => 
     request(`/v1/admin/registrations/${encodeURIComponent(registrationId)}/approve`, { method: "PATCH", backend: "spring" }),
@@ -405,24 +430,52 @@ export const api = {
   createParent: (body: any) => request('/api/parents', { method: 'POST', body, backend: "spring" }),
   listParents: (studentId: string) => {
     const query = studentId ? `?studentId=${encodeURIComponent(studentId)}` : '';
-    return request<any[]>(`/api/parents${query}`, { backend: "spring" }).then((items) => {
+    return request<any[]>(`/api/parents${query}`, { backend: "spring" }).then((items: any) => {
       const list = Array.isArray(items)
         ? items
-        : Array.isArray((items as any)?.parents)
-          ? (items as any).parents
-          : Array.isArray((items as any)?.data)
-            ? (items as any).data
-            : [];
+        : Array.isArray(items?.parents)
+          ? items.parents
+          : Array.isArray(items?.data)
+            ? items.data
+            : Array.isArray(items?._embedded?.parents)
+              ? items._embedded.parents
+              : [];
       return list;
     });
   },
   adminUpdateMajorClass: (payload: any) => request('/api/admin/major-classes', { method: 'PUT', body: payload, backend: "spring" }),
+  adminListMajorClasses: async (params: any = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.academicYear) queryParams.set('academicYear', String(params.academicYear));
+    if (params.semester) queryParams.set('semester', String(params.semester));
+    if (params.yearLevel) queryParams.set('yearLevel', String(params.yearLevel));
+    if (params.includeInactive !== undefined) queryParams.set('includeInactive', String(params.includeInactive));
+    const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    const items = await request<any>(`/api/admin/major-classes${query}`, { backend: "spring" });
+    if (Array.isArray(items)) return items;
+    if (Array.isArray(items?.majorClasses)) return items.majorClasses;
+    if (Array.isArray(items?.data)) return items.data;
+    if (Array.isArray(items?.content)) return items.content;
+    if (Array.isArray(items?._embedded?.majorClasses)) return items._embedded.majorClasses;
+    if (Array.isArray(items?._embedded?.majorClassList)) return items._embedded.majorClassList;
+    return [];
+  },
+  adminListClassSections: async () => {
+    const items = await request<any>('/api/admin/class-sections', { backend: "spring" });
+    if (Array.isArray(items)) return items;
+    if (Array.isArray(items?.classSections)) return items.classSections;
+    if (Array.isArray(items?.data)) return items.data;
+    if (Array.isArray(items?.content)) return items.content;
+    if (Array.isArray(items?._embedded?.classSections)) return items._embedded.classSections;
+    if (Array.isArray(items?._embedded?.classSectionList)) return items._embedded.classSectionList;
+    return [];
+  },
   adminUpdateClassSection: (payload: any) => request('/api/admin/class-sections', { method: 'PUT', body: payload, backend: "spring" }),
   adminMoveStudentSection: (payload: any) => request('/api/admin/class-sections/move-student', { method: 'POST', body: payload, backend: "spring" }),
   approveStudent: (studentId: string, body: any) => request(`/api/students/${encodeURIComponent(studentId)}/approve`, { method: 'POST', body, backend: "spring" }),
   rejectStudent: (studentId: string, body: any) => request(`/api/students/${encodeURIComponent(studentId)}/reject`, { method: 'POST', body, backend: "spring" }),
   updateStudentStatus: (studentId: string, status: string) => request(`/api/students/${encodeURIComponent(studentId)}/status`, { method: 'PATCH', body: { status }, backend: "spring" }),
-  getClassSections: (paramsOrYear: any, semesterArg?: any, yearLevelArg?: any) => {
+  getClassSections: async (paramsOrYear: any, semesterArg?: any, yearLevelArg?: any) => {
     const queryParams = new URLSearchParams();
     if (paramsOrYear && typeof paramsOrYear === 'object') {
       const { academicYear, semester, yearLevel, year } = paramsOrYear;
@@ -438,28 +491,67 @@ export const api = {
       queryParams.set('year', String(paramsOrYear));
     }
     const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
-    return request(`/api/class-sections${query}`, { backend: "spring" });
+    const items = await request<any>(`/api/class-sections${query}`, { backend: "spring" });
+    if (Array.isArray(items)) return items;
+    if (Array.isArray(items?.classSections)) return items.classSections;
+    if (Array.isArray(items?.data)) return items.data;
+    if (Array.isArray(items?.content)) return items.content;
+    if (Array.isArray(items?._embedded?.classSections)) return items._embedded.classSections;
+    if (Array.isArray(items?._embedded?.classSectionList)) return items._embedded.classSectionList;
+    return [];
   },
 
   // Legacy Spring auth endpoints kept for compatibility with src/pages login flows.
-  getStudents: async (email?: string) => {
+  getStudents: async (email?: string, backend: "fastapi" | "spring" = "fastapi") => {
     const query = email ? `?email=${encodeURIComponent(email)}` : '';
-    const items = await request<any>(`/api/students${query}`, { backend: "spring" });
-    const list = Array.isArray(items)
-      ? items
-      : Array.isArray(items?.students)
-        ? items.students
-        : Array.isArray(items?.data)
-          ? items.data
-          : Array.isArray(items?.content)
-            ? items.content
-            : Array.isArray(items?.results)
-              ? items.results
-              : [];
-    return list.map(normalizeStudent);
+    const items = await request<any>(`/api/students${query}`, { backend });
+    
+    let list: any[] = [];
+    if (Array.isArray(items)) {
+      list = items;
+    } else if (items && typeof items === 'object') {
+      const keys = ['students', 'studentList', 'student', 'content', 'data', 'results', 'student_list', 'allStudents'];
+      const foundKey = keys.find(k => Array.isArray(items[k]));
+      if (foundKey) {
+        list = items[foundKey];
+      } else if (items._embedded && typeof items._embedded === 'object') {
+        const firstKey = Object.keys(items._embedded).find(k => Array.isArray(items._embedded[k]));
+        if (firstKey) list = items._embedded[firstKey];
+      } else {
+        // Find ANY key that looks like a student list or contains an array
+        const likelyKey = Object.keys(items).find(k => k.toLowerCase().includes('student') && Array.isArray(items[k]));
+        if (likelyKey) {
+          list = items[likelyKey];
+        } else {
+          const anyArrayKey = Object.keys(items).find(k => Array.isArray(items[k]));
+          if (anyArrayKey) list = items[anyArrayKey];
+        }
+      }
+    }
+    
+    return (list || []).map(normalizeStudent);
   },
-  getCurrentTerm: () => request('/api/terms/current', { backend: "spring" }),
-  adminListTermEnrollments: (params: any = {}) => {
+  getCurrentTerm: (backend: "fastapi" | "spring" = "fastapi") => 
+    request('/api/terms/current', { backend }),
+  getAdminTermConfig: () => request('/api/admin/terms/config', { backend: "spring" }),
+  updateAdminTermConfig: (body: any) => request('/api/admin/terms/config', { method: 'PATCH', body, backend: "spring" }),
+  getRolloverReport: (params: any = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.academicYear) queryParams.set('academicYear', String(params.academicYear));
+    if (params.semester) queryParams.set('semester', String(params.semester));
+    const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    return request(`/api/admin/rollover/report${query}`, { backend: "spring" });
+  },
+  adminPrepareRollover: (body: any) => request('/api/admin/rollover/prepare', { method: 'POST', body, backend: "spring" }),
+  adminSetTermResult: (enrollmentId: string | number, result: string) => 
+    request(`/api/admin/term-enrollments/${enrollmentId}/set-result`, { method: 'PATCH', body: { result }, backend: "spring" }),
+  adminSetTermReexamResult: (enrollmentId: string | number, result: string) => 
+    request(`/api/admin/term-enrollments/${enrollmentId}/set-reexam-result`, { method: 'PATCH', body: { result }, backend: "spring" }),
+  adminBulkSetTermResult: (enrollmentIds: (string | number)[], result: string) => 
+    request('/api/admin/term-enrollments/bulk-set-result', { method: 'POST', body: { enrollmentIds, result }, backend: "spring" }),
+  adminBulkSetTermReexamResult: (enrollmentIds: (string | number)[], result: string) => 
+    request('/api/admin/term-enrollments/bulk-set-reexam-result', { method: 'POST', body: { enrollmentIds, result }, backend: "spring" }),
+  adminListTermEnrollments: async (params: any = {}, backend: "fastapi" | "spring" = "fastapi") => {
     const queryParams = new URLSearchParams();
     const { academicYear, semester, yearLevel, section, status } = params || {};
     if (academicYear != null && String(academicYear).trim() !== '') {
@@ -478,7 +570,25 @@ export const api = {
       queryParams.set('status', String(status));
     }
     const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
-    return request(`/api/admin/term-enrollments${query}`, { backend: "spring" });
+    const items = await request<any>(`/api/admin/term-enrollments${query}`, { backend });
+    
+    let list: any[] = [];
+    if (Array.isArray(items)) {
+      list = items;
+    } else if (items && typeof items === 'object') {
+      const keys = ['enrollments', 'termEnrollments', 'termEnrollmentList', 'data', 'content'];
+      const foundKey = keys.find(k => Array.isArray(items[k]));
+      if (foundKey) {
+        list = items[foundKey];
+      } else if (items._embedded && typeof items._embedded === 'object') {
+        const firstKey = Object.keys(items._embedded).find(k => Array.isArray(items._embedded[k]));
+        if (firstKey) list = items._embedded[firstKey];
+      } else {
+        const anyArrayKey = Object.keys(items).find(k => Array.isArray(items[k]));
+        if (anyArrayKey) list = items[anyArrayKey];
+      }
+    }
+    return list;
   },
   listRegistrations: async (studentId?: string) => {
     const query = studentId ? `?studentId=${encodeURIComponent(studentId)}` : '';
@@ -488,27 +598,9 @@ export const api = {
     if (Array.isArray(items?.data)) return items.data;
     if (Array.isArray(items?.content)) return items.content;
     if (Array.isArray(items?.results)) return items.results;
+    if (Array.isArray(items?._embedded?.registrations)) return items._embedded.registrations;
+    if (Array.isArray(items?._embedded?.registrationList)) return items._embedded.registrationList;
     return [];
-  },
-  adminListMajorClasses: (params: any = {}) => {
-    const queryParams = new URLSearchParams();
-    if (params.academicYear != null && String(params.academicYear).trim() !== '') {
-      queryParams.set('academicYear', String(params.academicYear).trim());
-    }
-    if (params.semester != null && String(params.semester).trim() !== '') {
-      queryParams.set('semester', String(params.semester).trim());
-    }
-    if (params.yearLevel != null && String(params.yearLevel).trim() !== '') {
-      queryParams.set('yearLevel', String(params.yearLevel).trim());
-    }
-    if (params.departmentId != null && String(params.departmentId).trim() !== '') {
-      queryParams.set('departmentId', String(params.departmentId).trim());
-    }
-    if (params.includeInactive != null) {
-      queryParams.set('includeInactive', params.includeInactive ? 'true' : 'false');
-    }
-    const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
-    return request(`/api/admin/major-classes${query}`, { backend: "spring" });
   },
 
   loginAdmin: (body: any) => request('/api/auth/admin/login', { method: 'POST', body, backend: "spring" }).then((data) => {
@@ -533,9 +625,9 @@ export const api = {
   resetPasswordWithToken: (payload: { token: string; new_password: string }) =>
     request("/api/v1/auth/reset-password-with-token", { method: "POST", body: payload }),
 
-  adminStatistics: () => request("/api/v1/admin/statistics"),
-  adminMajorDistribution: () => request("/api/v1/admin/major-distribution"),
-  adminPendingActions: () => request("/api/v1/admin/pending-actions"),
+  adminStatistics: (backend: "fastapi" | "spring" = "fastapi") => request("/api/v1/admin/statistics", { backend }),
+  adminMajorDistribution: (backend: "fastapi" | "spring" = "fastapi") => request("/api/v1/admin/major-distribution", { backend }),
+  adminPendingActions: (backend: "fastapi" | "spring" = "fastapi") => request("/api/v1/admin/pending-actions", { backend }),
 
   // --- Admin Courses ---
   adminCourses: () => request("/api/v1/admin/courses"),
@@ -621,7 +713,14 @@ export const api = {
 
   // --- Admin Messages ---
   adminMessages: () => request("/api/v1/admin/messages"),
-  adminStudents: () => request("/api/v1/admin/students/"),
+  adminStudents: async () => {
+    const items = await request<any>("/api/v1/admin/students/");
+    if (Array.isArray(items)) return items;
+    if (Array.isArray(items?.students)) return items.students;
+    if (Array.isArray(items?.data)) return items.data;
+    if (Array.isArray(items?.content)) return items.content;
+    return [];
+  },
   adminStudentIds: () => request("/api/v1/admin/students/ids"),
   adminStudentOptions: () => request("/api/v1/admin/students/options"),
 
@@ -654,7 +753,13 @@ export const api = {
     request(`/api/v1/admin/messages/${encodeURIComponent(messageId)}`, { method: "DELETE" }),
 
   // --- Student Messages ---
-  studentMessages: () => request<any[]>("/api/v1/student/messages"),
+  studentMessages: async () => {
+    const items = await request<any[]>("/api/v1/student/messages");
+    if (Array.isArray(items)) return items;
+    if (Array.isArray((items as any)?.messages)) return (items as any).messages;
+    if (Array.isArray((items as any)?.data)) return (items as any).data;
+    return [];
+  },
 
   studentMarkMessageRead: (messageId: string, is_read: boolean) =>
     request(`/api/v1/student/messages/${encodeURIComponent(messageId)}/read`, {
@@ -733,16 +838,30 @@ export const api = {
     request<any>(`/api/v1/student/courses/detail/${encodeURIComponent(code)}`),
 
   // --- Student Alerts ---
-  studentAlerts: () => request<any[]>("/api/v1/student/alerts/"),
+  studentAlerts: async () => {
+    const items = await request<any[]>("/api/v1/student/alerts/");
+    if (Array.isArray(items)) return items;
+    if (Array.isArray((items as any)?.alerts)) return (items as any).alerts;
+    if (Array.isArray((items as any)?.data)) return (items as any).data;
+    return [];
+  },
   studentDeleteAlert: (alertId: string) => request(`/api/v1/student/alerts/${encodeURIComponent(alertId)}`, { method: "DELETE" }),
 
   // --- Student Announcements ---
   studentAnnouncements: async () => {
     try {
-      return await request<any[]>("/api/v1/student/announcements");
+      const items = await request<any[]>("/api/v1/student/announcements");
+      if (Array.isArray(items)) return items;
+      if (Array.isArray((items as any)?.announcements)) return (items as any).announcements;
+      if (Array.isArray((items as any)?.data)) return (items as any).data;
+      return [];
     } catch {
       try {
-        return await request<any[]>("/api/v1/student/announcements/");
+        const items = await request<any[]>("/api/v1/student/announcements/");
+        if (Array.isArray(items)) return items;
+        if (Array.isArray((items as any)?.announcements)) return (items as any).announcements;
+        if (Array.isArray((items as any)?.data)) return (items as any).data;
+        return [];
       } catch {
         return [];
       }
@@ -909,4 +1028,3 @@ export const api = {
     return data as AdminChatResponse;
   },
 };
-  

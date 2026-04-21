@@ -9,11 +9,10 @@ export const API_BASE_URL =
     : "";
 
 // Spring Boot API Base URL (same pattern)
-const rawSpringApiBaseUrl = (import.meta.env.VITE_SPRING_API_BASE_URL || "").trim();
-
-const isLoopbackSpringApiUrl = /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?\/?$/i.test(rawSpringApiBaseUrl);
+const rawSpringApiBaseUrl = (import.meta.env.VITE_SPRING_API_BASE_URL || "http://127.0.0.1:8090").trim();
+const isSpringLoopback = /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?\/?$/i.test(rawSpringApiBaseUrl);
 
 export const SPRING_API_BASE_URL =
-  rawSpringApiBaseUrl && !(import.meta.env.DEV && isLoopbackSpringApiUrl)
+  rawSpringApiBaseUrl && !(import.meta.env.DEV && isSpringLoopback)
     ? rawSpringApiBaseUrl.replace(/\/$/, "")
     : "";

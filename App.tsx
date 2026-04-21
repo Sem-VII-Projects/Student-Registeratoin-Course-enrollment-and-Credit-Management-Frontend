@@ -53,6 +53,7 @@ import NewStudentDraftDetail from "./pages/NewStudentDraftDetail";
 import SubmittedDetailsReview from "./pages/SubmittedDetailsReview";
 import IsolatedReview from "./pages/IsolatedReview";
 import { DetailedCardGridSkeleton, Skeleton } from "./components/Skeleton";
+import ThemeToggle from "./components/ThemeToggle";
 
 import { User } from "./types";
 import { api } from "./lib/api";
@@ -261,7 +262,7 @@ const App: React.FC = () => {
                   element={<SubmittedDetailsReview user={user} onLogout={handleLogout} />}
                 />
                 <Route
-                  path="/admin/isolated-review/:studentId"
+                  path="/admin/submitted-details-review/:studentId"
                   element={<IsolatedReview user={user} onLogout={handleLogout} />}
                 />
 
@@ -349,8 +350,8 @@ const App: React.FC = () => {
           </>
         )}
       </Routes>
-<StudentChatTrigger visible={!!user && user.role === "student" && !user.must_reset_password} />
-        <PublicChatTrigger />
+      <ThemeToggle />
+      <StudentChatTrigger visible={!!user && user.role === "student" && !user.must_reset_password} />        <PublicChatTrigger />
         </HashRouter>
     </UIProvider>
   );
