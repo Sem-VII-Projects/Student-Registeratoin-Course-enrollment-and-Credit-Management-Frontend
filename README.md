@@ -18,3 +18,6 @@ View your app in AI Studio: https://ai.studio/apps/drive/1EO3y2AqXVjfS57WNyfdl4S
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+
+   ![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/Sem-VII-Projects/Student-Registeratoin-Course-enrollment-and-Credit-Management-Frontend?utm_source=oss&utm_medium=github&utm_campaign=Sem-VII-Projects%2FStudent-Registeratoin-Course-enrollment-and-Credit-Management-Frontend&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
