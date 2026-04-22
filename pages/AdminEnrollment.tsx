@@ -39,7 +39,7 @@ function CustomSelect({
       <button 
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center justify-between gap-2 min-w-[140px] rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all focus:ring-2 focus:ring-teal-500/20 outline-none"
+        className="flex items-center justify-between gap-2 min-w-[140px] rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2 text-xs font-bold text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-all focus:ring-2 focus:ring-teal-500/20 outline-none"
       >
         <span className="truncate">{selectedTitle}</span>
         <span className="material-icons-outlined text-[14px] text-slate-400 group-hover:text-teal-500 transition-colors shrink-0">
@@ -48,7 +48,7 @@ function CustomSelect({
       </button>
       
       {open && (
-        <div className="absolute top-full mt-1.5 right-0 min-w-full w-max max-h-64 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl z-50 py-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full">
+        <div className="absolute top-full mt-1.5 right-0 min-w-full w-max max-h-64 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl z-50 py-1.5">
           {options.map((opt) => {
             const isSelected = value === opt.value;
             return (
@@ -57,8 +57,8 @@ function CustomSelect({
                 onClick={() => { onChange(opt.value); setOpen(false); }}
                 className={`w-full text-left px-4 py-2.5 text-xs font-bold transition-colors flex items-center justify-between gap-3 ${
                   isSelected
-                    ? "bg-teal-50/80 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400"
-                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                    ? "bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400"
+                    : "text-slate-900 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                 }`}
               >
                 <span className="truncate">{opt.label}</span>
@@ -94,6 +94,9 @@ const AdminEnrollment: React.FC<EnrollmentProps> = ({ user, onLogout }) => {
   const [semesterFilter, setSemesterFilter] = useState<string>('all');
   const [academicYearFilter, setAcademicYearFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [yearFilter, setYearFilter] = useState<string>('all');
+  const [classFilter, setClassFilter] = useState<string>('all');
   const [currentSemester, setCurrentSemester] = useState<SemesterKey>(() => {
     const raw = localStorage.getItem("admin_current_semester");
     return raw === "summer" ? "summer" : "fall";
@@ -115,7 +118,7 @@ const AdminEnrollment: React.FC<EnrollmentProps> = ({ user, onLogout }) => {
       const items = Array.isArray(data) ? data : (data.items || []);
       
       const mapped: EnrollmentRequest[] = items.map((item: any) => ({
-        id: item._id, // Updated ID mapping
+        id: item._id,
         studentId: item.student_id || item.user_id || item.studentId,
         studentName: item.student_name || 'Unknown Student',
         studentInitials: getInitials(item.student_name || 'Unknown Student'),
@@ -123,6 +126,8 @@ const AdminEnrollment: React.FC<EnrollmentProps> = ({ user, onLogout }) => {
         courseName: item.course_title || 'Unknown Course',
         semester: item.semesterAttend || 'N/A',
         academicYear: item.academic_year || 'N/A',
+        year: item.year || 'N/A',
+        class: item.class || 'N/A',
         status: item.status || 'Pending',
       }));
       setRequests(mapped);
@@ -192,12 +197,20 @@ const AdminEnrollment: React.FC<EnrollmentProps> = ({ user, onLogout }) => {
 
   const filteredRequests = React.useMemo(() => {
     return requests.filter((req) => {
+      const searchLower = searchQuery.toLowerCase();
+      const matchesSearch = 
+        req.studentName.toLowerCase().includes(searchLower) ||
+        (req.studentId && req.studentId.toLowerCase().includes(searchLower));
+
       const semesterMatch = semesterFilter === 'all' || req.semester === semesterFilter;
       const academicYearMatch = academicYearFilter === 'all' || req.academicYear === academicYearFilter;
       const statusMatch = statusFilter === 'all' || req.status === statusFilter;
-      return semesterMatch && academicYearMatch && statusMatch;
+      const yearMatch = yearFilter === 'all' || req.year === yearFilter;
+      const classMatch = classFilter === 'all' || req.class === classFilter;
+      
+      return matchesSearch && semesterMatch && academicYearMatch && statusMatch && yearMatch && classMatch;
     });
-  }, [requests, semesterFilter, academicYearFilter, statusFilter]);
+  }, [requests, searchQuery, semesterFilter, academicYearFilter, statusFilter, yearFilter, classFilter]);
 
   const academicYearOptions = React.useMemo(() => {
     return Array.from(
@@ -358,50 +371,71 @@ const AdminEnrollment: React.FC<EnrollmentProps> = ({ user, onLogout }) => {
                   <h3 className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">{t("Recent Requests")}</h3>
                   <p className="text-xs font-medium text-slate-400 dark:text-slate-500">{t("Live feed of student submissions")}</p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <CustomSelect
-                    value={semesterFilter}
-                    onChange={(val) => {
-                      setSemesterFilter(val);
+                <div className="flex items-center gap-3 w-full">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
                       setCurrentPage(1);
                     }}
-                    options={[
-                      { value: "all", label: t("All Semesters") },
-                      ...semesterOptions.map(s => ({ value: s, label: s }))
-                    ]}
+                    placeholder={t("Search by name, username, email...")}
+                    className="flex-1 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500/20 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
-
                   <CustomSelect
-                    value={statusFilter}
+                    value={yearFilter}
                     onChange={(val) => {
-                      setStatusFilter(val);
+                      setYearFilter(val);
                       setCurrentPage(1);
                     }}
+                    placeholder={t("All Years")}
                     options={[
-                      { value: "all", label: t("All Status") },
-                      { value: "Pending", label: t("Pending") },
-                      { value: "Enrolled", label: t("Enrolled") }
+                      { value: "all", label: t("All Years") },
+                      { value: "1", label: "1" },
+                      { value: "2", label: "2" },
+                      { value: "3", label: "3" },
+                      { value: "4", label: "4" }
                     ]}
                   />
-
                   <CustomSelect
                     value={academicYearFilter}
                     onChange={(val) => {
                       setAcademicYearFilter(val);
                       setCurrentPage(1);
                     }}
+                    placeholder={t("Academic Year")}
                     options={[
                       { value: "all", label: t("All Academic Years") },
                       ...academicYearOptions.map(y => ({ value: y, label: y }))
                     ]}
                   />
-                  <button 
-                    onClick={() => handleSort('status')} 
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
-                  >
-                     <span className="material-icons-outlined text-sm">sort</span> {t("Sort")}
-                  </button>
+                  <CustomSelect
+                    value={semesterFilter}
+                    onChange={(val) => {
+                      setSemesterFilter(val);
+                      setCurrentPage(1);
+                    }}
+                    placeholder={t("Semester")}
+                    options={[
+                      { value: "all", label: t("All Semesters") },
+                      ...semesterOptions.map(s => ({ value: s, label: s }))
+                    ]}
+                  />
+                  <CustomSelect
+                    value={classFilter}
+                    onChange={(val) => {
+                      setClassFilter(val);
+                      setCurrentPage(1);
+                    }}
+                    placeholder={t("All Classes")}
+                    options={[
+                      { value: "all", label: t("All Classes") },
+                      { value: "A", label: "A" },
+                      { value: "B", label: "B" }
+                    ]}
+                  />
                 </div>
+
               </div>
               <div className="overflow-x-auto max-h-[600px] scrollbar-hide">
                 <table className="w-full text-left text-sm">

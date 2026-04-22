@@ -303,24 +303,24 @@ export default function NewStudentRegister() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 flex justify-center items-start">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-12 px-4 sm:px-6 lg:px-8 flex justify-center items-start transition-colors duration-500 relative overflow-hidden">
       <div className="absolute top-4 right-4 z-50">
         <LanguageSwitcher />
       </div>
-      <div className="w-full max-w-4xl bg-white p-7 md:p-10 rounded-[32px] border border-slate-100 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 group relative overflow-hidden">
+      <div className="w-full max-w-4xl bg-white dark:bg-slate-900 p-7 md:p-10 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:shadow-xl group relative overflow-hidden z-10">
         {/* Decorative corner element */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-teal-50 to-white rounded-bl-full pointer-events-none opacity-50 group-hover:opacity-100 transition-opacity"></div>
+        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-teal-50 to-white dark:from-teal-900/10 dark:to-transparent rounded-bl-full pointer-events-none opacity-50 group-hover:opacity-100 transition-opacity"></div>
 
-        <div className="text-center border-b-2 border-slate-100 pb-8 mb-8 relative z-10">
+        <div className="text-center border-b-2 border-slate-100 dark:border-slate-800 pb-8 mb-8 relative z-10">
           <div className="flex justify-center mb-4">
             <div className="w-16 h-16 bg-teal-100 dark:bg-teal-900/30 rounded-full flex items-center justify-center">
               <span className="material-icons-outlined text-4xl text-teal-600 dark:text-teal-400">app_registration</span>
             </div>
           </div>
-          <h2 className="text-4xl font-black text-slate-900 tracking-tight leading-tight">
+          <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
             {t('registerTitle')}
           </h2>
-          <p className="mt-4 text-slate-500 bg-slate-50 border border-slate-100 border-l-4 border-l-teal-600 rounded-xl p-4 text-sm text-left">
+          <p className="mt-4 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 border-l-4 border-l-teal-600 rounded-xl p-4 text-sm text-left font-medium leading-relaxed">
             {t('registerInstructions')}
           </p>
         </div>
@@ -328,8 +328,8 @@ export default function NewStudentRegister() {
         <form onSubmit={handleSubmit} className="grid gap-6 relative z-10">
           
           {/* Student Name */}
-          <div className="grid gap-2">
-            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+          <div className="grid gap-2 group">
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-1">
               {t('studentName')}: <span className="text-red-500">*</span>
             </label>
             <input
@@ -338,15 +338,15 @@ export default function NewStudentRegister() {
               value={formData.studentName}
               onChange={handleChange}
               placeholder="ကျောင်းသားအမည် ထည့်ပါ"
-              className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-slate-50/50 text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all"
+              className="w-full border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 bg-slate-50/50 dark:bg-slate-950/50 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700 font-bold"
               required
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Father Name */}
-            <div className="grid gap-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            <div className="grid gap-2 group">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-1">
                 {t('fatherName')}: <span className="text-red-500">*</span>
               </label>
               <input
@@ -355,14 +355,14 @@ export default function NewStudentRegister() {
                 value={formData.fatherName}
                 onChange={handleChange}
                 placeholder="အဖအမည် ထည့်ပါ"
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-slate-50/50 text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all"
+                className="w-full border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 bg-slate-50/50 dark:bg-slate-950/50 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700 font-bold"
                 required
               />
             </div>
 
             {/* Mother Name */}
-            <div className="grid gap-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            <div className="grid gap-2 group">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-1">
                 {t('motherName')}: <span className="text-red-500">*</span>
               </label>
               <input
@@ -371,7 +371,7 @@ export default function NewStudentRegister() {
                 value={formData.motherName}
                 onChange={handleChange}
                 placeholder="အမေအမည် ထည့်ပါ"
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-slate-50/50 text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all"
+                className="w-full border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 bg-slate-50/50 dark:bg-slate-950/50 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700 font-bold"
                 required
               />
             </div>
@@ -379,11 +379,11 @@ export default function NewStudentRegister() {
 
           {/* Gender */}
           <div className="grid gap-2">
-            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-1">
               {t('gender')}: <span className="text-red-500">*</span>
             </label>
             <div className="flex flex-wrap gap-4">
-              <label className="flex items-center gap-2 border border-slate-200 rounded-xl bg-slate-50/50 px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:border-teal-500 transition-colors">
+              <label className="flex items-center gap-3 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-950/50 px-5 py-3 font-bold text-slate-700 dark:text-slate-300 cursor-pointer hover:border-teal-500 transition-colors">
                 <input
                   type="radio"
                   name="gender"
@@ -395,7 +395,7 @@ export default function NewStudentRegister() {
                 />
                 <span>{t('male')}</span>
               </label>
-              <label className="flex items-center gap-2 border border-slate-200 rounded-xl bg-slate-50/50 px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:border-teal-500 transition-colors">
+              <label className="flex items-center gap-3 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-950/50 px-5 py-3 font-bold text-slate-700 dark:text-slate-300 cursor-pointer hover:border-teal-500 transition-colors">
                 <input
                   type="radio"
                   name="gender"
@@ -412,7 +412,7 @@ export default function NewStudentRegister() {
 
           {/* Date of Birth */}
           <div className="grid gap-2">
-            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-1">
               မွေးသက္ကရာဇ်: <span className="text-red-500">*</span>
             </label>
             <div className="grid grid-cols-3 gap-3">
@@ -420,12 +420,12 @@ export default function NewStudentRegister() {
                 name="dobDay"
                 value={formData.dobDay}
                 onChange={handleChange}
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-slate-50/50 text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all appearance-none cursor-pointer"
+                className="w-full border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 bg-slate-50/50 dark:bg-slate-950/50 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all appearance-none cursor-pointer font-bold"
                 required
               >
-                <option value="">{t('day')}</option>
+                <option value="" className="dark:bg-slate-900">{t('day')}</option>
                 {[...Array(31)].map((_, i) => (
-                  <option key={i + 1} value={String(i + 1).padStart(2, '0')}>
+                  <option key={i + 1} value={String(i + 1).padStart(2, '0')} className="dark:bg-slate-900">
                     {i + 1}
                   </option>
                 ))}
@@ -435,12 +435,12 @@ export default function NewStudentRegister() {
                 name="dobMonth"
                 value={formData.dobMonth}
                 onChange={handleChange}
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-slate-50/50 text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all appearance-none cursor-pointer"
+                className="w-full border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 bg-slate-50/50 dark:bg-slate-950/50 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all appearance-none cursor-pointer font-bold"
                 required
               >
-                <option value="">{t('month')}</option>
+                <option value="" className="dark:bg-slate-900">{t('month')}</option>
                 {months.map((month, index) => (
-                  <option key={index} value={String(index + 1).padStart(2, '0')}>
+                  <option key={index} value={String(index + 1).padStart(2, '0')} className="dark:bg-slate-900">
                     {month}
                   </option>
                 ))}
@@ -450,13 +450,13 @@ export default function NewStudentRegister() {
                 name="dobYear"
                 value={formData.dobYear}
                 onChange={handleChange}
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-slate-50/50 text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all appearance-none cursor-pointer"
+                className="w-full border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 bg-slate-50/50 dark:bg-slate-950/50 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all appearance-none cursor-pointer font-bold"
                 required
               >
-                <option value="">{t('year')}</option>
+                <option value="" className="dark:bg-slate-900">{t('year')}</option>
                 {[...Array(30)].map((_, i) => {
                   const year = 2010 - i;
-                  return <option key={year} value={year}>{year}</option>;
+                  return <option key={year} value={year} className="dark:bg-slate-900">{year}</option>;
                 })}
               </select>
             </div>
@@ -464,7 +464,7 @@ export default function NewStudentRegister() {
 
           {/* NRC Number */}
           <div className="grid gap-2">
-            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-1">
               မှတ်ပုံတင်အမှတ်: <span className="text-red-500">*</span>
             </label>
             <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr_1fr_2fr] gap-3">
@@ -474,11 +474,11 @@ export default function NewStudentRegister() {
                 onChange={handleChange}
                 disabled={nrcDisabled}
                 required={!nrcDisabled}
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-slate-50/50 text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all appearance-none cursor-pointer disabled:opacity-50"
+                className="w-full border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 bg-slate-50/50 dark:bg-slate-950/50 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all appearance-none cursor-pointer disabled:opacity-50 font-bold"
               >
-                <option value="">{t('region')}</option>
+                <option value="" className="dark:bg-slate-900">{t('region')}</option>
                 {nrcRegions.map((region) => (
-                  <option key={region} value={region}>{toMyanmarDigits(region)}</option>
+                  <option key={region} value={region} className="dark:bg-slate-900">{toMyanmarDigits(region)}</option>
                 ))}
               </select>
 
@@ -488,11 +488,11 @@ export default function NewStudentRegister() {
                 onChange={handleChange}
                 disabled={nrcDisabled}
                 required={!nrcDisabled}
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-slate-50/50 text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all appearance-none cursor-pointer disabled:opacity-50"
+                className="w-full border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 bg-slate-50/50 dark:bg-slate-950/50 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all appearance-none cursor-pointer disabled:opacity-50 font-bold"
               >
-                <option value="">{t('township')}</option>
+                <option value="" className="dark:bg-slate-900">{t('township')}</option>
                 {nrcTownships.map((township) => (
-                  <option key={township.code} value={township.code}>{township.code} - {township.nameMm || township.nameEn}</option>
+                  <option key={township.code} value={township.code} className="dark:bg-slate-900">{township.code} - {township.nameMm || township.nameEn}</option>
                 ))}
               </select>
 
@@ -502,11 +502,11 @@ export default function NewStudentRegister() {
                 onChange={handleChange}
                 disabled={nrcDisabled}
                 required={!nrcDisabled}
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-slate-50/50 text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all appearance-none cursor-pointer disabled:opacity-50"
+                className="w-full border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 bg-slate-50/50 dark:bg-slate-950/50 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all appearance-none cursor-pointer disabled:opacity-50 font-bold"
               >
-                <option value="">{t('type')}</option>
+                <option value="" className="dark:bg-slate-900">{t('type')}</option>
                 {nrcTypes.map((type) => (
-                  <option key={type} value={type}>{type}</option>
+                  <option key={type} value={type} className="dark:bg-slate-900">{type}</option>
                 ))}
               </select>
 
@@ -519,18 +519,18 @@ export default function NewStudentRegister() {
                 maxLength={6}
                 disabled={nrcDisabled}
                 required={!nrcDisabled}
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-slate-50/50 text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all disabled:opacity-50"
+                className="w-full border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 bg-slate-50/50 dark:bg-slate-950/50 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all disabled:opacity-50 font-bold placeholder:text-slate-300 dark:placeholder:text-slate-700"
               />
             </div>
             
             <div className="mt-2">
-              <label className="inline-flex items-center gap-2 border border-slate-200 rounded-xl bg-slate-50/50 px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:border-teal-500 transition-colors w-max">
+              <label className="inline-flex items-center gap-3 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-950/50 px-4 py-3 font-bold text-slate-700 dark:text-slate-300 cursor-pointer hover:border-teal-500 transition-colors w-max">
                 <input
                   type="checkbox"
                   name="nrcPending"
                   checked={formData.nrcPending}
                   onChange={handleChange}
-                  className="text-teal-600 focus:ring-teal-500 rounded border-slate-300 w-4 h-4"
+                  className="text-teal-600 focus:ring-teal-500 rounded border-slate-300 dark:border-slate-700 bg-transparent w-4 h-4"
                 />
                 <span>{t('pending')}</span>
               </label>
@@ -539,8 +539,8 @@ export default function NewStudentRegister() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Birthplace */}
-            <div className="grid gap-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            <div className="grid gap-2 group">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-1">
                 {t('placeOfBirth')}: <span className="text-red-500">*</span>
               </label>
               <input
@@ -549,30 +549,30 @@ export default function NewStudentRegister() {
                 value={formData.birthplace}
                 onChange={handleChange}
                 placeholder={t('birthplacePlaceholder')}
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-slate-50/50 text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all"
+                className="w-full border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 bg-slate-50/50 dark:bg-slate-950/50 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all font-bold placeholder:text-slate-300 dark:placeholder:text-slate-700"
                 required
               />
             </div>
 
             {/* Address */}
-            <div className="grid gap-2">
-<label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-              {t('address')}: <span className="text-red-500">*</span>
-            </label>
+            <div className="grid gap-2 group">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-1">
+                {t('address')}: <span className="text-red-500">*</span>
+              </label>
               <input
                 type="text"
                 name="address"
                 value={formData.address}
                 onChange={handleChange}
                 placeholder={t('addressPlaceholder')}
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-slate-50/50 text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all"
+                className="w-full border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 bg-slate-50/50 dark:bg-slate-950/50 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all font-bold placeholder:text-slate-300 dark:placeholder:text-slate-700"
                 required
               />
             </div>
 
             {/* Phone */}
-            <div className="grid gap-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            <div className="grid gap-2 group">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-1">
                 {t('phone')}: <span className="text-red-500">*</span>
               </label>
               <input
@@ -581,32 +581,32 @@ export default function NewStudentRegister() {
                 value={formData.phone}
                 onChange={handleChange}
                 placeholder="09xxxxxxxxx"
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-slate-50/50 text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all"
+                className="w-full border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 bg-slate-50/50 dark:bg-slate-950/50 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all font-bold placeholder:text-slate-300 dark:placeholder:text-slate-700"
                 required
               />
             </div>
 
             {/* Email */}
-            <div className="grid gap-2">
-<label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-              {t('email')}: <span className="text-red-500">*</span>
-            </label>
+            <div className="grid gap-2 group">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-1">
+                {t('email')}: <span className="text-red-500">*</span>
+              </label>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="example@gmail.com"
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-slate-50/50 text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all"
+                className="w-full border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 bg-slate-50/50 dark:bg-slate-950/50 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all font-bold placeholder:text-slate-300 dark:placeholder:text-slate-700"
                 required
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 border border-slate-100 p-6 rounded-2xl">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 p-6 rounded-2xl">
             {/* Entrance Roll No */}
-            <div className="grid gap-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            <div className="grid gap-2 group">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-1">
                 {t('entranceRollNo')}: <span className="text-red-500">*</span>
               </label>
               <input
@@ -615,14 +615,14 @@ export default function NewStudentRegister() {
                 value={formData.entranceRollNo}
                 onChange={handleChange}
                 placeholder="ဝင်ခွင့်အမှတ်စဉ် ထည့်ပါ"
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-white text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all"
+                className="w-full border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all font-bold placeholder:text-slate-300 dark:placeholder:text-slate-700"
                 required
               />
             </div>
 
             {/* Matriculation Roll No */}
-            <div className="grid gap-2">
-<label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            <div className="grid gap-2 group">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-1">
                 {t('matricRollNo')}: <span className="text-red-500">*</span>
               </label>
               <input
@@ -631,14 +631,14 @@ export default function NewStudentRegister() {
                 value={formData.matricRollNo}
                 onChange={handleChange}
                 placeholder="ခုံအမှတ် ထည့်ပါ"
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-white text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all"
+                className="w-full border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all font-bold placeholder:text-slate-300 dark:placeholder:text-slate-700"
                 required
               />
             </div>
 
             {/* Matriculation Pass Year */}
-            <div className="grid gap-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            <div className="grid gap-2 group">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-1">
                 {t('matricPassYear')}: <span className="text-red-500">*</span>
               </label>
               <input
@@ -647,14 +647,14 @@ export default function NewStudentRegister() {
                 value={formData.matricPassYear}
                 onChange={handleChange}
                 placeholder="ဥပမာ - 2024"
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-white text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all"
+                className="w-full border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all font-bold placeholder:text-slate-300 dark:placeholder:text-slate-700"
                 required
               />
             </div>
 
             {/* Total Marks */}
-            <div className="grid gap-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            <div className="grid gap-2 group">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-1">
                 {t('totalMarks')}: <span className="text-red-500">*</span>
               </label>
               <input
@@ -665,24 +665,24 @@ export default function NewStudentRegister() {
                 placeholder="စုစုပေါင်းရမှတ် ထည့်ပါ"
                 min="0"
                 max="600"
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 bg-white text-slate-900 focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all"
+                className="w-full border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all font-bold placeholder:text-slate-300 dark:placeholder:text-slate-700"
                 required
               />
             </div>
           </div>
 
           {/* Submit Button */}
-          <div className="mt-8 pt-8 border-t border-slate-100 flex flex-col-reverse sm:flex-row gap-4 sm:justify-end items-center">
+          <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800 flex flex-col-reverse sm:flex-row gap-4 sm:justify-end items-center relative z-10">
             <button 
               type="button" 
-              className="w-full sm:w-auto rounded-2xl flex items-center justify-center gap-2 px-8 py-4 font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all"
+              className="w-full sm:w-auto rounded-2xl flex items-center justify-center gap-2 px-8 py-4 font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-[0.98]"
               onClick={() => navigate('/')}
             >
               {t('back')}
             </button>
             <button 
               type="submit" 
-              className="w-full sm:w-auto rounded-2xl flex items-center justify-center gap-2 bg-teal-600 text-white px-8 py-4 font-bold shadow-lg shadow-teal-600/20 hover:shadow-teal-600/30 hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto rounded-2xl flex items-center justify-center gap-2 bg-teal-600 text-white px-12 py-4 font-black uppercase tracking-widest text-xs shadow-lg shadow-teal-600/20 hover:shadow-teal-600/30 hover:-translate-y-0.5 transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
               disabled={loading}
             >
               {loading ? t('submitting') : t('submit')}
@@ -691,6 +691,10 @@ export default function NewStudentRegister() {
           </div>
         </form>
       </div>
+
+      {/* Background Decorations */}
+      <div className="fixed top-0 right-0 -z-0 w-[600px] h-[600px] bg-teal-500/[0.03] dark:bg-teal-500/[0.02] rounded-full blur-[120px] pointer-events-none translate-x-1/2 -translate-y-1/2" />
+      <div className="fixed bottom-0 left-0 -z-0 w-[500px] h-[500px] bg-indigo-500/[0.03] dark:bg-indigo-500/[0.02] rounded-full blur-[100px] pointer-events-none -translate-x-1/2 translate-y-1/2" />
     </div>
   );
 }

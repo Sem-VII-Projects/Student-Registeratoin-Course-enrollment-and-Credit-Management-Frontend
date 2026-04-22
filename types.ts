@@ -40,6 +40,8 @@ export interface EnrollmentRequest {
   courseName: string;
   semester: string;
   academicYear: string;
+  year?: string;
+  class?: string;
   status: 'Enrolled' | 'Pending' | 'Conflict' | 'Waitlisted';
 }
 

@@ -1,6 +1,28 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from 'react-i18next';
 import FormDataC from "./form_data_C";
 import { api } from '../lib/api';
+
+// Utility to match project style
+function cn(...classes) {
+  return classes.filter(Boolean).join(" ");
+}
+
+function IconBadge({ icon, tone = "primary" }) {
+  const tones = {
+    primary: "bg-teal-100 text-teal-700 dark:bg-teal-900/35 dark:text-teal-300",
+    emerald: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/35 dark:text-emerald-300",
+    amber: "bg-amber-100 text-amber-700 dark:bg-amber-900/35 dark:text-amber-300",
+    rose: "bg-rose-100 text-rose-700 dark:bg-rose-900/35 dark:text-rose-300",
+    cyan: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/35 dark:text-cyan-300",
+    indigo: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/35 dark:text-indigo-300",
+  };
+  return (
+    <div className={cn("grid h-12 w-12 place-items-center rounded-2xl", tones[tone])}>
+      <span className="material-icons-outlined text-[24px]">{icon}</span>
+    </div>
+  );
+}
 
 const toLocalInputValue = (isoString) => {
     if (!isoString) return "";
@@ -22,7 +44,6 @@ const fromLocalInputValueToIso = (value) => {
     return date.toISOString();
 };
 
-// Set deadline to X minutes or hours from now (for demo/presentation)
 const minutesFromNow = (minutes) => {
     const d = new Date();
     d.setMinutes(d.getMinutes() + minutes);
@@ -31,6 +52,7 @@ const minutesFromNow = (minutes) => {
 };
 
 const Composer_C = () => {
+    const { t } = useTranslation();
     const [windowSettings, setWindowSettings] = useState({
         isOpen: true,
         registrationDeadline: "",
@@ -53,12 +75,8 @@ const Composer_C = () => {
                     allowEditAfterSubmit: data.allowEditAfterSubmit ?? true,
                 });
             })
-            .catch(() => {
-                // Keep defaults on failure
-            });
-        return () => {
-            isMounted = false;
-        };
+            .catch(() => {});
+        return () => { isMounted = false; };
     }, []);
 
     const handleWindowChange = (e) => {
@@ -69,7 +87,6 @@ const Composer_C = () => {
         }));
     };
 
-    // Quick-set deadline for demo/presentation (minutes or hours from now)
     const setDeadlineFromNow = (field, minutes) => {
         setWindowSettings((prev) => ({
             ...prev,
@@ -87,10 +104,10 @@ const Composer_C = () => {
                 paymentDeadline: fromLocalInputValueToIso(windowSettings.paymentDeadline),
                 allowEditAfterSubmit: !!windowSettings.allowEditAfterSubmit,
             };
-            // Basic client-side chronological validation
             const reg = payload.registrationDeadline ? new Date(payload.registrationDeadline).getTime() : null;
             const det = payload.detailsDeadline ? new Date(payload.detailsDeadline).getTime() : null;
             const pay = payload.paymentDeadline ? new Date(payload.paymentDeadline).getTime() : null;
+            
             if (reg && det && reg > det) {
                 alert("Registration deadline must be before or equal to details deadline.");
                 setSavingWindow(false);
@@ -119,120 +136,121 @@ const Composer_C = () => {
     };
 
     return (
-        <div>
-            <div style={{ marginTop: "20px", marginBottom: "24px", padding: "16px", borderRadius: "12px", border: "1px solid #dbe8f5", background: "#ffffff" }}>
-                <h2 style={{ marginTop: 0, marginBottom: "12px" }}>🕒 Registration Window Control</h2>
-                <p style={{ marginTop: 0, marginBottom: "16px", fontSize: "0.9rem", color: "#555" }}>
-                    Control when students can register, submit details, and upload payment. Deadlines are optional; leave blank for no deadline.
-                </p>
-                <div style={{ marginBottom: "12px", padding: "10px 12px", background: "#f0f7ff", borderRadius: "8px", border: "1px solid #c5daf0" }}>
-                    <strong style={{ fontSize: "0.85rem", color: "#0b5d90" }}>🎓 Demo / Presentation:</strong>
-                    <span style={{ marginLeft: "8px", fontSize: "0.85rem", color: "#555" }}>
-                        Quick-set deadlines in minutes/hours from now to test that students cannot access after each deadline.
-                    </span>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px", alignItems: "flex-start" }}>
-                    <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <input
-                            type="checkbox"
-                            name="isOpen"
-                            checked={windowSettings.isOpen}
-                            onChange={handleWindowChange}
-                        />
-                        <span>Registration Open</span>
-                    </label>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                        <label>Registration Deadline</label>
-                        <input
-                            type="datetime-local"
-                            name="registrationDeadline"
-                            value={windowSettings.registrationDeadline}
-                            onChange={handleWindowChange}
-                        />
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                            <span style={{ fontSize: "0.75rem", color: "#666", alignSelf: "center" }}>From now:</span>
-                            {[2, 5, 10, 30, 60].map((m) => (
-                                <button key={m} type="button" onClick={() => setDeadlineFromNow("registrationDeadline", m)}
-                                    style={{ padding: "4px 8px", fontSize: "0.75rem", borderRadius: "6px", border: "1px solid #0b5d90", background: "#fff", color: "#0b5d90", cursor: "pointer" }}>
-                                    {m < 60 ? `${m} min` : "1 hr"}
-                                </button>
-                            ))}
+        <div className="space-y-8 animate-in fade-in duration-700">
+            {/* Window Control Card */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[40px] p-7 shadow-sm relative overflow-hidden group">
+                <div className="relative z-10">
+                    <div className="flex items-center gap-6 mb-5">
+                        <IconBadge icon="timer" tone="primary" />
+                        <div>
+                            <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{t("Registration Window Control")}</h2>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{t("Manage intake accessibility and deadlines")}</p>
                         </div>
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                        <label>Details Submission Deadline</label>
-                        <input
-                            type="datetime-local"
-                            name="detailsDeadline"
-                            value={windowSettings.detailsDeadline}
-                            onChange={handleWindowChange}
-                        />
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                            <span style={{ fontSize: "0.75rem", color: "#666", alignSelf: "center" }}>From now:</span>
-                            {[2, 5, 10, 30, 60].map((m) => (
-                                <button key={m} type="button" onClick={() => setDeadlineFromNow("detailsDeadline", m)}
-                                    style={{ padding: "4px 8px", fontSize: "0.75rem", borderRadius: "6px", border: "1px solid #0b5d90", background: "#fff", color: "#0b5d90", cursor: "pointer" }}>
-                                    {m < 60 ? `${m} min` : "1 hr"}
-                                </button>
-                            ))}
+
+                    <div className="bg-slate-50 dark:bg-slate-950/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 mb-6 flex items-center gap-4">
+                        <div className="h-8 w-8 rounded-lg bg-teal-500/10 flex items-center justify-center text-teal-600 shrink-0">
+                            <span className="material-icons-outlined text-lg">rocket_launch</span>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-wider">{t("Demo Mode")}</p>
+                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{t("Quick-set deadlines to test system behavior.")}</p>
                         </div>
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                        <label>Payment Deadline</label>
-                        <input
-                            type="datetime-local"
-                            name="paymentDeadline"
-                            value={windowSettings.paymentDeadline}
-                            onChange={handleWindowChange}
-                        />
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                            <span style={{ fontSize: "0.75rem", color: "#666", alignSelf: "center" }}>From now:</span>
-                            {[2, 5, 10, 30, 60].map((m) => (
-                                <button key={m} type="button" onClick={() => setDeadlineFromNow("paymentDeadline", m)}
-                                    style={{ padding: "4px 8px", fontSize: "0.75rem", borderRadius: "6px", border: "1px solid #0b5d90", background: "#fff", color: "#0b5d90", cursor: "pointer" }}>
-                                    {m < 60 ? `${m} min` : "1 hr"}
-                                </button>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {/* Switches */}
+                        <div className="space-y-3">
+                            <label className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-pointer transition-all hover:border-teal-500/30">
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t("General Access")}</span>
+                                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{t("Registration Open")}</span>
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    name="isOpen"
+                                    className="w-5 h-5 accent-teal-600 rounded-lg"
+                                    checked={windowSettings.isOpen}
+                                    onChange={handleWindowChange}
+                                />
+                            </label>
+                            
+                            <label className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-pointer transition-all hover:border-teal-500/30">
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t("Submission Policy")}</span>
+                                <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{t("Allow Edits")}</span>
+                            </div>
+                            <input
+                                type="checkbox"
+                                name="allowEditAfterSubmit"
+                                className="w-5 h-5 accent-teal-600 rounded-lg"
+                                checked={windowSettings.allowEditAfterSubmit}
+                                onChange={handleWindowChange}
+                            />
+                            </label>
+                            </div>
+
+                            {/* Deadlines */}
+                            <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                            {[
+                            { id: "registrationDeadline", label: t("Registration Deadline") },
+                            { id: "detailsDeadline", label: t("Details Submission") },
+                            { id: "paymentDeadline", label: t("Payment Deadline") }
+                            ].map((field) => (
+                            <div key={field.id} className="space-y-1.5">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">{field.label}</label>
+                                <input
+                                    type="datetime-local"
+                                    name={field.id}
+                                    className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-xl text-sm font-bold outline-none focus:border-teal-500/50 transition-all text-slate-700 dark:text-slate-200"
+                                    value={windowSettings[field.id]}
+                                    onChange={handleWindowChange}
+                                />
+                                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                    {[2, 5, 10, 30, 60].map((m) => (
+                                        <button 
+                                            key={m} 
+                                            type="button" 
+                                            onClick={() => setDeadlineFromNow(field.id, m)}
+                                            className="px-2 py-1 text-[8px] font-black uppercase tracking-widest rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-400 hover:text-teal-600 hover:border-teal-500/30 transition-all active:scale-95"
+                                        >
+                                            {m < 60 ? `${m}m` : "1h"}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                             ))}
-                        </div>
-                    </div>
-                    <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <input
-                            type="checkbox"
-                            name="allowEditAfterSubmit"
-                            checked={windowSettings.allowEditAfterSubmit}
-                            onChange={handleWindowChange}
-                        />
-                        <span>Allow edits after submit</span>
-                    </label>
-                    <div>
-                        <button
+                            </div>
+                            </div>
+
+                            <div className="mt-6 flex justify-end pt-6 border-t border-slate-50 dark:border-slate-800">
+                            <button
                             type="button"
                             onClick={handleSaveWindow}
                             disabled={savingWindow}
-                            style={{
-                                padding: "8px 16px",
-                                borderRadius: "8px",
-                                border: "none",
-                                background: "#0b5d90",
-                                color: "#fff",
-                                fontWeight: 600,
-                                cursor: savingWindow ? "default" : "pointer",
-                                marginTop: "4px",
-                            }}
-                        >
-                            {savingWindow ? "Saving..." : "Save Window Settings"}
-                        </button>
-                    </div>
+                            className="px-8 py-3.5 bg-slate-900 dark:bg-teal-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:shadow-teal-500/20 active:scale-95 disabled:opacity-50 transition-all"
+                            >
+                            {savingWindow ? t("Syncing...") : t("Save Window Settings")}
+                            </button>
+                            </div>
+                            </div>
+                            <div className="absolute top-0 right-0 h-32 w-32 bg-teal-500/5 rounded-bl-full transform translate-x-8 -translate-y-8 group-hover:scale-110 transition-transform" />
+                            </div>
+
+                            {/* Config Section */}
+                            <div className="bg-slate-50 dark:bg-slate-950/40 rounded-[40px] p-0.5 border border-slate-100 dark:border-slate-800">
+                            <div className="p-7">
+                            <div className="flex items-center gap-5 mb-6">
+                            <IconBadge icon="settings" tone="indigo" />
+                            <div>
+                            <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{t("Configure Registration")}</h2>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{t("Academic tiers, majors, and fee structures")}</p>
+                            </div>
+                            </div>
+
+                    <FormDataC />
                 </div>
             </div>
-
-            <div style={{ marginTop: "30px", marginBottom: "20px" }}>
-                <h2>⚙ Configure The Registeration </h2>
-                <FormDataC
-                />
-            </div>
-
-            
         </div>
     );
 };

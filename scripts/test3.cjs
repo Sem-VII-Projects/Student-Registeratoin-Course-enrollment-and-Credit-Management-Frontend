@@ -23,8 +23,7 @@ const replacements = [
 ];
 
 replacements.forEach(str => {
-  const re = new RegExp('>\\\\s*' + str + '\\\\s*<', 'g');
-  code = code.replace(re, '>\{t("' + str + '")\}<');
+  code = code.split('>' + str + '<').join('>{t("' + str + '")}<');
 });
 
 code = code.replace('placeholder="Search Code..."', 'placeholder={t("Search Code...")}');

@@ -4,6 +4,18 @@
 This workspace implements a University Management System (UniPortal / UniAdmin CMS).
 All planning, code generation, and review should follow the skill files under `Frontend/.github/skills`, prompt standards under `Frontend/.github/prompts`, and role definitions under `Frontend/.github/agents`.
 
+
+## Project Scope & Separation (CRITICAL)
+This workspace contains two distinct projects:
+1. **Course Enrollment and Credit Management** (My Project)
+2. **Student Registration** (My friend's project)
+
+**Rule 1: Component Separation**
+When a task or component is explicitly labeled or stated as "my friend's project" (Student Registration), the code or component MUST be separately copied, created, or placed. DO NOT overwrite, modify, or delete any components belonging to "my project" (Course Enrollment and Credit Management).
+
+**Rule 2: API & Backend Routing**
+Any API endpoint, service, or backend integration labeled or stated as "my friend's project" MUST be configured to be handled by a **Spring Boot server**.
+
 ## Source-of-Truth Order
 When rules conflict, apply this precedence:
 1. `Frontend/.github/skills/business-logic/SKILL.md`

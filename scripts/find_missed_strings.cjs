@@ -1,4 +1,9 @@
-const html = require('fs').readFileSync('C:/Frontend/Frontend/pages/AdminManualEnrollment.tsx', 'utf8'); 
+const fs = require('fs');
+const path = require('path');
+
+const scriptDir = __dirname;
+const baseDir = path.resolve(scriptDir, '..');
+const html = fs.readFileSync(path.join(baseDir, 'pages/AdminManualEnrollment.tsx'), 'utf8'); 
 const regex = />([^<{]+)</g; 
 let match; 
 while(match = regex.exec(html)) { 

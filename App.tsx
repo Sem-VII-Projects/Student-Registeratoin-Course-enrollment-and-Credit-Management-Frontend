@@ -14,7 +14,7 @@ import ResetPasswordToken from "./pages/ResetPasswordToken";
 import HomePage from "./pages/HomePage";
 import NewStudentRegister from "./pages/NewStudentRegister";
 
-import AdminDashboard from "./pages/AdminDashboard";
+import IntegratedAdminPortal from "./pages/IntegratedAdminPortal";
 import AdminEnrollment from "./pages/AdminEnrollment";
 import AdminCourses from "./pages/AdminCourses";
 import AdminStudents from "./pages/AdminStudents";
@@ -49,7 +49,11 @@ import StudentDegreeAudit from "./pages/StudentDegreeAudit";
 
 //  student course details page stays as CourseDetails.tsx (student-facing)
 import CourseDetails from "./pages/CourseDetails";
+import NewStudentDraftDetail from "./pages/NewStudentDraftDetail";
+import SubmittedDetailsReview from "./pages/SubmittedDetailsReview";
+import IsolatedReview from "./pages/IsolatedReview";
 import { DetailedCardGridSkeleton, Skeleton } from "./components/Skeleton";
+import ThemeToggle from "./components/ThemeToggle";
 
 import { User } from "./types";
 import { api } from "./lib/api";
@@ -123,7 +127,10 @@ const App: React.FC = () => {
       sessionStorage.removeItem("user");
       sessionStorage.removeItem("role");
       sessionStorage.removeItem("must_reset_password");
+      sessionStorage.removeItem("adminAuthToken");
       localStorage.removeItem("access_token");
+      localStorage.removeItem("adminData");
+      localStorage.removeItem("adminAuthToken");
     }
   };
 
@@ -196,10 +203,7 @@ const App: React.FC = () => {
 
             {user?.role === "admin" ? (
               <>
-                <Route
-                  path="/admin/dashboard"
-                  element={<AdminDashboard user={user} onLogout={handleLogout} />}
-                />
+                <Route path="/admin/dashboard" element={<IntegratedAdminPortal user={user} onLogout={handleLogout} />} />
                 <Route
                   path="/admin/enrollment"
                   element={<AdminEnrollment user={user} onLogout={handleLogout} />}
@@ -248,6 +252,18 @@ const App: React.FC = () => {
                 <Route
                   path="/admin/chatbot"
                   element={<AdminChatPage user={user} onLogout={handleLogout} />}
+                />
+                <Route
+                  path="/admin/new-student-draft-detail/:recordId"
+                  element={<NewStudentDraftDetail user={user} onLogout={handleLogout} />}
+                />
+                <Route
+                  path="/admin/submitted-details/:studentId"
+                  element={<SubmittedDetailsReview user={user} onLogout={handleLogout} />}
+                />
+                <Route
+                  path="/admin/submitted-details-review/:studentId"
+                  element={<IsolatedReview user={user} onLogout={handleLogout} />}
                 />
 
                 <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
@@ -334,8 +350,8 @@ const App: React.FC = () => {
           </>
         )}
       </Routes>
-<StudentChatTrigger visible={!!user && user.role === "student" && !user.must_reset_password} />
-        <PublicChatTrigger />
+      <ThemeToggle />
+      <StudentChatTrigger visible={!!user && user.role === "student" && !user.must_reset_password} />        <PublicChatTrigger />
         </HashRouter>
     </UIProvider>
   );

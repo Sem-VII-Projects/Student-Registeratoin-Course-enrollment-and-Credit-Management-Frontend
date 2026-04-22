@@ -1,0 +1,203 @@
+.submitted-review-page-isolated {
+  min-height: 100vh;
+  padding: 24px 14px 34px;
+  background:
+    radial-gradient(1000px 380px at 0% -12%, rgba(11, 79, 159, 0.16), transparent 64%),
+    radial-gradient(900px 360px at 100% 0%, rgba(232, 169, 58, 0.2), transparent 62%),
+    linear-gradient(180deg, #f4f8fd 0%, #edf3fb 55%, #f8fbff 100%);
+}
+
+.submitted-review-wrap-isolated {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: grid;
+  gap: 14px;
+}
+
+.submitted-review-header-isolated,
+.submitted-highlight-isolated,
+.submitted-section-isolated,
+.submitted-review-empty-isolated {
+  border-radius: 16px;
+  border: 1px solid #dbe8f5;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 24px rgba(13, 40, 74, 0.1);
+}
+
+.submitted-review-header-isolated {
+  padding: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.submitted-review-header-isolated h1 {
+  margin: 0;
+  color: #1b3f62;
+}
+
+.submitted-review-header-isolated p {
+  margin: 6px 0 0;
+  color: #607b96;
+}
+
+.submitted-btn-isolated {
+  min-height: 40px;
+  border: 0;
+  border-radius: 10px;
+  padding: 9px 14px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(140deg, #0b5d90, #0b4f9f);
+}
+
+.submitted-highlight-isolated {
+  padding: 18px;
+}
+
+.submitted-highlight-isolated .status-isolated {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  background: #e4efff;
+  color: #245493;
+}
+
+.submitted-highlight-isolated h2 {
+  margin: 10px 0 0;
+  color: #1f4366;
+}
+
+.submitted-highlight-isolated p {
+  margin: 8px 0 0;
+  color: #607b96;
+}
+
+.submitted-grid-isolated {
+  display: grid;
+  gap: 12px;
+}
+
+.submitted-grid-isolated.two-col-isolated {
+  grid-template-columns: repeat(2, minmax(300px, 1fr));
+}
+
+.submitted-section-isolated {
+  padding: 16px;
+}
+
+.submitted-section-isolated h3 {
+  margin: 0 0 10px;
+  color: #214668;
+  border-bottom: 1px solid #e5eff9;
+  padding-bottom: 8px;
+}
+
+.submitted-section-isolated p {
+  margin: 7px 0;
+  color: #516d88;
+  line-height: 1.45;
+}
+
+.submitted-section-isolated p strong {
+  color: #2a4f73;
+}
+
+.submitted-image-grid-isolated {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.submitted-image-grid-isolated.two-isolated {
+  grid-template-columns: repeat(2, minmax(170px, 1fr));
+  margin-top: 10px;
+}
+
+.submitted-image-card-isolated {
+  border-radius: 12px;
+  border: 1px solid #dbe8f5;
+  background: #f8fbff;
+  padding: 10px;
+}
+
+.submitted-image-card-isolated h4 {
+  margin: 0 0 8px;
+  font-size: 0.88rem;
+  color: #2a4f73;
+}
+
+.submitted-image-card-isolated img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #dbe8f5;
+  display: block;
+}
+
+.submitted-image-card-isolated .open-link-isolated {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 0.82rem;
+  color: #0b5d90;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.submitted-image-card-isolated .open-link-isolated:hover {
+  text-decoration: underline;
+}
+
+.submitted-image-card-isolated .missing-isolated {
+  margin: 0;
+  color: #8a5662;
+  font-size: 0.88rem;
+}
+
+.submitted-review-loading-isolated,
+.submitted-review-empty-isolated {
+  min-height: 50vh;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  gap: 10px;
+}
+
+.submitted-review-empty-isolated {
+  max-width: 560px;
+  margin: 64px auto 0;
+  padding: 24px 18px;
+}
+
+.submitted-review-empty-isolated h2 {
+  margin: 0;
+  color: #1f4366;
+}
+
+.submitted-review-empty-isolated p {
+  margin: 0;
+  color: #607b96;
+}
+
+@media (max-width: 980px) {
+  .submitted-grid-isolated.two-col-isolated,
+  .submitted-image-grid-isolated {
+    grid-template-columns: 1fr;
+  }
+
+  .submitted-image-grid-isolated.two-isolated {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .submitted-review-header-isolated {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
