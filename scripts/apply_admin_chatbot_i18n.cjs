@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const enPath = path.join(__dirname, 'public', 'locales', 'en', 'translation.json');
-const myPath = path.join(__dirname, 'public', 'locales', 'my', 'translation.json');
+const enPath = path.join(__dirname, '..', 'public', 'locales', 'en', 'translation.json');
+const myPath = path.join(__dirname, '..', 'public', 'locales', 'my', 'translation.json');
 
 const strings = {
   "Your session expired. Please sign in again.": "??????????????????????????????????? ??????????? ??????????????????",
@@ -42,7 +42,7 @@ const strings = {
   "characters": "??????????",
   "AI Synthesis Active": "AI ???????????? ??????????????",
   "Execute": "????????????",
-  "CMD + Enter to dispatch • Shift + Enter for multiline": "?????????? CMD + Enter • ????????????????????? Shift + Enter",
+  "CMD + Enter to dispatch ï¿½ Shift + Enter for multiline": "?????????? CMD + Enter ï¿½ ????????????????????? Shift + Enter",
   "Administrator": "???????????",
   "System Assistant": "???? ????????",
   "Conceal Citations": "?????????????????? ???????????",
@@ -97,7 +97,7 @@ function injectI18n(content) {
 }
 
 // Update AdminChatPage.tsx
-const cpPath = path.join(__dirname, 'pages', 'AdminChatPage.tsx');
+const cpPath = path.join(__dirname, '..', 'pages', 'AdminChatPage.tsx');
 let cpData = fs.readFileSync(cpPath, 'utf8');
 cpData = injectI18n(cpData);
 cpData = cpData.replace(/"Your session expired\. Please sign in again\."/g, 't("Your session expired. Please sign in again.")');
@@ -109,7 +109,7 @@ fs.writeFileSync(cpPath, cpData, 'utf8');
 console.log('Patched AdminChatPage.tsx');
 
 // Update ChatWindow.tsx
-const cwPath = path.join(__dirname, 'components', 'admin-chat', 'ChatWindow.tsx');
+const cwPath = path.join(__dirname, '..', 'components', 'admin-chat', 'ChatWindow.tsx');
 let cwData = fs.readFileSync(cwPath, 'utf8');
 cwData = injectI18n(cwData);
 cwData = cwData.replace(/<h2[^>]*>Institutional Intelligence<\/h2>/, '<h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">{t("Institutional Intelligence")}</h2>');
@@ -130,8 +130,8 @@ ccData = ccData.replace(/placeholder="Inquire about curriculum metrics, administ
 ccData = ccData.replace(/"\$\{value\.length\} characters"/g, '`${value.length} ${t("characters")}`');
 ccData = ccData.replace(/'AI Synthesis Active'/g, 't("AI Synthesis Active")');
 ccData = ccData.replace(/>\s*Execute\s*<\/span>/g, '>{t("Execute")}</span>');
-ccData = ccData.replace(/>\s*CMD \+ Enter to dispatch â€¢ Shift \+ Enter for multiline\s*<\/p>/g, '>{t("CMD + Enter to dispatch • Shift + Enter for multiline")}</p>');
-ccData = ccData.replace(/>\s*CMD \+ Enter to dispatch • Shift \+ Enter for multiline\s*<\/p>/g, '>{t("CMD + Enter to dispatch • Shift + Enter for multiline")}</p>');
+ccData = ccData.replace(/>\s*CMD \+ Enter to dispatch â€¢ Shift \+ Enter for multiline\s*<\/p>/g, '>{t("CMD + Enter to dispatch ï¿½ Shift + Enter for multiline")}</p>');
+ccData = ccData.replace(/>\s*CMD \+ Enter to dispatch ï¿½ Shift \+ Enter for multiline\s*<\/p>/g, '>{t("CMD + Enter to dispatch ï¿½ Shift + Enter for multiline")}</p>');
 fs.writeFileSync(ccPath, ccData, 'utf8');
 console.log('Patched ChatComposer.tsx');
 
