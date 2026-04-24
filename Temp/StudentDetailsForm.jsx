@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { api } from '../lib/api';
+import { api } from '../api/client';
 import nrcCatalog from '../data/nrc.json';
-import { getStudentSession, persistStudentSession } from '../src/utils/studentStorage';
+import { getStudentSession, persistStudentSession } from '../utils/studentStorage';
 import '../styles/StudentDetailsForm.css';
 
 const REGISTRATION_CONFIG_STORAGE_KEY = 'registration_form_data';
 
-const SEMESTER_OPTIONS_BY_YEAR: Record<string, string[]> = {
+const SEMESTER_OPTIONS_BY_YEAR = {
   '1': ['Sem I', 'Sem II'],
   '2': ['Sem III', 'Sem IV'],
   '3': ['Sem V', 'Sem VI'],
@@ -22,8 +22,8 @@ const DEFAULT_YEAR_OPTIONS = [
   { value: '5', label: 'Year 5' }
 ];
 
-const getSemestersForYear = (yearValue: string | number) => SEMESTER_OPTIONS_BY_YEAR[String(yearValue || '').trim()] || [];
-const STEP_TO_SECTION: Record<string, number> = {
+const getSemestersForYear = (yearValue) => SEMESTER_OPTIONS_BY_YEAR[String(yearValue || '').trim()] || [];
+const STEP_TO_SECTION = {
   start: 1,
   personal: 1,
   contact: 2,
@@ -33,20 +33,20 @@ const STEP_TO_SECTION: Record<string, number> = {
   declaration: 6
 };
 
-const resolveSectionFromStep = (stepParam: string | undefined) => {
+const resolveSectionFromStep = (stepParam) => {
   const key = String(stepParam || '').trim().toLowerCase();
   return STEP_TO_SECTION[key] || 1;
 };
 
-const asObject = (value: any) => (value && typeof value === 'object' && !Array.isArray(value) ? value : {});
+const asObject = (value) => (value && typeof value === 'object' && !Array.isArray(value) ? value : {});
 
-const hasMeaningfulValue = (value: any) => {
+const hasMeaningfulValue = (value) => {
   if (value === null || value === undefined) return false;
   if (typeof value === 'string') return value.trim() !== '';
   return true;
 };
 
-const hasValues = (record: any): boolean => {
+const hasValues = (record) => {
   const target = asObject(record);
   return Object.values(target).some((value) => {
     if (value && typeof value === 'object' && !Array.isArray(value)) {
@@ -56,41 +56,41 @@ const hasValues = (record: any): boolean => {
   });
 };
 
-const hasSectionContent = (sections: any) => {
+const hasSectionContent = (sections) => {
   const target = asObject(sections);
   if (Object.keys(target).length === 0) return false;
   return Object.values(target).some((value) => hasValues(value));
 };
 
-const pickFirstValue = (...values: any[]) =>
+const pickFirstValue = (...values) =>
   values.find((value) => {
     if (value === null || value === undefined) return false;
     if (typeof value === 'string') return value.trim() !== '';
     return true;
   });
 
-const toBoolean = (value: any) => {
+const toBoolean = (value) => {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'string') return value.trim().toLowerCase() === 'true';
   return !!value;
 };
 
-const registrationIdOf = (record: any) =>
+const registrationIdOf = (record) =>
   record?.registrationId ||
   record?.registrationid ||
   record?.registration_id ||
   record?.id ||
   null;
 
-const sortRegistrationsByRecent = (items: any[]) => [...items].sort((a, b) => {
+const sortRegistrationsByRecent = (items) => [...items].sort((a, b) => {
   const aTime = new Date(a?.submittedAt || a?.submitted_at || a?.createdAt || a?.created_at || 0).getTime() || 0;
   const bTime = new Date(b?.submittedAt || b?.submitted_at || b?.createdAt || b?.created_at || 0).getTime() || 0;
   return bTime - aTime;
 });
 
-const normalizeRelation = (value: any) => String(value || '').trim().toLowerCase();
+const normalizeRelation = (value) => String(value || '').trim().toLowerCase();
 
-const toEnglishDigits = (value: any) =>
+const toEnglishDigits = (value) =>
   String(value || '')
     .replace(/\u1040/g, '0')
     .replace(/\u1041/g, '1')
@@ -103,7 +103,7 @@ const toEnglishDigits = (value: any) =>
     .replace(/\u1048/g, '8')
     .replace(/\u1049/g, '9');
 
-const parseNrcParts = (rawValue: any) => {
+const parseNrcParts = (rawValue) => {
   const raw = String(rawValue || '').trim();
   if (!raw) {
     return { region: '', township: '', type: '', number: '' };
@@ -138,7 +138,7 @@ const parseNrcParts = (rawValue: any) => {
   return { region: '', township: '', type: '', number: '' };
 };
 
-const parseDateParts = (rawDate: any) => {
+const parseDateParts = (rawDate) => {
   const raw = String(rawDate || '').trim();
   if (!raw) {
     return { dobDay: '', dobMonth: '', dobYear: '' };
@@ -162,11 +162,11 @@ const parseDateParts = (rawDate: any) => {
   };
 };
 
-const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
+function StudentDetailsForm() {
   const navigate = useNavigate();
-  const { step } = useParams<{ step?: string }>();
-  const [student, setStudent] = useState<any>(null);
-  const [registrationConfig, setRegistrationConfig] = useState<any>(null);
+  const { step } = useParams();
+  const [student, setStudent] = useState(null);
+  const [registrationConfig, setRegistrationConfig] = useState(null);
   const [loading, setLoading] = useState(false);
   const [currentSection, setCurrentSection] = useState(() => resolveSectionFromStep(step));
 
@@ -175,7 +175,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
   }, [step]);
 
   // Form data for all sections
-  const [formData, setFormData] = useState<any>({
+  const [formData, setFormData] = useState({
     // Section 1: Student Info
     passportPhoto: null,
     passportPhotoPreview: '',
@@ -255,19 +255,19 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
     '\u1027\u100A\u1037\u103A',
     '\u1015\u103C\u102F'
   ];
-  const toMyanmarDigits = (value: any) =>
+  const toMyanmarDigits = (value) =>
     String(value).replace(/[0-9]/g, (d) => '\u1040\u1041\u1042\u1043\u1044\u1045\u1046\u1047\u1048\u1049'[Number(d)]);
-  const nrcRegions = Array.from(new Set(nrcCatalog.map((row: any) => String(row.state_code).trim())))
+  const nrcRegions = Array.from(new Set(nrcCatalog.map((row) => String(row.state_code).trim())))
     .sort((a, b) => Number(a) - Number(b));
-  const getTownshipsByRegion = (region: string) => nrcCatalog
-    .filter((row: any) => String(row.state_code).trim() === region)
-    .map((row: any) => ({
+  const getTownshipsByRegion = (region) => nrcCatalog
+    .filter((row) => String(row.state_code).trim() === region)
+    .map((row) => ({
       code: String(row.township_code_mm || '').trim(),
       nameMm: String(row.township_mm || '').trim(),
       nameEn: String(row.township_en || '').trim()
     }))
-    .filter((row: any) => row.code)
-    .sort((a: any, b: any) => a.code.localeCompare(b.code));
+    .filter((row) => row.code)
+    .sort((a, b) => a.code.localeCompare(b.code));
   const fatherTownships = getTownshipsByRegion(formData.fatherNrcRegion);
   const motherTownships = getTownshipsByRegion(formData.motherNrcRegion);
   const [yearOptions, setYearOptions] = useState(DEFAULT_YEAR_OPTIONS);
@@ -328,8 +328,8 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
       }
 
       const studentId = resolvedStudent?.studentid || resolvedStudent?.id;
-      let parents: any[] = [];
-      let registrationSections: any = {};
+      let parents = [];
+      let registrationSections = {};
 
       if (studentId) {
         const [parentsResult, registrationsResult] = await Promise.allSettled([
@@ -342,8 +342,8 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
         }
 
         const seenRegistrationIds = new Set();
-        const candidateRegistrationIds: any[] = [];
-        const addRegistrationCandidate = (registrationId: any) => {
+        const candidateRegistrationIds = [];
+        const addRegistrationCandidate = (registrationId) => {
           if (!registrationId) return;
           const normalized = String(registrationId);
           if (seenRegistrationIds.has(normalized)) return;
@@ -368,7 +368,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
             if (Object.keys(registrationSections).length === 0 && Object.keys(payload).length > 0) {
               registrationSections = payload;
             }
-          } catch (sectionError: any) {
+          } catch (sectionError) {
             if (sectionError?.status !== 404) {
               console.warn('Failed to hydrate registration sections:', sectionError);
             }
@@ -474,7 +474,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
         ? financialSupporterCandidate
         : '';
 
-      setFormData((prev: any) => ({
+      setFormData((prev) => ({
         ...prev,
         passportPhoto: passportPhotoUrl || null,
         passportPhotoPreview: passportPhotoUrl || '',
@@ -565,7 +565,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
     };
   }, [navigate]);
 
-  const getMajorsForYear = (yearValue: string | number) => {
+  const getMajorsForYear = (yearValue) => {
     if (!registrationConfig || !registrationConfig.yearlyConfig) {
       // Fallback majors if admin has not configured any
       return ['KE', 'SE', 'HPC', 'Csec', 'BIS', 'ES', 'CN'];
@@ -573,7 +573,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
     const yearNum = Number(String(yearValue || '').trim() || 0);
     if (!yearNum) return [];
     const match = registrationConfig.yearlyConfig.find(
-      (y: any) => Number(y.yearLevel) === yearNum
+      (y) => Number(y.yearLevel) === yearNum
     );
     if (!match || !Array.isArray(match.majors)) {
       return [];
@@ -584,9 +584,8 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
   const majorsForSelectedYear = getMajorsForYear(formData.currentYear);
 
   // Handle text input change
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
-    const checked = (e.target as HTMLInputElement).checked;
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
     const nextValue = type === 'checkbox' ? checked : value;
     const allowedSemestersForSelectedYear = name === 'currentYear'
       ? getSemestersForYear(nextValue)
@@ -604,8 +603,8 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
   };
 
   // Handle file upload
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, fieldName: string, previewName: string) => {
-    const file = e.target.files?.[0];
+  const handleFileChange = (e, fieldName, previewName) => {
+    const file = e.target.files[0];
     if (file) {
       // Check file size (max 2MB)
       if (file.size > 2 * 1024 * 1024) {
@@ -626,7 +625,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
     }
   };
 
-  const fileToDataUrl = (file: File) =>
+  const fileToDataUrl = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result);
@@ -634,7 +633,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
       reader.readAsDataURL(file);
     });
 
-  const resolveDocumentUrl = (result: any, fallbackUrl: string) =>
+  const resolveDocumentUrl = (result, fallbackUrl) =>
     result?.fileUrl ||
     result?.url ||
     result?.publicUrl ||
@@ -642,14 +641,14 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
     result?.data?.fileUrl ||
     fallbackUrl;
 
-  const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  const upsertSectionWithRetry = async (registrationId: string | number, section: string, payload: any, maxAttempts = 2) => {
+  const upsertSectionWithRetry = async (registrationId, section, payload, maxAttempts = 2) => {
     let lastError = null;
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       try {
         return await api.upsertSection(registrationId, section, payload);
-      } catch (error: any) {
+      } catch (error) {
         lastError = error;
         const isRetryableServerError = typeof error?.status === 'number' && error.status >= 500;
         if (!isRetryableServerError || attempt >= maxAttempts) {
@@ -662,7 +661,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
   };
 
   // Upload file through backend document API (persisted by backend/Supabase integration)
-  const uploadImage = async (file: any, docType: string, studentId: string | number) => {
+  const uploadImage = async (file, docType, studentId) => {
     if (!file) return null;
     if (typeof file === 'string') return file;
     if (typeof Blob !== 'undefined' && !(file instanceof Blob)) {
@@ -678,29 +677,29 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
       fileSize: file.size,
       fileUrl: dataUrl
     });
-    return resolveDocumentUrl(savedDoc, dataUrl as string);
+    return resolveDocumentUrl(savedDoc, dataUrl);
   };
 
-  const getRegistrationId = (registration: any) =>
+  const getRegistrationId = (registration) =>
     registration?.id ||
     registration?.registrationId ||
     registration?.registration_id ||
     null;
 
-  const resolveRegistrationId = async (studentRecord: any, studentId: string | number) => {
+  const resolveRegistrationId = async (studentRecord, studentId) => {
     const direct = studentRecord?.registrationId || studentRecord?.registrationid || studentRecord?.registration_id;
     if (direct) {
       try {
         await api.getRegistrationSections(direct);
         return direct;
-      } catch (error: any) {
+      } catch (error) {
         if (error?.status !== 404) {
           throw error;
         }
       }
     }
 
-    let registrations: any[] = [];
+    let registrations = [];
     try {
       registrations = await api.listRegistrations(studentId);
     } catch (error) {
@@ -730,7 +729,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
   };
 
   // Validate current section
-  const validateSection = (section: number) => {
+  const validateSection = (section) => {
     switch (section) {
       case 1:
         if (!formData.passportPhoto) {
@@ -770,7 +769,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
           alert('Please complete father NRC fields.');
           return false;
         }
-        if (!fatherTownships.some((t: any) => t.code === formData.fatherNrcTownship)) {
+        if (!fatherTownships.some((t) => t.code === formData.fatherNrcTownship)) {
           alert('Father NRC township is invalid for the selected region.');
           return false;
         }
@@ -792,7 +791,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
           alert('Please complete mother NRC fields.');
           return false;
         }
-        if (!motherTownships.some((t: any) => t.code === formData.motherNrcTownship)) {
+        if (!motherTownships.some((t) => t.code === formData.motherNrcTownship)) {
           alert('Mother NRC township is invalid for the selected region.');
           return false;
         }
@@ -1015,9 +1014,9 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
       persistStudentSession(updatedStudent);
 
       // Navigate back to dashboard
-      navigate('/student/dashboard');
+      navigate('/student-dashboard');
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Submit error:', error);
       const endpoint = error?.path ? `\nEndpoint: ${error.method || 'GET'} ${error.path}` : '';
       alert('Submit failed.\n\n' + error.message + endpoint);
@@ -1035,21 +1034,21 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
       {/* Header */}
       <header className="form-header">
         <div className="header-content">
-          <h1>Student Details Form</h1>
-          <p>Complete your student information</p>
+          <h1>📝 Student Details Form</h1>
+          <p>ကျောင်းသား အချက်အလက် အပြည့်အစုံ ဖြည့်စွက်ခြင်း</p>
         </div>
       </header>
 
       {/* Progress Bar */}
       <div className="progress-container">
         <div className="progress-bar">
-          {[1, 2, 3, 4, 5, 6].map((stepNumber) => (
+          {[1, 2, 3, 4, 5, 6].map((step) => (
             <div
-              key={stepNumber}
-              className={`progress-step ${currentSection >= stepNumber ? 'active' : ''} ${currentSection === stepNumber ? 'current' : ''}`}
+              key={step}
+              className={`progress-step ${currentSection >= step ? 'active' : ''} ${currentSection === step ? 'current' : ''}`}
             >
-              <div className="step-number">{stepNumber}</div>
-              <div className="step-label">Section {stepNumber}</div>
+              <div className="step-number">{step}</div>
+              <div className="step-label">Section {step}</div>
             </div>
           ))}
         </div>
@@ -1062,12 +1061,12 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
           {/* SECTION 1: Student Information */}
           {currentSection === 1 && (
             <div className="section">
-              <h2 className="section-title">Section 1: Student Information</h2>
-              <p className="section-subtitle">Provide your personal details</p>
+              <h2 className="section-title">📋 Section 1: Student Information</h2>
+              <p className="section-subtitle">ကျောင်းသား၏ အချက်အလက်များ</p>
 
               {/* Passport Photo */}
               <div className="form-group">
-                <label>Passport Photo: <span className="required">*</span></label>
+                <label>ပတ်စ်ပို့ဓာတ်ပုံ (Passport Photo): <span className="required">*</span></label>
                 <div className="image-upload-box">
                   {formData.passportPhotoPreview ? (
                     <div className="image-preview">
@@ -1075,14 +1074,14 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
                       <button 
                         type="button" 
                         className="btn-change-image"
-                        onClick={() => document.getElementById('passportPhoto')?.click()}
+                        onClick={() => document.getElementById('passportPhoto').click()}
                       >
                         Change
                       </button>
                     </div>
                   ) : (
                     <label htmlFor="passportPhoto" className="upload-label">
-                      <div className="upload-icon">Upload</div>
+                      <div className="upload-icon">📷</div>
                       <p>Click to upload photo</p>
                       <small>(Max 2MB, JPG/PNG)</small>
                     </label>
@@ -1133,7 +1132,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
                         <button 
                           type="button" 
                           className="btn-change-image"
-                          onClick={() => document.getElementById('nrcFront')?.click()}
+                          onClick={() => document.getElementById('nrcFront').click()}
                         >
                           Change
                         </button>
@@ -1161,7 +1160,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
                         <button 
                           type="button" 
                           className="btn-change-image"
-                          onClick={() => document.getElementById('nrcBack')?.click()}
+                          onClick={() => document.getElementById('nrcBack').click()}
                         >
                           Change
                         </button>
@@ -1261,7 +1260,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
                   <label>Major: <span className="required">*</span></label>
                   <select name="major" value={formData.major} onChange={handleChange}>
                     <option value="">Select major</option>
-                    {majorsForSelectedYear.map((item: string) => (
+                    {majorsForSelectedYear.map((item) => (
                       <option key={item} value={item}>{item}</option>
                     ))}
                   </select>
@@ -1275,7 +1274,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
                   name="address"
                   value={formData.address}
                   onChange={handleChange}
-                  rows={3}
+                  rows="3"
                   placeholder="အပြည့်အစုံ လိပ်စာ ရေးပါ"
                 />
               </div>
@@ -1285,18 +1284,18 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
           {/* SECTION 2: Father Information */}
           {currentSection === 2 && (
             <div className="section">
-              <h2 className="section-title">Section 2: Father's Information</h2>
-              <p className="section-subtitle">Father's details</p>
+              <h2 className="section-title">👨 Section 2: Father's Information</h2>
+              <p className="section-subtitle">အဖ၏ အချက်အလက်များ</p>
 
               <div className="form-row">
                 <div className="form-group">
-                  <label>Father Name (Myanmar): <span className="required">*</span></label>
+                  <label>အဖအမည် (မြန်မာ): <span className="required">*</span></label>
                   <input
                     type="text"
                     name="fatherNameMM"
                     value={formData.fatherNameMM}
                     onChange={handleChange}
-                    placeholder="Enter name"
+                    placeholder="ဦးအောင်အောင်"
                   />
                 </div>
                 <div className="form-group">
@@ -1312,18 +1311,18 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
               </div>
 
               <div className="form-group">
-                <label>Occupation:</label>
+                <label>အလုပ်အကိုင် (Occupation):</label>
                 <input
                   type="text"
                   name="fatherOccupation"
                   value={formData.fatherOccupation}
                   onChange={handleChange}
-                  placeholder="e.g., Teacher"
+                  placeholder="ဥပမာ - ဆရာ"
                 />
               </div>
 
               <div className="form-group">
-                <label>NRC Number:</label>
+                <label>မှတ်ပုံတင်အမှတ် (NRC Number):</label>
                 <div className="nrc-group">
                   <select
                     name="fatherNrcRegion"
@@ -1341,7 +1340,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
                     onChange={handleChange}
                   >
                     <option value="">Township</option>
-                    {fatherTownships.map((township: any) => (
+                    {fatherTownships.map((township) => (
                       <option key={township.code} value={township.code}>
                         {township.code} - {township.nameMm || township.nameEn}
                       </option>
@@ -1363,14 +1362,14 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
                     value={formData.fatherNrcNumber}
                     onChange={handleChange}
                     placeholder="6 digits"
-                    maxLength={6}
+                    maxLength="6"
                   />
                 </div>
               </div>
 
               {/* Father NRC Images */}
               <div className="form-group">
-                <label>Father's NRC Photo: <span className="required">*</span></label>
+                <label>အဖ၏ မှတ်ပုံတင် ဓာတ်ပုံ: <span className="required">*</span></label>
                 <div className="image-row">
                   {/* Father NRC Front */}
                   <div className="image-upload-box half">
@@ -1380,15 +1379,15 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
                         <button 
                           type="button" 
                           className="btn-change-image"
-                          onClick={() => document.getElementById('fatherNrcFront')?.click()}
+                          onClick={() => document.getElementById('fatherNrcFront').click()}
                         >
                           Change
                         </button>
                       </div>
                     ) : (
                       <label htmlFor="fatherNrcFront" className="upload-label">
-                        <div className="upload-icon">Upload</div>
-                        <p>NRC Front</p>
+                        <div className="upload-icon">📄</div>
+                        <p>NRC Front (ရှေ့)</p>
                       </label>
                     )}
                     <input
@@ -1408,15 +1407,15 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
                         <button 
                           type="button" 
                           className="btn-change-image"
-                          onClick={() => document.getElementById('fatherNrcBack')?.click()}
+                          onClick={() => document.getElementById('fatherNrcBack').click()}
                         >
                           Change
                         </button>
                       </div>
                     ) : (
                       <label htmlFor="fatherNrcBack" className="upload-label">
-                        <div className="upload-icon">Upload</div>
-                        <p>NRC Back</p>
+                        <div className="upload-icon">📄</div>
+                        <p>NRC Back (နောက်)</p>
                       </label>
                     )}
                     <input
@@ -1470,7 +1469,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
                   name="fatherAddress"
                   value={formData.fatherAddress}
                   onChange={handleChange}
-                  rows={3}
+                  rows="3"
                 />
               </div>
 
@@ -1546,7 +1545,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
                     onChange={handleChange}
                   >
                     <option value="">Township</option>
-                    {motherTownships.map((township: any) => (
+                    {motherTownships.map((township) => (
                       <option key={township.code} value={township.code}>
                         {township.code} - {township.nameMm || township.nameEn}
                       </option>
@@ -1568,7 +1567,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
                     value={formData.motherNrcNumber}
                     onChange={handleChange}
                     placeholder="6 digits"
-                    maxLength={6}
+                    maxLength="6"
                   />
                 </div>
               </div>
@@ -1579,52 +1578,51 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
                 <div className="image-row">
                   {/* Mother NRC Front */}
                   <div className="image-upload-box half">
-                  {formData.motherNrcFrontPreview ? (
-                    <div className="image-preview">
-                      <img src={formData.motherNrcFrontPreview} alt="Mother NRC Front" />
-                      <button 
-                        type="button" 
-                        className="btn-change-image"
-                        onClick={() => document.getElementById('motherNrcFront')?.click()}
-                      >
-                        Change
-                      </button>
-                    </div>
-                  ) : (
-                    <label htmlFor="motherNrcFront" className="upload-label">
-                      <div className="upload-icon">Upload</div>
-                      <p>NRC Front (ရှေ့)</p>
-                    </label>
-                  )}
-                  <input
-                    type="file"
-                    id="motherNrcFront"
-                    accept="image/*"
-                    onChange={(e) => handleFileChange(e, 'motherNrcFront', 'motherNrcFrontPreview')}
-                    style={{ display: 'none' }}
-                  />
+                    {formData.motherNrcFrontPreview ? (
+                      <div className="image-preview">
+                        <img src={formData.motherNrcFrontPreview} alt="Mother NRC Front" />
+                        <button 
+                          type="button" 
+                          className="btn-change-image"
+                          onClick={() => document.getElementById('motherNrcFront').click()}
+                        >
+                          Change
+                        </button>
+                      </div>
+                    ) : (
+                      <label htmlFor="motherNrcFront" className="upload-label">
+                        <div className="upload-icon">📄</div>
+                        <p>NRC Front (ရှေ့)</p>
+                      </label>
+                    )}
+                    <input
+                      type="file"
+                      id="motherNrcFront"
+                      accept="image/*"
+                      onChange={(e) => handleFileChange(e, 'motherNrcFront', 'motherNrcFrontPreview')}
+                      style={{ display: 'none' }}
+                    />
                   </div>
 
                   {/* Mother NRC Back */}
                   <div className="image-upload-box half">
-                  {formData.motherNrcBackPreview ? (
-                    <div className="image-preview">
-                      <img src={formData.motherNrcBackPreview} alt="Mother NRC Back" />
-                      <button 
-                        type="button" 
-                        className="btn-change-image"
-                        onClick={() => document.getElementById('motherNrcBack')?.click()}
-                      >
-                        Change
-                      </button>
-                    </div>
-                  ) : (
-                    <label htmlFor="motherNrcBack" className="upload-label">
-                      <div className="upload-icon">Upload</div>
-                      <p>NRC Back (နောက်)</p>
-                    </label>
-                  )}
-
+                    {formData.motherNrcBackPreview ? (
+                      <div className="image-preview">
+                        <img src={formData.motherNrcBackPreview} alt="Mother NRC Back" />
+                        <button 
+                          type="button" 
+                          className="btn-change-image"
+                          onClick={() => document.getElementById('motherNrcBack').click()}
+                        >
+                          Change
+                        </button>
+                      </div>
+                    ) : (
+                      <label htmlFor="motherNrcBack" className="upload-label">
+                        <div className="upload-icon">📄</div>
+                        <p>NRC Back (နောက်)</p>
+                      </label>
+                    )}
                     <input
                       type="file"
                       id="motherNrcBack"
@@ -1676,7 +1674,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
                   name="motherAddress"
                   value={formData.motherAddress}
                   onChange={handleChange}
-                  rows={3}
+                  rows="3"
                 />
               </div>
 
@@ -1696,7 +1694,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
           {/* SECTION 4: Parent Agreement */}
           {currentSection === 4 && (
             <div className="section">
-              <h2 className="section-title">Section 4: Parent Agreement Form</h2>
+              <h2 className="section-title">✅ Section 4: Parent Agreement Form</h2>
               <p className="section-subtitle">မိဘ သဘောတူညီချက်</p>
 
               {/* Question 1: Financial Supporter */}
@@ -1798,14 +1796,14 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
                         <button 
                           type="button" 
                           className="btn-change-image"
-                          onClick={() => document.getElementById('familyReg')?.click()}
+                          onClick={() => document.getElementById('familyReg').click()}
                         >
                           Change
                         </button>
                       </div>
                     ) : (
                       <label htmlFor="familyReg" className="upload-label">
-                        <div className="upload-icon">Upload</div>
+                        <div className="upload-icon">📋</div>
                         <p>Upload Family Registration</p>
                         <small>(အိမ်ထောင်စုစာရင်း)</small>
                       </label>
@@ -1826,7 +1824,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
           {/* SECTION 5: School Terms */}
           {currentSection === 5 && (
             <div className="section">
-              <h2 className="section-title">Section 5: School Terms and Conditions</h2>
+              <h2 className="section-title">📜 Section 5: School Terms and Conditions</h2>
               <p className="section-subtitle">ကျောင်းစည်းကမ်းများ</p>
 
               <div className="terms-box">
@@ -1869,7 +1867,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
           {/* SECTION 6: Student Confession */}
           {currentSection === 6 && (
             <div className="section">
-              <h2 className="section-title">Section 6: Student Confession</h2>
+              <h2 className="section-title">🤝 Section 6: Student Confession</h2>
               <p className="section-subtitle">ကျောင်းသား ကတိသစ္စာ</p>
 
               <div className="confession-box">
@@ -1911,7 +1909,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
               </div>
 
               <div className="final-note">
-                <p>သတိပြုရန်: Form တင်သွင်းပြီးပါက ပြင်ဆင်၍ မရတော့ပါ။</p>
+                <p>⚠️ သတိပြုရန်: Form တင်သွင်းပြီးပါက ပြင်ဆင်၍ မရတော့ပါ။</p>
                 <p>အချက်အလက်များ မှန်ကန်ကြောင်း သေချာပါစေ။</p>
               </div>
             </div>
@@ -1944,7 +1942,7 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
                 onClick={handleSubmit}
                 disabled={loading}
               >
-                {loading ? 'တင်သွင်းနေသည်...' : 'Submit Form'}
+                {loading ? 'တင်သွင်းနေသည်...' : '✅ Submit Form'}
               </button>
             )}
           </div>
@@ -1953,6 +1951,21 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
       </div>
     </div>
   );
-};
+}
 
-export default StudentDetails;
+export default StudentDetailsForm;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
