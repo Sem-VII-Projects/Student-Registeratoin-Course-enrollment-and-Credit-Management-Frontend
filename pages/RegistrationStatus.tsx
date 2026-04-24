@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { clearStudentSession, getStudentSession, persistStudentSession } from '../src/utils/studentStorage';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import '../styles/RegistrationStatus.css';
 
 function normalizeStartReason(reason: any) {
@@ -51,6 +53,7 @@ interface RegistrationStatusProps {
 }
 
 const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUser, onLogout }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [student, setStudent] = useState<any>(null);
@@ -187,8 +190,16 @@ const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUs
     if (raw === null || raw === undefined || String(raw).trim() === '') {
       return '-';
     }
-    return `${raw} year`;
-  }, [student?.currentyear, student?.currentYear]);
+    const labelMap: Record<string, string> = {
+      '1st': '1st year',
+      '2nd': '2nd year',
+      '3rd': '3rd year',
+      '4th': '4th year',
+      '5th': '5th year'
+    };
+    const engLabel = labelMap[String(raw)] || `${raw} year`;
+    return t(engLabel);
+  }, [student?.currentyear, student?.currentYear, t]);
 
   const showYearChangedRegistrationAction = useMemo(() => {
     if (startRouteReason === 'YEAR_CHANGED') {
@@ -208,18 +219,25 @@ const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUs
   );
 
   const yearChangedActionTitle = startRouteReason === 'YEAR_CHANGED'
-    ? 'Year Level Updated'
-    : 'Registration Details Required';
+    ? t('Year Level Updated')
+    : t('Registration Details Required');
 
   const statusLabel = useMemo(() => {
-    const raw = String(student?.status || '');
-    if (!raw) return 'Unknown';
-    return raw
-      .toLowerCase()
-      .split('_')
-      .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : ''))
-      .join(' ');
-  }, [student?.status]);
+    const raw = String(student?.status || '').toUpperCase();
+    if (!raw) return t('Unknown');
+    // Map backend status codes to translation keys
+    const keys: Record<string, string> = {
+      'PENDING': 'PENDING',
+      'APPROVED': 'APPROVED',
+      'DETAILS_SUBMITTED': 'DETAILS_SUBMITTED',
+      'PAYMENT_REQUIRED': 'PAYMENT_REQUIRED',
+      'PAYMENT_PENDING': 'PAYMENT_PENDING',
+      'PAYMENT_DONE': 'PAYMENT_DONE',
+      'ENROLLED': 'ENROLLED',
+      'REJECTED': 'REJECTED'
+    };
+    return t(keys[raw] || raw);
+  }, [student?.status, t]);
 
   const normalizedStatus = useMemo(
     () => String(student?.status || '').trim().toUpperCase(),
@@ -331,15 +349,15 @@ const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUs
     const confirmPassword = passwordForm.confirmPassword.trim();
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      alert('Please fill all password fields.');
+      alert(t('Please fill all password fields.'));
       return;
     }
     if (newPassword.length < 6) {
-      alert('New password must be at least 6 characters.');
+      alert(t('At least 6 characters'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      alert('New password and confirm password do not match.');
+      alert(t('New password and confirm password do not match.'));
       return;
     }
 
@@ -377,7 +395,7 @@ const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUs
         }
       }
       if (!studentId) {
-        throw new Error('Student account ID not found. Please login again.');
+        throw new Error(t('Student account ID not found. Please login again.'));
       }
 
       await api.changeStudentPassword(studentId, {
@@ -386,17 +404,17 @@ const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUs
         email: student.email,
         username: student.user_name
       });
-      alert('Password changed successfully.');
+      alert(t('Password changed successfully.'));
       closePasswordModal();
     } catch (error: any) {
-      alert(`Failed to change password.\n\n${error.message}`);
+      alert(`${t('Failed to change password.')}\n\n${error.message}`);
     } finally {
       setPasswordLoading(false);
     }
   };
 
   if (!student) {
-    return <div className="loading">Loading...</div>;
+    return <div className="loading">{t('Loading...')}</div>;
   }
 
   return (
@@ -407,18 +425,19 @@ const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUs
             <div className="logo-circle-small">UIT</div>
             <div>
               <h1>Portal</h1>
-              <p>Registration Management</p>
+              <p>{t('Registration Management')}</p>
             </div>
           </div>
 
           <div className="header-actions">
+            <LanguageSwitcher />
             {(normalizedStatus === 'ENROLLED' || showEnrollmentCompleteCard) && (
               <button 
                 className="btn-primary" 
                 onClick={handleEnterPortal}
                 style={{ marginTop: 0, padding: '10px 20px', background: '#10b981' }}
               >
-                Enter Portal
+                {t('Enter Portal')}
               </button>
             )}
             <div className="profile-menu">
@@ -435,10 +454,10 @@ const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUs
               {menuOpen && (
                 <div className="profile-dropdown">
                   <button className="profile-dropdown-item" onClick={openPasswordModal}>
-                    Security Settings
+                    {t('Security Settings')}
                   </button>
                   <button className="profile-dropdown-item danger" onClick={handleLogout}>
-                    Sign Out
+                    {t('Sign Out')}
                   </button>
                 </div>
               )}
@@ -450,35 +469,35 @@ const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUs
       <main className="dashboard-main">
         <div className="dashboard-content">
           <section className="welcome-section">
-            <h2>Hello, {student.namemm}.</h2>
-            <p className="username-display">Account: <strong>{student.user_name}</strong></p>
+            <h2>{t('Hello, {{name}}.', { name: student.namemm || student.name || 'Student' })}</h2>
+            <p className="username-display">{t('Account:')} <strong>{student.user_name}</strong></p>
           </section>
 
           <section className="status-card">
-            <h3>Current Status</h3>
+            <h3>{t('Current Status')}</h3>
             <div className="status-info">
               <div className="status-item">
-                <span className="label">Registry Status</span>
+                <span className="label">{t('Registry Status')}</span>
                 <span className={`badge badge-${String(student.status || '').toLowerCase()}`}>
                   {statusLabel}
                 </span>
               </div>
               <div className="status-item">
-                <span className="label">Academic Year</span>
+                <span className="label">{t('Academic Year')}</span>
                 <span className="value">{currentTerm?.academicYear || '2024-2025'}</span>
               </div>
               <div className="status-item">
-                <span className="label">Semester</span>
-                <span className="value">{currentTerm?.semester || 'Semester 1'}</span>
+                <span className="label">{t('Semester')}</span>
+                <span className="value">{t(currentTerm?.semester || 'Semester 1')}</span>
               </div>
               <div className="status-item">
-                <span className="label">Level</span>
+                <span className="label">{t('Level')}</span>
                 <span className="value">{yearLevelLabel}</span>
               </div>
             </div>
             {startRouteReason === 'CLOSED' && (
               <p className="status-note" style={{ marginTop: '20px', color: '#ef4444', fontWeight: '700' }}>
-                Registration cycle is currently closed.
+                {t('Registration cycle is currently closed.')}
               </p>
             )}
           </section>
@@ -491,9 +510,9 @@ const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUs
                 </div>
                 <div className="card-text">
                   <h3>{yearChangedActionTitle}</h3>
-                  <p>Your record has been advanced to the next academic cycle. Please update your registration details.</p>
+                  <p>{t('Your record has been advanced to the next academic cycle. Please update your registration details.')}</p>
                   <button className="btn-primary" onClick={() => navigate(yearChangedTargetRoute)}>
-                    Begin Registration
+                    {t('Begin Registration')}
                   </button>
                 </div>
               </div>
@@ -505,8 +524,8 @@ const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUs
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 </div>
                 <div className="card-text">
-                  <h3>Pending Review</h3>
-                  <p>Your initial application is in the queue for administrative verification.</p>
+                  <h3>{t('Pending Review')}</h3>
+                  <p>{t('Your initial application is in the queue for administrative verification.')}</p>
                 </div>
               </div>
             )}
@@ -517,10 +536,10 @@ const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUs
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                 </div>
                 <div className="card-text">
-                  <h3>{(student.rejection_reason || student.rejectionReason) ? 'Action Required: Resubmit' : 'Complete Registration'}</h3>
-                  <p>Please provide your comprehensive student details and required documentation.</p>
+                  <h3>{(student.rejection_reason || student.rejectionReason) ? t('Action Required: Resubmit') : t('Complete Registration')}</h3>
+                  <p>{t('Please provide your comprehensive student details and required documentation.')}</p>
                   <button className="btn-primary" onClick={() => navigate('/student-details')}>
-                    {(student.rejection_reason || student.rejectionReason) ? 'Resubmit Details' : 'Continue to Form'}
+                    {(student.rejection_reason || student.rejectionReason) ? t('Resubmit Details') : t('Continue to Form')}
                   </button>
                 </div>
               </div>
@@ -532,8 +551,8 @@ const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUs
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                 </div>
                 <div className="card-text">
-                  <h3>Verification in Progress</h3>
-                  <p>Your submitted details are currently being audited by the registrar's office.</p>
+                  <h3>{t('Verification in Progress')}</h3>
+                  <p>{t('Your submitted details are currently being audited by the registrar\'s office.')}</p>
                 </div>
               </div>
             )}
@@ -544,10 +563,10 @@ const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUs
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
                 </div>
                 <div className="card-text">
-                  <h3>Audit Successful</h3>
-                  <p>Your details are verified. Please proceed with the tuition payment to finalize your seat.</p>
+                  <h3>{t('Audit Successful')}</h3>
+                  <p>{t('Your details are verified. Please proceed with the tuition payment to finalize your seat.')}</p>
                   <button className="btn-primary" onClick={() => navigate('/payment')}>
-                    Proceed to Payment
+                    {t('Proceed to Payment')}
                   </button>
                 </div>
               </div>
@@ -559,8 +578,8 @@ const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUs
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 </div>
                 <div className="card-text">
-                  <h3>Payment Under Review</h3>
-                  <p>We are confirming your transaction with the finance department.</p>
+                  <h3>{t('Payment Under Review')}</h3>
+                  <p>{t('We are confirming your transaction with the finance department.')}</p>
                 </div>
               </div>
             )}
@@ -571,14 +590,14 @@ const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUs
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                 </div>
                 <div className="card-text">
-                  <h3>Course Enrollment</h3>
-                  <p>Your financial status is cleared. You may now select your sections for the current term.</p>
+                  <h3>{t('Course Enrollment')}</h3>
+                  <p>{t('Your financial status is cleared. You may now select your sections for the current term.')}</p>
                   <div style={{ display: 'flex', gap: '12px' }}>
                     <button className="btn-primary" onClick={handleOpenEnrollment}>
-                      Enroll Courses
+                      {t('Enroll Courses')}
                     </button>
                     <button className="btn-primary" onClick={handleEnterPortal} style={{ background: '#fff', color: '#000', border: '1px solid #000' }}>
-                      Enter Portal
+                      {t('Enter Portal')}
                     </button>
                   </div>
                 </div>
@@ -591,11 +610,11 @@ const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUs
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                 </div>
                 <div className="card-text">
-                  <h3>Enrollment Finalized</h3>
-                  <p>Class: <strong>{student.assigned_class || student.assignedClass || 'Unassigned'}</strong></p>
-                  <p>Registration cycle complete. Welcome to the new academic year.</p>
+                  <h3>{t('Enrollment Finalized')}</h3>
+                  <p>{t('Class:')} <strong>{student.assigned_class || student.assignedClass || t('Unassigned')}</strong></p>
+                  <p>{t('Registration cycle complete. Welcome to the new academic year.')}</p>
                   <button className="btn-primary" onClick={handleEnterPortal} style={{ background: '#10b981' }}>
-                    Enter Academic Portal
+                    {t('Enter Academic Portal')}
                   </button>
                 </div>
               </div>
@@ -607,30 +626,30 @@ const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUs
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                 </div>
                 <div className="card-text">
-                  <h3>Application Refused</h3>
-                  <p>Reason: {student.rejection_reason || student.rejectionReason || 'No reason provided.'}</p>
+                  <h3>{t('Application Refused')}</h3>
+                  <p>{t('Reason:')} {student.rejection_reason || student.rejectionReason || t('No reason provided.')}</p>
                 </div>
               </div>
             )}
           </section>
 
           <section className="info-section">
-            <h3>Registry Information</h3>
+            <h3>{t('Registry Information')}</h3>
             <div className="info-grid">
               <div className="info-item">
-                <strong>Identity</strong>
+                <strong>{t('Identity')}</strong>
                 <p>{matriculationRollNo}</p>
               </div>
               <div className="info-item">
-                <strong>Academic Merit</strong>
+                <strong>{t('Academic Merit')}</strong>
                 <p>{totalMarksObtained}</p>
               </div>
               <div className="info-item">
-                <strong>Entry Cycle</strong>
+                <strong>{t('Entry Cycle')}</strong>
                 <p>{student.academicyearentered}</p>
               </div>
               <div className="info-item">
-                <strong>Contact</strong>
+                <strong>{t('Contact')}</strong>
                 <p>{student.phone}</p>
               </div>
             </div>
@@ -641,41 +660,41 @@ const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUs
       {showPasswordModal && (
         <div className="modal-overlay" onClick={closePasswordModal}>
           <div className="password-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Change Password</h3>
+            <h3>{t('Change Password')}</h3>
             <form onSubmit={handlePasswordChange}>
               <div className="form-group">
-                <label>Current Password</label>
+                <label>{t('Current Password')}</label>
                 <input
                   type="password"
                   value={passwordForm.currentPassword}
                   onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                  placeholder="Enter current password"
+                  placeholder={t('Enter current password')}
                 />
               </div>
               <div className="form-group">
-                <label>New Password</label>
+                <label>{t('New Password')}</label>
                 <input
                   type="password"
                   value={passwordForm.newPassword}
                   onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                  placeholder="At least 6 characters"
+                  placeholder={t('At least 6 characters')}
                 />
               </div>
               <div className="form-group">
-                <label>Confirm New Password</label>
+                <label>{t('Confirm New Password')}</label>
                 <input
                   type="password"
                   value={passwordForm.confirmPassword}
                   onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                  placeholder="Confirm new password"
+                  placeholder={t('Confirm new password')}
                 />
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn-cancel" onClick={closePasswordModal}>
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button type="submit" className="btn-save" disabled={passwordLoading}>
-                  {passwordLoading ? 'Saving...' : 'Save Password'}
+                  {passwordLoading ? t('Loading...') : t('Save Password')}
                 </button>
               </div>
             </form>
