@@ -50,6 +50,7 @@ import StudentDegreeAudit from "./pages/StudentDegreeAudit";
 //  student course details page stays as CourseDetails.tsx (student-facing)
 import CourseDetails from "./pages/CourseDetails";
 import StudentDetails from "./pages/StudentDetails";
+import Payment from "./pages/Payment";
 import RegistrationStatus from "./pages/RegistrationStatus";
 import RegistrationChoice from "./pages/RegistrationChoice";
 import NewStudentDraftDetail from "./pages/NewStudentDraftDetail";
@@ -384,6 +385,10 @@ const App: React.FC = () => {
                 <Route
                   path="/registration-details"
                   element={<RegistrationStatus user={user} onLogout={handleLogout} />}
+                />
+                <Route
+                  path="/payment"
+                  element={<Payment />}
                 />
                 <Route
                   path="/student-details"
