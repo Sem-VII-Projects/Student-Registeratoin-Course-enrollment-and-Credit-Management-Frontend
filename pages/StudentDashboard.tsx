@@ -194,7 +194,7 @@ const StudentDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         <main className="flex-1 overflow-y-auto p-8 lg:p-12 relative animate-in fade-in duration-700 slide-in-from-bottom-4 scrollbar-hide">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-8">
             <div className="min-w-0 space-y-2">
-              <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">{t("Welcome back")}, {user.name.split(' ')[0]}!</h2>
+              <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">{t("Welcome back")}, {user?.name?.split(' ')?.[0] || 'Student'}!</h2>
               <p className="text-lg font-medium text-slate-400 dark:text-slate-500">{t("Your academic trajectory is looking healthy. Here's the briefing.")}</p>
             </div>
             <div className="w-full md:w-auto bg-slate-50/50 dark:bg-slate-900/50 px-6 py-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-3 shrink-0">

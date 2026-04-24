@@ -1,0 +1,11 @@
+src/pages/*
+pages/*
+components/*
+Temp/*
+types/*
+lib/*
+context/*
+*.tsx
+*.ts
+*.jsx
+*.js

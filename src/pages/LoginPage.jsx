@@ -95,68 +95,24 @@ function LoginPage({ onLogin }) {
         return;
       }
 
-      const loginEmail = data.email;
-      if (!loginEmail) {
-        throw new Error('Student email is missing. Contact admin.');
-      }
+      // Hydrate with 'register' role as requested
+      const userWithRegisterRole = { ...data, role: 'register' };
 
       if (backendToken) {
         localStorage.setItem('authToken', backendToken);
       }
 
-      // Check if student is approved
-      if (data.status === 'PENDING') {
-        alert('⏳ သင့်အကောင့်ကို အက်ဒမင်မှ စစ်ဆေးဆဲ ဖြစ်ပါသည်။\n\nကျေးဇူးပြု၍ စောင့်ဆိုင်းပေးပါ။');
-        setLoading(false);
-        return;
-      }
-
-      if (data.status === 'REJECTED') {
-        alert('❌ သင့်လျှောက်လွှာကို ပယ်ချခံရပါသည်။\n\nအသေးစိတ်သိရှိရန် အက်ဒမင်ထံ ဆက်သွယ်ပါ။');
-        setLoading(false);
-        return;
-      }
-
       // Login successful!
-      alert(`✅ ကြိုဆိုပါတယ် ${data.namemm}!`);
+      alert(`✅ ကြိုဆိုပါတယ် ${data.namemm || data.student_name || 'Student'}!`);
       
-      // Save student info to localStorage
-      persistStudentSession(data);
+      // Save student info to localStorage with the register role
+      persistStudentSession(userWithRegisterRole);
       
       // Update global app state
-      if (onLogin) onLogin(data);
+      if (onLogin) onLogin(userWithRegisterRole);
 
-      let startRoutePayload = null;
-      try {
-        startRoutePayload = await api.getStudentStartRoute();
-      } catch (startRouteError) {
-        startRoutePayload = null;
-      }
-
-      const studentDetails = await detectStudentDetailsRecord(api, data);
-      const academicProgress = deriveAcademicProgress(startRoutePayload);
-      const postLoginDecision = decidePostLoginRoute(data, studentDetails, academicProgress);
-      let hasNavigated = false;
-
-      if (postLoginDecision.type === 'REDIRECT') {
-        if (!hasNavigated) {
-          hasNavigated = true;
-          navigate(postLoginDecision.path, { replace: true });
-        }
-      } else {
-        if (!hasNavigated) {
-          hasNavigated = true;
-          navigate('/student/dashboard', {
-            replace: true,
-            state: {
-              decision: postLoginDecision,
-              startRoute: startRoutePayload,
-              academicProgress,
-              studentDetails
-            }
-          });
-        }
-      }
+      // Navigate directly to registration details
+      navigate('/registration-details', { replace: true });
 
     } catch (error) {
       console.error('Login error:', error);

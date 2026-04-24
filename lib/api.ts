@@ -196,17 +196,22 @@ function redirectToLogin() {
   const onPublicPage =
     hash === "#/login" ||
     hash === "#/admin-login" ||
+    hash === "#/student-login" ||
     hash.startsWith("#/login?") ||
     hash.startsWith("#/admin-login?") ||
+    hash.startsWith("#/student-login?") ||
     hash === "#/forgot-password" ||
     hash.startsWith("#/forgot-password?") ||
     hash === "#/reset-password-token" ||
     hash.startsWith("#/reset-password-token?");
 
   if (!onPublicPage) {
+    const role = sessionStorage.getItem("role") || localStorage.getItem("role");
     // If we were on an admin path, redirect to admin login
     if (hash.startsWith("#/admin")) {
       window.location.hash = "#/admin-login";
+    } else if (role === "register" || hash.startsWith("#/student") || hash.includes("registration")) {
+      window.location.hash = "#/student-login";
     } else {
       window.location.hash = "#/login";
     }
@@ -215,6 +220,7 @@ function redirectToLogin() {
 
 function shouldAutoLogout(path: string) {
   if (path === "/api/v1/auth/login") return false;
+  if (path === "/api/auth/login") return false; // Spring Login
   if (path === "/api/auth/admin/login") return false;
   if (path === "/api/v1/auth/me") return false;
   if (path === "/api/v1/auth/forgot-password") return false;
@@ -396,6 +402,22 @@ export type AdminAnnouncementBulkPayload = {
 export const api = {
   // Public student registration
   registerStudent: (body: any) => request("/api/auth/register", { method: "POST", body, backend: "spring" }),
+
+  loginStudent: (body: any) =>
+    request("/api/auth/login", { method: "POST", body, backend: "spring" }).then((data) => {
+      if (data?.student) {
+        return { ...data, student: normalizeStudent(data.student) };
+      }
+      return normalizeStudent(data);
+    }),
+
+  loginAdmin: (body: any) => request('/api/auth/admin/login', { method: 'POST', body, backend: "spring" }).then((data) => {
+    if (data?.admin) {
+      return { ...data, admin: normalizeAdmin(data.admin) };
+    }
+    return normalizeAdmin(data);
+  }),
+
   getRegistrationWindowSettings: () => request("/api/registration-window", { backend: "spring" }),
   updateRegistrationWindowSettings: (body: any) => request("/api/admin/registration-window", { method: "PUT", body, backend: "spring" }),
 
@@ -613,7 +635,15 @@ export const api = {
   login: (payload: { username: string; password: string; role: "admin" | "student" }) =>
     request("/api/v1/auth/login", { method: "POST", body: payload }),
 
-  me: () => request("/api/v1/auth/me"),
+  me: async () => {
+    const data = await request("/api/v1/auth/me");
+    // Preserve 'register' role if backend returns a generic user but we know they are in registration
+    const storedRole = sessionStorage.getItem("role") || localStorage.getItem("role");
+    if (data && !data.role && storedRole) {
+      data.role = storedRole;
+    }
+    return data;
+  },
 
   logout: () => request("/api/v1/auth/logout", { method: "POST" }),
 
@@ -727,6 +757,29 @@ export const api = {
 
   // SubmittedDetailsReview requirements
   getStudentById: (studentId: string) => request(`/api/students/${encodeURIComponent(studentId)}`, { backend: "spring" }),
+  updateStudent: (studentId: string, body: any) => request(`/api/students/${encodeURIComponent(studentId)}`, { method: 'PATCH', body, backend: "spring" }).then(normalizeStudent),
+  getEnrollmentOptions: (studentId?: string) => {
+    const query = studentId ? `?studentId=${encodeURIComponent(studentId)}` : '';
+    return request(`/api/enrollment/options${query}`, { backend: "spring" });
+  },
+  registerTermEnrollment: (body: any) => request('/api/term-enrollments/register', { method: 'POST', body, backend: "spring" }).then((data) => data?.enrollment || data),
+  selectTermEnrollmentSection: (enrollmentId: string | number, section: string) =>
+    request(`/api/term-enrollments/${enrollmentId}/select-section`, {
+      method: 'PATCH',
+      body: { section },
+      backend: "spring"
+    }).then((data) => data?.enrollment || data),
+  adminGenerateMajorClasses: (payload: any) => request('/api/admin/major-classes/generate', { method: 'POST', body: payload, backend: "spring" }),
+  changeStudentPassword: (studentId: string, body: any) => request(`/api/students/${encodeURIComponent(studentId)}/change-password`, { method: 'POST', body, backend: "spring" }),
+  upsertSection: (registrationId: string, section: string, data: any) =>
+    request(`/v1/registration/${registrationId}/sections/${section}`, {
+      method: 'PUT',
+      body: { data },
+      backend: "spring"
+    }),
+  upsertStudentDocument: (body: any) => request('/v1/student/documents', { method: 'POST', body, backend: "spring" }),
+  createRegistration: (body: any) => request('/api/registrations', { method: 'POST', body, backend: "spring" }),
+  getStudentStartRoute: () => request('/api/student/start-route', { backend: "spring" }),
   getRegistrationSections: (registrationId: string) => request(`/v1/registration/${encodeURIComponent(registrationId)}/sections`, { backend: "spring" }),
   getLatestStudentDocument: (studentId: string, docType: string) => request(`/v1/student/documents?studentId=${encodeURIComponent(studentId)}&docType=${encodeURIComponent(docType)}`, { backend: "spring" }),
 

@@ -49,6 +49,8 @@ import StudentDegreeAudit from "./pages/StudentDegreeAudit";
 
 //  student course details page stays as CourseDetails.tsx (student-facing)
 import CourseDetails from "./pages/CourseDetails";
+import RegistrationStatus from "./pages/RegistrationStatus";
+import RegistrationChoice from "./pages/RegistrationChoice";
 import NewStudentDraftDetail from "./pages/NewStudentDraftDetail";
 import SubmittedDetailsReview from "./pages/SubmittedDetailsReview";
 import IsolatedReview from "./pages/IsolatedReview";
@@ -66,11 +68,16 @@ const App: React.FC = () => {
 
   const syncStudentEnrollmentSettings = async () => {
     try {
+      // Only sync if we have a valid session and have officially 'entered' the portal
+      const hasEntered = sessionStorage.getItem("portal_entered") === "true";
+      if (!hasEntered) return;
+
       const setting = await api.studentEnrollmentSettingCurrent();
       localStorage.setItem("max_credits", String(setting.max_credits));
       localStorage.setItem("student_enrollment_setting_current", JSON.stringify(setting));
-    } catch {
-      // non-blocking for app bootstrap
+    } catch (e: any) {
+      // Silently catch 401/403 as they are expected during boot
+      console.warn("Enrollment sync skipped (expected if unauthorized):", e.status);
     }
   };
 
@@ -81,12 +88,41 @@ const App: React.FC = () => {
   useEffect(() => {
     const boot = async () => {
       try {
-        const me = await api.me();
+        let me = null;
+        const hasEntered = sessionStorage.getItem("portal_entered") === "true";
+        const studentJson = localStorage.getItem("studentData");
+
+        // Logic: Only run session/data syncs if user has officially entered the portal
+        if (hasEntered) {
+          try {
+            me = await api.me();
+          } catch (e) {
+            console.warn("API me() failed; checking local storage...");
+          }
+        }
+
+        // Fallback or Initial state from LocalStorage
+        if (!me && studentJson) {
+          me = JSON.parse(studentJson);
+          if (me && !me.role) me.role = "student";
+        }
+        
+        if (!me) throw new Error("No user found");
+
+        // Force role based on portal entry state
+        if (!hasEntered) {
+          me.role = "register";
+        } else {
+          me.role = "student";
+        }
+
         setUser(me);
         sessionStorage.setItem("user", JSON.stringify(me));
         sessionStorage.setItem("role", me.role);
         sessionStorage.setItem("must_reset_password", String(!!me.must_reset_password));
-        if (me.role === "student" && !me.must_reset_password) {
+        
+        // Sync enrollment only if entered
+        if (hasEntered && me.role === "student" && !me.must_reset_password) {
           await syncStudentEnrollmentSettings();
         }
       } catch {
@@ -100,11 +136,16 @@ const App: React.FC = () => {
   }, []);
 
   const handleLogin = (userFromBackend: User) => {
-    setUser(userFromBackend);
-    sessionStorage.setItem("user", JSON.stringify(userFromBackend));
-    sessionStorage.setItem("role", userFromBackend.role);
-    sessionStorage.setItem("must_reset_password", String(!!userFromBackend.must_reset_password));
-    if (userFromBackend.role === "student" && !userFromBackend.must_reset_password) {
+    // Force register role initially on login to show the gateway dashboard
+    const initialUser = userFromBackend.role === "student" 
+      ? { ...userFromBackend, role: "register" as any } 
+      : userFromBackend;
+
+    setUser(initialUser);
+    sessionStorage.setItem("user", JSON.stringify(initialUser));
+    sessionStorage.setItem("role", initialUser.role);
+    sessionStorage.setItem("must_reset_password", String(!!initialUser.must_reset_password));
+    if (initialUser.role === "student" && !initialUser.must_reset_password) {
       void syncStudentEnrollmentSettings();
     }
   };
@@ -188,7 +229,13 @@ const App: React.FC = () => {
               element={
                 user ? (
                   <Navigate
-                    to={user.role === "admin" ? "/admin/dashboard" : "/student/dashboard"}
+                    to={
+                      user.role === "admin"
+                        ? "/admin/dashboard"
+                        : (user.role === "student"
+                          ? "/registration-details"
+                          : "/student/dashboard")
+                    }
                     replace
                   />
                 ) : (
@@ -268,10 +315,8 @@ const App: React.FC = () => {
 
                 <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
               </>
-            ) : user?.role === "student" ? (
+                        ) : user?.role === "student" ? (
               <>
-
-
                 <Route
                   path="/student/dashboard"
                   element={<StudentDashboard user={user} onLogout={handleLogout} />}
@@ -324,8 +369,6 @@ const App: React.FC = () => {
                   path="/student/chatbot"
                   element={<StudentChatPage user={user} onLogout={handleLogout} />}
                 />
-
-                {/*  student course details stays CourseDetails */}
                 <Route
                   path="/student/courses/:courseId"
                   element={<CourseDetails user={user} onLogout={handleLogout} />}
@@ -334,15 +377,24 @@ const App: React.FC = () => {
                   path="/student/announcements"
                   element={<StudentAnnouncements user={user} onLogout={handleLogout} />}
                 />
-              <Route
-                path="/student/messages"
-                element={<StudentMessages user={user} onLogout={handleLogout} />}
-              />                <Route
+                <Route
+                  path="/student/messages"
+                  element={<StudentMessages user={user} onLogout={handleLogout} />}
+                />
+                <Route
                   path="/student/degree-audit"
                   element={<StudentDegreeAudit user={user} onLogout={handleLogout} />}
                 />
-
                 <Route path="*" element={<Navigate to="/student/dashboard" replace />} />
+              </>
+            ) : user?.role === "register" ? (
+              <>
+                {/* Registration-only area */}
+                <Route
+                  path="/registration-details"
+                  element={<RegistrationStatus user={user} onLogout={handleLogout} />}
+                />
+                <Route path="*" element={<Navigate to="/registration-details" replace />} />
               </>
             ) : (
               <Route path="*" element={<Navigate to="/login" replace />} />
