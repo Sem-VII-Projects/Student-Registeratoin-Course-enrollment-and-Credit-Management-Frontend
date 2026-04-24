@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { api } from '../lib/api';
 import nrcCatalog from '../data/nrc.json';
+import CustomSelect from '../components/CustomSelect';
 
 export default function NewStudentRegister() {
   const navigate = useNavigate();
@@ -468,47 +469,29 @@ export default function NewStudentRegister() {
               မှတ်ပုံတင်အမှတ်: <span className="text-red-500">*</span>
             </label>
             <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr_1fr_2fr] gap-3">
-              <select
-                name="nrcRegion"
+              <CustomSelect
                 value={formData.nrcRegion}
-                onChange={handleChange}
-                disabled={nrcDisabled}
-                required={!nrcDisabled}
-                className="w-full border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 bg-slate-50/50 dark:bg-slate-950/50 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all appearance-none cursor-pointer disabled:opacity-50 font-bold"
-              >
-                <option value="" className="dark:bg-slate-900">{t('region')}</option>
-                {nrcRegions.map((region) => (
-                  <option key={region} value={region} className="dark:bg-slate-900">{toMyanmarDigits(region)}</option>
-                ))}
-              </select>
+                onChange={(val) => handleChange({ target: { name: 'nrcRegion', value: val } } as any)}
+                options={nrcRegions.map(region => ({ value: region, label: toMyanmarDigits(region) }))}
+                placeholder={t('region')}
+                className="w-full"
+              />
 
-              <select
-                name="nrcTownship"
+              <CustomSelect
                 value={formData.nrcTownship}
-                onChange={handleChange}
-                disabled={nrcDisabled}
-                required={!nrcDisabled}
-                className="w-full border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 bg-slate-50/50 dark:bg-slate-950/50 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all appearance-none cursor-pointer disabled:opacity-50 font-bold"
-              >
-                <option value="" className="dark:bg-slate-900">{t('township')}</option>
-                {nrcTownships.map((township) => (
-                  <option key={township.code} value={township.code} className="dark:bg-slate-900">{township.code} - {township.nameMm || township.nameEn}</option>
-                ))}
-              </select>
+                onChange={(val) => handleChange({ target: { name: 'nrcTownship', value: val } } as any)}
+                options={nrcTownships.map(township => ({ value: township.code, label: `${township.code} - ${township.nameMm || township.nameEn}` }))}
+                placeholder={t('township')}
+                className="w-full"
+              />
 
-              <select
-                name="nrcType"
+              <CustomSelect
                 value={formData.nrcType}
-                onChange={handleChange}
-                disabled={nrcDisabled}
-                required={!nrcDisabled}
-                className="w-full border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 bg-slate-50/50 dark:bg-slate-950/50 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all appearance-none cursor-pointer disabled:opacity-50 font-bold"
-              >
-                <option value="" className="dark:bg-slate-900">{t('type')}</option>
-                {nrcTypes.map((type) => (
-                  <option key={type} value={type} className="dark:bg-slate-900">{type}</option>
-                ))}
-              </select>
+                onChange={(val) => handleChange({ target: { name: 'nrcType', value: val } } as any)}
+                options={nrcTypes.map(type => ({ value: type, label: type }))}
+                placeholder={t('type')}
+                className="w-full"
+              />
 
               <input
                 type="text"
@@ -519,7 +502,7 @@ export default function NewStudentRegister() {
                 maxLength={6}
                 disabled={nrcDisabled}
                 required={!nrcDisabled}
-                className="w-full border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 bg-slate-50/50 dark:bg-slate-950/50 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all disabled:opacity-50 font-bold placeholder:text-slate-300 dark:placeholder:text-slate-700"
+                className="w-full border border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-3 bg-slate-50/50 dark:bg-slate-950/50 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all disabled:opacity-50 font-bold placeholder:text-slate-300 dark:placeholder:text-slate-700"
               />
             </div>
             

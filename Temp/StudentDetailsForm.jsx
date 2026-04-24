@@ -4,6 +4,7 @@ import { api } from '../api/client';
 import nrcCatalog from '../data/nrc.json';
 import { getStudentSession, persistStudentSession } from '../utils/studentStorage';
 import '../styles/StudentDetailsForm.css';
+import CustomSelect from '../components/CustomSelect';
 
 const REGISTRATION_CONFIG_STORAGE_KEY = 'registration_form_data';
 
@@ -1324,38 +1325,24 @@ function StudentDetailsForm() {
               <div className="form-group">
                 <label>မှတ်ပုံတင်အမှတ် (NRC Number):</label>
                 <div className="nrc-group">
-                  <select
-                    name="fatherNrcRegion"
+                  <CustomSelect
                     value={formData.fatherNrcRegion}
-                    onChange={handleChange}
-                  >
-                    <option value="">Region</option>
-                    {nrcRegions.map((region) => (
-                      <option key={region} value={region}>{toMyanmarDigits(region)}</option>
-                    ))}
-                  </select>
-                  <select
-                    name="fatherNrcTownship"
+                    onChange={(val) => handleChange({ target: { name: 'fatherNrcRegion', value: val } })}
+                    options={nrcRegions.map(region => ({ value: region, label: toMyanmarDigits(region) }))}
+                    placeholder="Region"
+                  />
+                  <CustomSelect
                     value={formData.fatherNrcTownship}
-                    onChange={handleChange}
-                  >
-                    <option value="">Township</option>
-                    {fatherTownships.map((township) => (
-                      <option key={township.code} value={township.code}>
-                        {township.code} - {township.nameMm || township.nameEn}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    name="fatherNrcType"
+                    onChange={(val) => handleChange({ target: { name: 'fatherNrcTownship', value: val } })}
+                    options={fatherTownships.map(township => ({ value: township.code, label: `${township.code} - ${township.nameMm || township.nameEn}` }))}
+                    placeholder="Township"
+                  />
+                  <CustomSelect
                     value={formData.fatherNrcType}
-                    onChange={handleChange}
-                  >
-                    <option value="">Type</option>
-                    {nrcTypes.map((type) => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => handleChange({ target: { name: 'fatherNrcType', value: val } })}
+                    options={nrcTypes.map(type => ({ value: type, label: type }))}
+                    placeholder="Type"
+                  />
                   <input
                     type="text"
                     name="fatherNrcNumber"
@@ -1529,38 +1516,24 @@ function StudentDetailsForm() {
               <div className="form-group">
                 <label>မှတ်ပုံတင်အမှတ် (NRC Number):</label>
                 <div className="nrc-group">
-                  <select
-                    name="motherNrcRegion"
+                  <CustomSelect
                     value={formData.motherNrcRegion}
-                    onChange={handleChange}
-                  >
-                    <option value="">Region</option>
-                    {nrcRegions.map((region) => (
-                      <option key={region} value={region}>{toMyanmarDigits(region)}</option>
-                    ))}
-                  </select>
-                  <select
-                    name="motherNrcTownship"
+                    onChange={(val) => handleChange({ target: { name: 'motherNrcRegion', value: val } })}
+                    options={nrcRegions.map(region => ({ value: region, label: toMyanmarDigits(region) }))}
+                    placeholder="Region"
+                  />
+                  <CustomSelect
                     value={formData.motherNrcTownship}
-                    onChange={handleChange}
-                  >
-                    <option value="">Township</option>
-                    {motherTownships.map((township) => (
-                      <option key={township.code} value={township.code}>
-                        {township.code} - {township.nameMm || township.nameEn}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    name="motherNrcType"
+                    onChange={(val) => handleChange({ target: { name: 'motherNrcTownship', value: val } })}
+                    options={motherTownships.map(township => ({ value: township.code, label: `${township.code} - ${township.nameMm || township.nameEn}` }))}
+                    placeholder="Township"
+                  />
+                  <CustomSelect
                     value={formData.motherNrcType}
-                    onChange={handleChange}
-                  >
-                    <option value="">Type</option>
-                    {nrcTypes.map((type) => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => handleChange({ target: { name: 'motherNrcType', value: val } })}
+                    options={nrcTypes.map(type => ({ value: type, label: type }))}
+                    placeholder="Type"
+                  />
                   <input
                     type="text"
                     name="motherNrcNumber"
