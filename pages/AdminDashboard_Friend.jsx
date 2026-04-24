@@ -1078,15 +1078,42 @@ function AdminDashboard({ user, onLogout }) {
                                 <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{t("Details Verification Queue")}</h3>
                                 <div className="grid grid-cols-1 gap-4">
                                     {students.filter(s => String(s.status || '').toUpperCase() === 'DETAILS_SUBMITTED').map((student, i) => (
-                                        <div key={i} className="flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl hover:shadow-lg transition-all">
-                                            <div className="flex items-center gap-4">
-                                                <div className="h-12 w-12 rounded-2xl bg-white dark:bg-slate-800 grid place-items-center text-teal-600 font-black border border-slate-100 dark:border-slate-800 shadow-sm">{student.namemm?.charAt(0)}</div>
-                                                <div>
-                                                    <div className="font-black text-slate-900 dark:text-white">{student.namemm}</div>
-                                                    <div className="text-xs font-bold text-slate-400">{student.user_name || '-'} • {student.email}</div>
+                                        <div key={i} className="group relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[32px] p-8 shadow-sm hover:shadow-xl hover:border-slate-200 dark:hover:border-slate-700 transition-all duration-500 animate-in fade-in slide-in-from-bottom-2">
+                                            <div className="flex flex-col md:flex-row gap-8">
+                                                <div className="flex-1 space-y-6">
+                                                    <div>
+                                                        <h4 className="text-xl font-black text-slate-900 dark:text-white tracking-tight mb-1">{student.namemm}</h4>
+                                                        <span className="inline-block px-3 py-1 bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400 text-[10px] font-black uppercase tracking-widest rounded-full border border-teal-100 dark:border-teal-800">
+                                                            {t("Verification Required")}
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{t("Username")}</span>
+                                                            <span className="text-sm font-bold text-slate-600 dark:text-slate-300">{student.user_name || '-'}</span>
+                                                        </div>
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{t("Email")}</span>
+                                                            <span className="text-sm font-bold text-slate-600 dark:text-slate-300 truncate">{student.email || '-'}</span>
+                                                        </div>
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{t("Status")}</span>
+                                                            <span className="text-sm font-bold text-slate-900 dark:text-white uppercase">{String(student.status || 'DETAILS_SUBMITTED')}</span>
+                                                        </div>
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{t("Source")}</span>
+                                                            <span className="text-sm font-bold text-slate-600 dark:text-slate-300">{t("Staged Registration Sections")}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="flex flex-col justify-center gap-3 w-full md:w-auto">
+                                                    <button onClick={() => navigate(`/admin/submitted-details-review/${student.studentid || student.id}`, { state: { studentRecord: student } })} className="px-6 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all active:scale-95">{t("View Submitted Data")}</button>
+                                                    <button onClick={() => approveDetails(student)} className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all active:scale-95 shadow-md shadow-emerald-500/10">{t("Approve Details")}</button>
+                                                    <button onClick={() => openRejectDialog(student)} className="px-6 py-3 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/10 dark:hover:bg-rose-900/20 text-rose-600 text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all active:scale-95">{t("Reject Details")}</button>
                                                 </div>
                                             </div>
-                                            <button onClick={() => approveDetails(student)} className="px-6 py-3 bg-teal-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-teal-700 active:scale-95 transition-all">{t("Review & Approve")}</button>
                                         </div>
                                     ))}
                                     {students.filter(s => String(s.status || '').toUpperCase() === 'DETAILS_SUBMITTED').length === 0 && (

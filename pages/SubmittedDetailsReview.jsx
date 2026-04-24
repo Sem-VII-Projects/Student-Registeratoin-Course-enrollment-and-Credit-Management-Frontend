@@ -357,10 +357,20 @@ function SubmittedDetailsReview() {
         </header>
 
         <section className="submitted-highlight">
-          <div className="status">{String(student.status || 'DETAILS_SUBMITTED').toUpperCase()}</div>
+          <div className="status-badge">WAITING APPROVAL</div>
           <h2>{displayStudentName}</h2>
-          <p>{t('Submitted at')}: {formatDate(pick(declaration.submittedAt, student.updatedAt, student.createdAt))}</p>
-          <p>{t('Registration ID')}: {registrationId || '-'}</p>
+          <div className="submitted-info-grid">
+            <p><strong>{t('Username')}:</strong> {displayUsername}</p>
+            <p><strong>{t('Email')}:</strong> {student?.email || '-'}</p>
+            <p><strong>{t('Status')}:</strong> {String(student.status || 'DETAILS_SUBMITTED').toUpperCase()}</p>
+            <p><strong>{t('Review')}:</strong> {t('Waiting for admin approval')}</p>
+            <p><strong>{t('Source')}:</strong> {t('Staged Registration Sections')}</p>
+          </div>
+          <div className="submitted-actions">
+            <button className="btn-view" onClick={() => {/* TODO: Implement View */}}>{t('View Submitted Data')}</button>
+            <button className="btn-approve" onClick={() => {/* TODO: Implement Approve */}}>{t('Approve Details')}</button>
+            <button className="btn-reject" onClick={() => {/* TODO: Implement Reject */}}>{t('Reject Details')}</button>
+          </div>
         </section>
 
         <section className="submitted-grid two-col">
