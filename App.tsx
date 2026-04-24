@@ -50,6 +50,7 @@ import StudentDegreeAudit from "./pages/StudentDegreeAudit";
 //  student course details page stays as CourseDetails.tsx (student-facing)
 import CourseDetails from "./pages/CourseDetails";
 import RegistrationStatus from "./pages/RegistrationStatus";
+import StudentDetails from "./pages/StudentDetails";
 import RegistrationChoice from "./pages/RegistrationChoice";
 import NewStudentDraftDetail from "./pages/NewStudentDraftDetail";
 import SubmittedDetailsReview from "./pages/SubmittedDetailsReview";
@@ -69,15 +70,15 @@ const App: React.FC = () => {
   const syncStudentEnrollmentSettings = async () => {
     try {
       // Only sync if we have a valid session and have officially 'entered' the portal
-      const hasEntered = sessionStorage.getItem("portal_entered") === "true";
+      const hasEntered = sessionStorage.getItem("portal_entered") === "true" || localStorage.getItem("portal_entered") === "true";
       if (!hasEntered) return;
 
       const setting = await api.studentEnrollmentSettingCurrent();
       localStorage.setItem("max_credits", String(setting.max_credits));
       localStorage.setItem("student_enrollment_setting_current", JSON.stringify(setting));
     } catch (e: any) {
-      // Silently catch 401/403 as they are expected during boot
-      console.warn("Enrollment sync skipped (expected if unauthorized):", e.status);
+      // Silently catch 401/403 as they are expected during boot or transition
+      console.warn("Enrollment sync skipped or failed:", e.status || e.message);
     }
   };
 
@@ -89,7 +90,7 @@ const App: React.FC = () => {
     const boot = async () => {
       try {
         let me = null;
-        const hasEntered = sessionStorage.getItem("portal_entered") === "true";
+        const hasEntered = sessionStorage.getItem("portal_entered") === "true" || localStorage.getItem("portal_entered") === "true";
         const studentJson = localStorage.getItem("studentData");
 
         // Logic: Only run session/data syncs if user has officially entered the portal
@@ -109,17 +110,23 @@ const App: React.FC = () => {
         
         if (!me) throw new Error("No user found");
 
-        // Force role based on portal entry state
-        if (!hasEntered) {
-          me.role = "register";
-        } else {
-          me.role = "student";
+        // Force role based on portal entry state (only for students)
+        if (me.role !== "admin") {
+          if (!hasEntered) {
+            me.role = "register";
+          } else {
+            me.role = "student";
+          }
         }
 
         setUser(me);
+        // Persist the resolved role to both storages to keep everything in sync
         sessionStorage.setItem("user", JSON.stringify(me));
         sessionStorage.setItem("role", me.role);
         sessionStorage.setItem("must_reset_password", String(!!me.must_reset_password));
+        
+        localStorage.setItem("studentData", JSON.stringify(me));
+        localStorage.setItem("role", me.role);
         
         // Sync enrollment only if entered
         if (hasEntered && me.role === "student" && !me.must_reset_password) {
@@ -145,6 +152,15 @@ const App: React.FC = () => {
     sessionStorage.setItem("user", JSON.stringify(initialUser));
     sessionStorage.setItem("role", initialUser.role);
     sessionStorage.setItem("must_reset_password", String(!!initialUser.must_reset_password));
+    
+    // Also update localStorage for persistence
+    localStorage.setItem("studentData", JSON.stringify(initialUser));
+    localStorage.setItem("role", initialUser.role);
+
+    // Ensure portal_entered is cleared on fresh login
+    sessionStorage.removeItem("portal_entered");
+    localStorage.removeItem("portal_entered");
+
     if (initialUser.role === "student" && !initialUser.must_reset_password) {
       void syncStudentEnrollmentSettings();
     }
@@ -155,6 +171,10 @@ const App: React.FC = () => {
     sessionStorage.setItem("user", JSON.stringify(updatedUser));
     sessionStorage.setItem("role", updatedUser.role);
     sessionStorage.setItem("must_reset_password", String(!!updatedUser.must_reset_password));
+    
+    localStorage.setItem("studentData", JSON.stringify(updatedUser));
+    localStorage.setItem("role", updatedUser.role);
+
     if (updatedUser.role === "student" && !updatedUser.must_reset_password) {
       void syncStudentEnrollmentSettings();
     }
@@ -169,9 +189,36 @@ const App: React.FC = () => {
       sessionStorage.removeItem("role");
       sessionStorage.removeItem("must_reset_password");
       sessionStorage.removeItem("adminAuthToken");
+      sessionStorage.removeItem("portal_entered");
       localStorage.removeItem("access_token");
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("studentData");
+      localStorage.removeItem("role");
       localStorage.removeItem("adminData");
       localStorage.removeItem("adminAuthToken");
+      localStorage.removeItem("portal_entered");
+    }
+  };
+
+  const handleEnterPortal = async () => {
+    sessionStorage.setItem("portal_entered", "true");
+    localStorage.setItem("portal_entered", "true");
+    
+    if (user) {
+      const updatedUser = { ...user, role: "student" as any };
+      
+      // Update storage BEFORE state to ensure consistency on immediate re-renders/API calls
+      localStorage.setItem("studentData", JSON.stringify(updatedUser));
+      localStorage.setItem("role", updatedUser.role);
+      sessionStorage.setItem("user", JSON.stringify(updatedUser));
+      sessionStorage.setItem("role", updatedUser.role);
+      
+      setUser(updatedUser);
+      
+      // Sync enrollment settings for the new student role
+      if (!updatedUser.must_reset_password) {
+        await syncStudentEnrollmentSettings();
+      }
     }
   };
 
@@ -233,8 +280,8 @@ const App: React.FC = () => {
                       user.role === "admin"
                         ? "/admin/dashboard"
                         : (user.role === "student"
-                          ? "/registration-details"
-                          : "/student/dashboard")
+                          ? "/student/dashboard"
+                          : "/registration-details")
                     }
                     replace
                   />
@@ -392,7 +439,11 @@ const App: React.FC = () => {
                 {/* Registration-only area */}
                 <Route
                   path="/registration-details"
-                  element={<RegistrationStatus user={user} onLogout={handleLogout} />}
+                  element={<RegistrationStatus user={user} onLogout={handleLogout} onEnterPortal={handleEnterPortal} />}
+                />
+                <Route
+                  path="/student-details"
+                  element={<StudentDetails user={user} onLogout={handleLogout} />}
                 />
                 <Route path="*" element={<Navigate to="/registration-details" replace />} />
               </>

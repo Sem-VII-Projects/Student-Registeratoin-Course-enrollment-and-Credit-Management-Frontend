@@ -50,9 +50,10 @@ function resolveStudentCandidate(records: any[], currentStudent: any) {
 interface RegistrationStatusProps {
   user?: any;
   onLogout?: () => void;
+  onEnterPortal?: () => void;
 }
 
-const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUser, onLogout }) => {
+const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUser, onLogout, onEnterPortal }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -72,14 +73,16 @@ const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUs
   });
 
   const handleEnterPortal = () => {
-    // Set transition flag for App.tsx boot/refresh logic
-    sessionStorage.setItem("portal_entered", "true");
-    
     // Attempt to update global user role if possible via navigation/refresh
-    // App.tsx handles the actual role resolution on refresh, 
-    // but we can trigger a hard navigate or reload if needed.
-    window.location.href = '/#/student/dashboard';
-    window.location.reload();
+    if (onEnterPortal) {
+      onEnterPortal();
+      navigate('/student/dashboard');
+    } else {
+      // Fallback for legacy behavior
+      sessionStorage.setItem("portal_entered", "true");
+      window.location.href = '/#/student/dashboard';
+      window.location.reload();
+    }
   };
 
   useEffect(() => {
@@ -469,8 +472,8 @@ const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUs
       <main className="dashboard-main">
         <div className="dashboard-content">
           <section className="welcome-section">
-            <h2>{t('Hello, {{name}}.', { name: student.namemm || student.name || 'Student' })}</h2>
-            <p className="username-display">{t('Account:')} <strong>{student.user_name}</strong></p>
+            <h2>{t('Hello, {{name}}.', { name: student.fullName || student.namemm || student.name || 'Student' })}</h2>
+            <p className="username-display">{t('Account:')} <strong>{student.username || student.user_name}</strong></p>
           </section>
 
           <section className="status-card">

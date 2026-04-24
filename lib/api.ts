@@ -210,9 +210,13 @@ function redirectToLogin() {
     // If we were on an admin path, redirect to admin login
     if (hash.startsWith("#/admin")) {
       window.location.hash = "#/admin-login";
-    } else if (role === "register" || hash.startsWith("#/student") || hash.includes("registration")) {
+    } else if (role === "register" || (role === "student" && hash.includes("registration"))) {
+      // If they are in registration flow or have register role, send to student login
       window.location.hash = "#/student-login";
-    } else {
+    } else if (hash.startsWith("#/student") && !role) {
+      // Only redirect to student-login if they are accessing a student route WITHOUT a role
+      window.location.hash = "#/student-login";
+    } else if (!role) {
       window.location.hash = "#/login";
     }
   }
@@ -235,6 +239,8 @@ function shouldAutoLogout(path: string) {
   if (path.includes("/api/v1/admin/messages/") && path.endsWith("/read")) return false;
   // Allow enrollment errors to be handled by UI instead of auto-redirecting to login
   if (path.includes("/courses/enrollment")) return false;
+  if (path.includes("/student/enrollment/settings/current")) return false;
+  
   // Spring Boot public endpoints (match raw path — prefix is added inside request())
   if (path === "/api/auth/register") return false;
   if (path === "/api/registration-window") return false;
@@ -756,7 +762,7 @@ export const api = {
   adminStudentOptions: () => request("/api/v1/admin/students/options"),
 
   // SubmittedDetailsReview requirements
-  getStudentById: (studentId: string) => request(`/api/students/${encodeURIComponent(studentId)}`, { backend: "spring" }),
+  getStudentById: (studentId: string) => request(`/api/students/${encodeURIComponent(studentId)}`, { backend: "spring" }).then(normalizeStudent),
   updateStudent: (studentId: string, body: any) => request(`/api/students/${encodeURIComponent(studentId)}`, { method: 'PATCH', body, backend: "spring" }).then(normalizeStudent),
   getEnrollmentOptions: (studentId?: string) => {
     const query = studentId ? `?studentId=${encodeURIComponent(studentId)}` : '';
