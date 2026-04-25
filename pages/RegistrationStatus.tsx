@@ -72,18 +72,23 @@ const RegistrationStatus: React.FC<RegistrationStatusProps> = ({ user: initialUs
     confirmPassword: ''
   });
 
-  const handleEnterPortal = () => {
-    // Attempt to update global user role if possible via navigation/refresh
-    if (onEnterPortal) {
-      onEnterPortal();
-      navigate('/student/dashboard');
-    } else {
-      // Fallback for legacy behavior
-      sessionStorage.setItem("portal_entered", "true");
-      window.location.href = '/#/student/dashboard';
-      window.location.reload();
+const handleEnterPortal = () => {
+  // Attempt to update global user role if possible via navigation/refresh
+  if (onEnterPortal) {
+    onEnterPortal();
+    navigate('/student/dashboard');
+  } else {
+    // Fallback for legacy behavior - update role to student before redirect
+    const studentData = getStudentSession();
+    if (studentData) {
+      studentData.role = "student";
+      persistStudentSession(studentData);
     }
-  };
+    sessionStorage.setItem("portal_entered", "true");
+    window.location.href = '/#/student/dashboard';
+    window.location.reload();
+  }
+};
 
   useEffect(() => {
     const parsedStudent = getStudentSession();

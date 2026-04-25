@@ -43,12 +43,14 @@
 .dashboard-container {
   min-height: 100vh;
   background-color: var(--perplexity-bg);
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.03) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(245, 158, 11, 0.03) 0px, transparent 50%);
+  background-image:
+  radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.03) 0px, transparent 50%),
+  radial-gradient(at 100% 0%, rgba(245, 158, 11, 0.03) 0px, transparent 50%);
   color: var(--perplexity-text-main);
   transition: background-color 0.3s ease, color 0.3s ease;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
 }
 
 .dashboard-header {
@@ -95,8 +97,9 @@
   margin: 0;
   color: var(--perplexity-text-heading);
   font-size: 1.5rem;
-  font-weight: 900;
+  font-weight: 600;
   letter-spacing: -0.03em;
+  font-family: 'Poppins', sans-serif;
 }
 
 .logo-section p {
@@ -186,9 +189,10 @@
 .welcome-section h2 {
   margin: 0;
   font-size: 3rem;
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: -0.05em;
   color: var(--perplexity-text-heading);
+  font-family: 'Poppins', sans-serif;
 }
 
 .username-display {
@@ -225,8 +229,9 @@
   margin: 0 0 24px;
   color: var(--perplexity-text-heading);
   font-size: 1.4rem;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: -0.02em;
+  font-family: 'Poppins', sans-serif;
 }
 
 .status-info {
@@ -315,9 +320,10 @@
 .action-card h3 {
   margin: 0;
   font-size: 1.5rem;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--perplexity-text-heading);
+  font-family: 'Poppins', sans-serif;
 }
 
 .action-card p {
@@ -396,9 +402,10 @@
 
 .password-modal h3 {
   font-size: 1.8rem;
-  font-weight: 900;
+  font-weight: 700;
   margin-bottom: 24px;
   color: var(--perplexity-text-heading);
+  font-family: 'Poppins', sans-serif;
 }
 
 .form-group {
@@ -484,4 +491,12 @@
   background: var(--perplexity-bg);
   color: var(--perplexity-text-muted);
   font-weight: 600;
+}
+
+/* Myanmar language support */
+html[lang="my"] .dashboard-container,
+html[lang="my"] .welcome-section h2,
+html[lang="my"] .action-card,
+html[lang="my"] .status-card {
+  font-family: 'Noto Sans Myanmar', sans-serif;
 }

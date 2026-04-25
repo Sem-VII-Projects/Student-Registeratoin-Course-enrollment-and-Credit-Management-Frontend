@@ -3,9 +3,13 @@ export function persistStudentSession(data) {
   localStorage.setItem('studentData', JSON.stringify(data));
   if (data.role) {
     localStorage.setItem('role', data.role);
+  } else {
+    localStorage.removeItem('role');
   }
   if (data.token) {
     localStorage.setItem('authToken', data.token);
+  } else {
+    localStorage.removeItem('authToken');
   }
 }
 
@@ -22,4 +26,5 @@ export function getStudentSession() {
 export function clearStudentSession() {
   localStorage.removeItem('studentData');
   localStorage.removeItem('authToken');
+  localStorage.removeItem('role');
 }
