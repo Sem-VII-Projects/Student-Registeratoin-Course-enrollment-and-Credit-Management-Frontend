@@ -56,6 +56,7 @@ import RegistrationChoice from "./pages/RegistrationChoice";
 import NewStudentDraftDetail from "./pages/NewStudentDraftDetail";
 import SubmittedDetailsReview from "./pages/SubmittedDetailsReview";
 import IsolatedReview from "./pages/IsolatedReview";
+import EnrollmentBlank from "./pages/EnrollmentBlank";
 import { DetailedCardGridSkeleton, Skeleton } from "./components/Skeleton";
 import ThemeToggle from "./components/ThemeToggle";
 
@@ -389,6 +390,10 @@ const App: React.FC = () => {
                 <Route
                   path="/payment"
                   element={<Payment />}
+                />
+                <Route
+                  path="/enrollment-blank"
+                  element={<EnrollmentBlank />}
                 />
                 <Route
                   path="/student-details"

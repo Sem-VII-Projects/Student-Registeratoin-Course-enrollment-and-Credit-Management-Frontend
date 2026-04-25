@@ -32,9 +32,9 @@ function toBoolean(value) {
   return !!value;
 }
 
-function formatYesNo(value) {
+function formatYesNo(value, t) {
   if (!hasMeaningfulValue(value)) return '-';
-  return toBoolean(value) ? 'Yes' : 'No';
+  return toBoolean(value) ? t('Yes') : t('No');
 }
 
 function asObject(value) {
@@ -74,12 +74,12 @@ function sortRegistrationsByRecent(registrations) {
   });
 }
 
-function formatFinancialSupporter(value) {
+function formatFinancialSupporter(value, t) {
   const normalized = String(value || '').trim().toLowerCase();
   if (!normalized) return '-';
-  if (normalized === 'father') return 'Father';
-  if (normalized === 'mother') return 'Mother';
-  if (normalized === 'other') return 'Other';
+  if (normalized === 'father') return t('Father');
+  if (normalized === 'mother') return t('Mother');
+  if (normalized === 'other') return t('Other');
   return value;
 }
 
@@ -143,9 +143,6 @@ function IsolatedReview({ user, onLogout }) {
           api.listParents(studentId)
         ]);
 
-        console.log('DEBUG: studentResponse:', studentResponse);
-        console.log('DEBUG: parentResponse:', parentResponse);
-
         const safeStudent = studentResponse || null;
         setStudent(safeStudent);
         setParents(Array.isArray(parentResponse) ? parentResponse : []);
@@ -154,8 +151,6 @@ function IsolatedReview({ user, onLogout }) {
           registrationIdOf(location.state?.studentRecord) ||
           registrationIdOf(safeStudent);
         
-        console.log('DEBUG: preferredRegistrationId:', preferredRegistrationId);
-
         let resolvedRegistrationId = preferredRegistrationId || null;
         let resolvedSections = {};
         let foundSectionsWithContent = false;
@@ -172,12 +167,9 @@ function IsolatedReview({ user, onLogout }) {
         const loadSectionsForRegistrationId = async (candidateId) => {
           if (!candidateId) return null;
           try {
-            console.log('DEBUG: Fetching sections for:', candidateId);
             const payload = await api.getRegistrationSections(candidateId);
-            console.log(`DEBUG: Payload for ${candidateId}:`, payload);
             return asObject(payload);
           } catch (sectionError) {
-            console.error(`DEBUG: Error fetching sections for ${candidateId}:`, sectionError);
             if (sectionError?.status === 404) {
               return null;
             }
@@ -191,9 +183,7 @@ function IsolatedReview({ user, onLogout }) {
         let registrationList = [];
         try {
           registrationList = await api.listRegistrations(studentId);
-          console.log('DEBUG: registrationList:', registrationList);
         } catch (registrationError) {
-          console.error('DEBUG: Error listing registrations:', registrationError);
           registrationList = [];
         }
 
@@ -304,7 +294,7 @@ function IsolatedReview({ user, onLogout }) {
     student?.student_name,
     student?.full_name,
     student?.fullName
-  ) || 'Unknown Student';
+  ) || t('Unknown Student');
   const displayUsername = pick(
     student?.user_name,
     student?.username,
@@ -315,7 +305,7 @@ function IsolatedReview({ user, onLogout }) {
   if (loading) {
     return (
         <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-950 font-black text-teal-600 uppercase tracking-widest text-sm animate-pulse">
-            Syncing Profile Data...
+            {t('Syncing Profile Data...')}
         </div>
     );
   }
@@ -324,10 +314,10 @@ function IsolatedReview({ user, onLogout }) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-10">
         <div className="max-w-2xl mx-auto bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-10 rounded-[32px] text-center shadow-sm">
-          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">System Error</h2>
-          <p className="text-slate-500 mt-4 mb-8 font-bold">{error || 'Student record not found.'}</p>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{t('System Error')}</h2>
+          <p className="text-slate-500 mt-4 mb-8 font-bold">{error || t('Student record not found.')}</p>
           <button className="bg-teal-600 text-white px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-teal-700 transition-all active:scale-95" onClick={() => navigate('/admin/dashboard')}>
-            Back to Dashboard
+            {t('Return to Dashboard')}
           </button>
         </div>
       </div>
@@ -351,13 +341,16 @@ function IsolatedReview({ user, onLogout }) {
                 </p>
               </div>
             </div>
-            <button
-              className="group bg-slate-900 dark:bg-slate-800 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-teal-600 transition-all active:scale-95 flex items-center gap-2 shadow-xl shadow-slate-900/10"
-              onClick={() => navigate('/admin/dashboard')}
-            >
-              <span className="material-icons-round text-sm group-hover:-translate-x-1 transition-transform">arrow_back</span>
-              {t('Back')}
-            </button>
+            <div className='flex items-center gap-4'>
+              <LanguageSwitcher />
+              <button
+                className="group bg-slate-900 dark:bg-slate-800 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-teal-600 transition-all active:scale-95 flex items-center gap-2 shadow-xl shadow-slate-900/10"
+                onClick={() => navigate('/admin/dashboard')}
+              >
+                <span className="material-icons-round text-sm group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                {t('Back')}
+              </button>
+            </div>
           </header>
 
           {/* STUDENT INFO */}
