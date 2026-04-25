@@ -1219,21 +1219,30 @@ function AdminDashboard({ user, onLogout }) {
                                                         )}>{normalizePaymentSessionStatus(student)}</span>
                                                     </td>
                                                     <td className="px-6 py-6 text-right whitespace-nowrap">
-                                                        {normalizePaymentSessionStatus(student) === 'PAYMENT_PENDING' ? (
+                                                        <div className="flex justify-end gap-2">
                                                             <button 
-                                                                onClick={() => approvePayment(student)}
-                                                                className="px-4 py-2 bg-teal-600 text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-teal-700 shadow-md shadow-teal-500/10 active:scale-95 transition-all"
+                                                                onClick={() => navigate(`/admin/submitted-details-review/${student.studentid || student.id}`, { state: { studentRecord: student } })}
+                                                                className="px-3 py-1.5 bg-sky-600 text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-sky-700 shadow-md transition-all"
                                                             >
-                                                                {t("Verify Payment")}
+                                                                {t("View")}
                                                             </button>
-                                                        ) : (
-                                                            <div className="flex justify-end gap-2">
-                                                                <button 
-                                                                    onClick={() => navigate(`/admin/submitted-details-review/${student.studentid || student.id}`, { state: { studentRecord: student } })}
-                                                                    className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-teal-600 transition-all"><span className="material-icons-outlined text-sm">visibility</span></button>
-                                                                <button className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-emerald-600 border border-emerald-100 dark:border-emerald-900/30 transition-all"><span className="material-icons-outlined text-sm">check_circle</span></button>
-                                                            </div>
-                                                        )}
+                                                            {normalizePaymentSessionStatus(student) === 'PAYMENT_PENDING' && (
+                                                                <>
+                                                                    <button 
+                                                                        onClick={() => approvePayment(student)}
+                                                                        className="px-3 py-1.5 bg-emerald-600 text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-emerald-700 shadow-md transition-all"
+                                                                    >
+                                                                        {t("Approve")}
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={() => {/* Implement reject logic */ console.log('Reject', student)}}
+                                                                        className="px-3 py-1.5 bg-rose-600 text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-rose-700 shadow-md transition-all"
+                                                                    >
+                                                                        {t("Reject")}
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}
