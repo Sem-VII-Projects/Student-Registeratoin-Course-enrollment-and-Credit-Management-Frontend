@@ -54,28 +54,59 @@
 }
 
 .submitted-highlight {
-  padding: 18px;
+  padding: 24px;
+  position: relative;
 }
 
-.submitted-highlight .status {
-  display: inline-flex;
-  border-radius: 999px;
-  padding: 6px 12px;
-  font-size: 0.78rem;
-  font-weight: 800;
+.status-badge {
+  position: absolute;
+  top: 24px;
+  right: 24px;
   background: #e4efff;
   color: #245493;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
 }
 
-.submitted-highlight h2 {
-  margin: 10px 0 0;
-  color: #1f4366;
+.submitted-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 16px;
 }
 
-.submitted-highlight p {
-  margin: 8px 0 0;
-  color: #607b96;
+.submitted-info-grid p {
+  margin: 0;
+  color: #4a657e;
 }
+
+.submitted-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.submitted-actions button {
+  flex: 1;
+  min-height: 48px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  transition: opacity 0.2s;
+}
+
+.submitted-actions button:hover {
+  opacity: 0.9;
+}
+
+.btn-view { background: #0b5d90; }
+.btn-approve { background: #0a7d65; }
+.btn-reject { background: #b93e45; }
 
 .submitted-grid {
   display: grid;
