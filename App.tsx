@@ -69,6 +69,17 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [booting, setBooting] = useState(true);
 
+  const handleOnEnterPortal = () => {
+    if (user) {
+      const updatedUser = { ...user, role: "student" as any };
+      setUser(updatedUser);
+      // Update localStorage and sessionStorage
+      localStorage.setItem("studentData", JSON.stringify(updatedUser));
+      sessionStorage.setItem("user", JSON.stringify(updatedUser));
+      sessionStorage.setItem("role", "student");
+    }
+  };
+
   const syncStudentEnrollmentSettings = async () => {
     try {
       const setting = await api.studentEnrollmentSettingCurrent();

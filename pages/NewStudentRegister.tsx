@@ -469,29 +469,35 @@ export default function NewStudentRegister() {
               မှတ်ပုံတင်အမှတ်: <span className="text-red-500">*</span>
             </label>
             <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr_1fr_2fr] gap-3">
-              <CustomSelect
-                value={formData.nrcRegion}
-                onChange={(val) => handleChange({ target: { name: 'nrcRegion', value: val } } as any)}
-                options={nrcRegions.map(region => ({ value: region, label: toMyanmarDigits(region) }))}
-                placeholder={t('region')}
-                className="w-full"
-              />
+<CustomSelect
+        value={formData.nrcRegion}
+        onChange={(val) => handleChange({ target: { name: 'nrcRegion', value: val } } as any)}
+        options={nrcRegions.map(region => ({ value: region, label: toMyanmarDigits(region) }))}
+        placeholder={t('region')}
+        className="w-full"
+        disabled={nrcDisabled}
+        required={!nrcDisabled}
+      />
 
-              <CustomSelect
-                value={formData.nrcTownship}
-                onChange={(val) => handleChange({ target: { name: 'nrcTownship', value: val } } as any)}
-                options={nrcTownships.map(township => ({ value: township.code, label: `${township.code} - ${township.nameMm || township.nameEn}` }))}
-                placeholder={t('township')}
-                className="w-full"
-              />
+      <CustomSelect
+        value={formData.nrcTownship}
+        onChange={(val) => handleChange({ target: { name: 'nrcTownship', value: val } } as any)}
+        options={nrcTownships.map(township => ({ value: township.code, label: `${township.code} - ${township.nameMm || township.nameEn}` }))}
+        placeholder={t('township')}
+        className="w-full"
+        disabled={nrcDisabled}
+        required={!nrcDisabled}
+      />
 
-              <CustomSelect
-                value={formData.nrcType}
-                onChange={(val) => handleChange({ target: { name: 'nrcType', value: val } } as any)}
-                options={nrcTypes.map(type => ({ value: type, label: type }))}
-                placeholder={t('type')}
-                className="w-full"
-              />
+      <CustomSelect
+        value={formData.nrcType}
+        onChange={(val) => handleChange({ target: { name: 'nrcType', value: val } } as any)}
+        options={nrcTypes.map(type => ({ value: type, label: type }))}
+        placeholder={t('type')}
+        className="w-full"
+        disabled={nrcDisabled}
+        required={!nrcDisabled}
+      />
 
               <input
                 type="text"
