@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import '../styles/IsolatedReview.css';
 
 function pick(...values) {
@@ -349,13 +350,16 @@ function IsolatedReview({ user, onLogout }) {
                </p>
                </div>
                </div>
-               <button
-               className="group bg-slate-900 dark:bg-slate-800 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-teal-600 transition-all active:scale-95 flex items-center gap-2 shadow-xl shadow-slate-900/10"
-               onClick={() => navigate('/admin/dashboard')}
-               >
-               <span className="material-icons-round text-sm group-hover:-translate-x-1 transition-transform">arrow_back</span>
-               {t('Return to Dashboard')}
-               </button>
+               <div className="flex items-center gap-4">
+                 <LanguageSwitcher />
+                 <button
+                 className="group bg-slate-900 dark:bg-slate-800 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-teal-600 transition-all active:scale-95 flex items-center gap-2 shadow-xl shadow-slate-900/10"
+                 onClick={() => navigate('/admin/dashboard')}
+                 >
+                 <span className="material-icons-round text-sm group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                 {t('Return to Dashboard')}
+                 </button>
+               </div>
 
         </header>
 
