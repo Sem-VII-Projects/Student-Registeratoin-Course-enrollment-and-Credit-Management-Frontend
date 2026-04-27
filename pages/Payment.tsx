@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { getStudentSession, persistStudentSession } from '../src/utils/studentStorage';
 import '../styles/Payment.css';
@@ -7,6 +8,7 @@ import '../styles/Payment.css';
 const REGISTRATION_CONFIG_STORAGE_KEY = 'registration_form_data';
 
 function Payment() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [student, setStudent] = useState(null);
@@ -100,8 +102,8 @@ const parsedStudent = getStudentSession();
       return;
     }
 
-    if (currentStatus !== 'PAYMENT_REQUIRED' && currentStatus !== 'CLASS_SELECTED') {
-      alert('You can submit payment only after admin approves your details.');
+    if (currentStatus !== 'PAYMENT_REQUIRED' && currentStatus !== 'CLASS_SELECTED' && currentStatus !== 'PAYMENT_REJECTED') {
+      alert(t('You can submit payment only after admin approves your details.'));
       navigate('/student/dashboard');
       return;
     }
@@ -204,34 +206,34 @@ persistStudentSession(updatedStudent);
   }
 
   return (
-    <div className="payment-container">
-      <header className="payment-header">
-        <h1>Payment</h1>
-        <p>Complete your tuition payment to finalize your seat.</p>
+    <div className="payment-container min-h-screen bg-slate-50 dark:bg-slate-950 p-6 md:p-10 animate-in fade-in duration-500">
+      <header className="payment-header mb-10">
+        <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase">{t('Payment')}</h1>
+        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-2">{t('Complete your tuition payment to finalize your seat.')}</p>
       </header>
 
-      <div className="payment-content">
-        <div className="amount-card">
-          <h2>Semester Fee</h2>
-          <div className="amount-display">{amount.toLocaleString()} <span style={{fontSize: '1rem', color: '#64748b'}}>MMK</span></div>
+      <div className="payment-content max-w-4xl mx-auto space-y-8">
+        <div className="amount-card bg-white dark:bg-slate-900 p-8 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm">
+          <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">{t('Semester Fee')}</h2>
+          <div className="amount-display text-4xl font-black text-slate-900 dark:text-white tracking-tighter">{amount.toLocaleString()} <span className="text-xl text-slate-400">MMK</span></div>
         </div>
 
-        <div className="payment-methods">
-          <h3>1. Select Method</h3>
-          <div className="method-grid">
+        <div className="payment-methods bg-white dark:bg-slate-900 p-8 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm">
+          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">{t('1. Select Method')}</h3>
+          <div className="method-grid grid grid-cols-1 md:grid-cols-3 gap-6">
             {Object.keys(paymentMethods).map((key) => {
               const method = paymentMethods[key];
               return (
                 <div
                   key={key}
-                  className={`method-card ${selectedMethod === key ? 'selected' : ''}`}
+                  className={`method-card cursor-pointer p-6 rounded-2xl border transition-all duration-300 ${selectedMethod === key ? 'border-teal-600 bg-teal-50 dark:bg-teal-900/20 shadow-md' : 'border-slate-100 dark:border-slate-800 hover:shadow-lg hover:-translate-y-1'}`}
                   onClick={() => {
                     setSelectedMethod(key);
                     setSelectedPaymentType('');
                   }}
                 >
-                  <div className="method-icon">{method.icon}</div>
-                  <div className="method-name">{method.name}</div>
+                  <div className="method-icon text-3xl mb-3">{method.icon}</div>
+                  <div className="method-name text-sm font-black text-slate-900 dark:text-white uppercase">{method.name}</div>
                 </div>
               );
             })}
@@ -239,59 +241,61 @@ persistStudentSession(updatedStudent);
         </div>
 
         {selectedMethod && (
-          <div className="payment-details animate-in fade-in duration-500">
-            <h3>2. Payment Type</h3>
-            <div className="payment-type-options">
-              <div 
-                className={`payment-type-card ${selectedPaymentType === 'qr' ? 'active' : ''}`}
-                onClick={() => setSelectedPaymentType('qr')}
-              >
-                <div className="type-icon">🔳</div>
-                <h4>QR Scan</h4>
+          <div className="payment-details space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">{t('2. Payment Type')}</h3>
+              <div className="payment-type-options grid grid-cols-2 gap-6">
+                <div 
+                  className={`payment-type-card cursor-pointer p-6 rounded-2xl border transition-all ${selectedPaymentType === 'qr' ? 'border-teal-600 bg-teal-50 dark:bg-teal-900/20 shadow-md' : 'border-slate-100 dark:border-slate-800 hover:shadow-lg hover:-translate-y-1'}`}
+                  onClick={() => setSelectedPaymentType('qr')}
+                >
+                  <div className="type-icon text-2xl mb-2">🔳</div>
+                  <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase">{t('QR Scan')}</h4>
+                </div>
+                <div 
+                  className={`payment-type-card cursor-pointer p-6 rounded-2xl border transition-all ${selectedPaymentType === 'phone' ? 'border-teal-600 bg-teal-50 dark:bg-teal-900/20 shadow-md' : 'border-slate-100 dark:border-slate-800 hover:shadow-lg hover:-translate-y-1'}`}
+                  onClick={() => setSelectedPaymentType('phone')}
+                >
+                  <div className="type-icon text-2xl mb-2">📱</div>
+                  <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase">{t('Phone Transfer')}</h4>
+                </div>
               </div>
-              <div 
-                className={`payment-type-card ${selectedPaymentType === 'phone' ? 'active' : ''}`}
-                onClick={() => setSelectedPaymentType('phone')}
-              >
-                <div className="type-icon">📱</div>
-                <h4>Phone Transfer</h4>
-              </div>
+
+              {selectedPaymentType === 'qr' && (
+                <div className="qr-display mt-8 animate-in fade-in">
+                  <div className="qr-code-box bg-slate-50 dark:bg-slate-950 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 text-center">
+                    <p className="text-sm font-bold text-slate-500">{t('QR Code for')} {selectedMethod}</p>
+                  </div>
+                </div>
+              )}
+
+              {selectedPaymentType === 'phone' && (
+                <div className="phone-display mt-8 animate-in fade-in">
+                  <div className="phone-number-box flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <div className="phone-number text-xl font-black text-slate-900 dark:text-white tabular-nums">{paymentMethods[selectedMethod].phone}</div>
+                    <button 
+                      className={`btn-copy px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-all ${copied ? 'bg-emerald-600' : 'bg-slate-900 dark:bg-teal-600'}`}
+                      onClick={() => handleCopy(paymentMethods[selectedMethod].phone)}
+                    >
+                      {copied ? t('Copied!') : t('Copy')}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {selectedPaymentType === 'qr' && (
-              <div className="qr-display animate-in fade-in">
-                <div className="qr-code-box">
-                  <p>QR Code for {selectedMethod}</p>
-                </div>
-              </div>
-            )}
-
-            {selectedPaymentType === 'phone' && (
-              <div className="phone-display animate-in fade-in">
-                <div className="phone-number-box">
-                  <div className="phone-number">{paymentMethods[selectedMethod].phone}</div>
-                  <button 
-                    className={`btn-copy ${copied ? 'bg-emerald-600' : 'bg-[#0f172a]'}`}
-                    onClick={() => handleCopy(paymentMethods[selectedMethod].phone)}
-                  >
-                    {copied ? 'Copied!' : 'Copy'}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div className="receipt-upload">
-              <h3>3. Upload Screenshot</h3>
+            <div className="receipt-upload bg-white dark:bg-slate-900 p-8 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">{t('3. Upload Screenshot')}</h3>
               <div className="upload-section">
                 {receiptPreview ? (
-                  <div className="receipt-preview">
-                    <img src={receiptPreview} alt="Receipt" />
-                    <button className="btn-change" onClick={() => document.getElementById('receiptInput').click()}>Change</button>
+                  <div className="receipt-preview relative group">
+                    <img src={receiptPreview} alt="Receipt" className="w-full h-auto rounded-2xl border border-slate-100" />
+                    <button className="btn-change absolute bottom-4 right-4 bg-white/80 backdrop-blur-sm px-6 py-3 rounded-2xl text-[10px] font-black uppercase shadow-lg" onClick={() => document.getElementById('receiptInput').click()}>{t('Change')}</button>
                   </div>
                 ) : (
-                  <label htmlFor="receiptInput" className="upload-label">
-                    <div className="upload-icon">📤</div>
-                    <p>Click to upload</p>
+                  <label htmlFor="receiptInput" className="upload-label flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-12 cursor-pointer hover:border-teal-500 transition-all">
+                    <div className="upload-icon text-4xl mb-4">📤</div>
+                    <p className="text-sm font-black text-slate-400 uppercase">{t('Click to upload')}</p>
                   </label>
                 )}
                 <input type="file" id="receiptInput" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
@@ -300,14 +304,14 @@ persistStudentSession(updatedStudent);
           </div>
         )}
 
-        <div className="payment-actions">
-          <button className="btn btn-back" onClick={() => navigate('/student/dashboard')}>Back</button>
+        <div className="payment-actions flex items-center justify-between pt-8">
+          <button className="btn btn-back px-8 py-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-black uppercase tracking-widest hover:bg-slate-200" onClick={() => navigate('/student/dashboard')}>{t('Back')}</button>
           <button 
-            className="btn btn-submit"
+            className="btn btn-submit px-10 py-4 rounded-2xl bg-teal-600 text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-teal-500/20 hover:bg-teal-500 disabled:opacity-50 transition-all"
             onClick={handleSubmit}
             disabled={!selectedMethod || !selectedPaymentType || !receiptFile || loading}
           >
-            {loading ? 'Processing...' : 'Confirm Payment'}
+            {loading ? t('Processing...') : t('Confirm Payment')}
           </button>
         </div>
       </div>

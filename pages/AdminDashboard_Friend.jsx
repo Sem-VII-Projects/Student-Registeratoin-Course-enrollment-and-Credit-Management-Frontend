@@ -374,7 +374,7 @@ function AdminDashboard({ user, onLogout }) {
 
       // 2. Set status back to PAYMENT_REQUIRED and store rejection reason using dual fields
       await api.updateStudent(studentId, {
-        status: 'PAYMENT_REQUIRED',
+        status: 'PAYMENT_REJECTED',
         rejectionReason: reason,
         rejection_reason: reason
       });
