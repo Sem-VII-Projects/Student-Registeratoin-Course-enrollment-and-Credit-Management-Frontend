@@ -372,9 +372,9 @@ function AdminDashboard({ user, onLogout }) {
         console.warn(`Failed to clear payment documents for ${studentId}`, docClearError);
       }
 
-      // 2. Set status back to PAYMENT_REQUIRED and store rejection reason using dual fields
+      // 2. Set status to PAYMENT_REJECT and store rejection reason using dual fields
       await api.updateStudent(studentId, {
-        status: 'PAYMENT_REQUIRED',
+        status: 'PAYMENT_REJECT',
         rejectionReason: reason,
         rejection_reason: reason
       });
