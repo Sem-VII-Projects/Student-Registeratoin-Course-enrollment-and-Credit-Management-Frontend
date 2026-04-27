@@ -100,6 +100,7 @@ function LoginPage({ onLogin }) {
 
       if (backendToken) {
         localStorage.setItem('authToken', backendToken);
+        localStorage.setItem('access_token', backendToken);
       }
 
       // Login successful!

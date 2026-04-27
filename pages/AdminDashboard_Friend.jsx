@@ -262,6 +262,7 @@ function AdminDashboard({ user, onLogout }) {
   const [refreshing, setRefreshing] = useState(false);
   
   const [rejectDialog, setRejectDialog] = useState({ open: false, student: null, reason: '' });
+  const [paymentRejectDialog, setPaymentRejectDialog] = useState({ open: false, student: null, reason: '' });
   
   const openRejectDialog = (student) => {
     setRejectDialog({ open: true, student, reason: '' });
@@ -269,6 +270,14 @@ function AdminDashboard({ user, onLogout }) {
 
   const closeRejectDialog = () => {
     setRejectDialog({ open: false, student: null, reason: '' });
+  };
+
+  const openPaymentRejectDialog = (student) => {
+    setPaymentRejectDialog({ open: true, student, reason: '' });
+  };
+
+  const closePaymentRejectDialog = () => {
+    setPaymentRejectDialog({ open: false, student: null, reason: '' });
   };
 
   const handleRejectStudent = async () => {
@@ -303,6 +312,54 @@ function AdminDashboard({ user, onLogout }) {
       loadData();
     } catch (error) {
       console.error('Reject error:', error);
+      alert(t('Error: ') + (error.message || t('Rejection failed')));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const rejectPayment = async () => {
+    const student = paymentRejectDialog.student;
+    if (!student) return;
+
+    const studentId = student.studentid || student.id;
+    if (!studentId) {
+      alert(t('Cannot reject payment: student ID not found.'));
+      return;
+    }
+
+    const reason = paymentRejectDialog.reason.trim();
+    if (!reason) {
+      alert(t('Rejection reason is required.'));
+      return;
+    }
+
+    const confirm = window.confirm(
+      t('Reject payment for {{name}}?', { name: student.namemm }) + '\n\n' + 
+      t('Student will see this reason and must resubmit payment form.')
+    );
+    if (!confirm) return;
+
+    setLoading(true);
+    try {
+      // Clear payment documents
+      try {
+        await api.deleteStudentDocuments(studentId, 'PAYMENT_RECEIPT');
+      } catch (docClearError) {
+        console.warn(`Failed to clear payment documents for ${studentId}`, docClearError);
+      }
+
+      await api.updateStudent(studentId, {
+        status: 'PAYMENT_REQUIRED',
+        rejectionReason: reason,
+        rejection_reason: reason
+      });
+
+      alert(t('{{name}}\'s payment was rejected. Student must resubmit payment form.', { name: student.namemm }));
+      closePaymentRejectDialog();
+      loadData();
+    } catch (error) {
+      console.error('Reject payment error:', error);
       alert(t('Error: ') + (error.message || t('Rejection failed')));
     } finally {
       setLoading(false);
@@ -719,10 +776,31 @@ function AdminDashboard({ user, onLogout }) {
   };
 
   const approvePayment = async (student) => {
+    const studentId = student.studentid || student.id;
+    if (!studentId) {
+      alert(t('Cannot approve payment: student ID not found.'));
+      return;
+    }
+
+    const currentStatus = normalizePaymentSessionStatus(student);
+    if (currentStatus === 'PAYMENT_DONE') {
+      alert(t('Payment is already approved.'));
+      return;
+    }
+
     const confirm = window.confirm(t('Approve payment for {{name}}?', { name: student.namemm }));
     if (!confirm) return;
+
     setLoading(true);
-    try { await api.updateStudent(student.studentid || student.id, { status: 'PAYMENT_DONE' }); loadData(); } catch (e) { alert(e.message); } finally { setLoading(false); }
+    try { 
+      await api.updateStudent(studentId, { status: 'PAYMENT_DONE' }); 
+      alert(t('Payment approved for {{name}}.', { name: student.namemm }));
+      loadData(); 
+    } catch (e) { 
+      alert(e.message); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const exportPaymentStudentsToExcel = () => {
@@ -1219,21 +1297,30 @@ function AdminDashboard({ user, onLogout }) {
                                                         )}>{normalizePaymentSessionStatus(student)}</span>
                                                     </td>
                                                     <td className="px-6 py-6 text-right whitespace-nowrap">
-                                                        {normalizePaymentSessionStatus(student) === 'PAYMENT_PENDING' ? (
+                                                        <div className="flex justify-end gap-2.5">
                                                             <button 
-                                                                onClick={() => approvePayment(student)}
-                                                                className="px-4 py-2 bg-teal-600 text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-teal-700 shadow-md shadow-teal-500/10 active:scale-95 transition-all"
+                                                                onClick={() => navigate(`/admin/submitted-details-review/${student.studentid || student.id}`, { state: { studentRecord: student, viewMode: 'payment' } })}
+                                                                className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-sky-500/20 transition-all active:scale-95"
                                                             >
-                                                                {t("Verify Payment")}
+                                                                {t("View")}
                                                             </button>
-                                                        ) : (
-                                                            <div className="flex justify-end gap-2">
-                                                                <button 
-                                                                    onClick={() => navigate(`/admin/submitted-details-review/${student.studentid || student.id}`, { state: { studentRecord: student } })}
-                                                                    className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-teal-600 transition-all"><span className="material-icons-outlined text-sm">visibility</span></button>
-                                                                <button className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-emerald-600 border border-emerald-100 dark:border-emerald-900/30 transition-all"><span className="material-icons-outlined text-sm">check_circle</span></button>
-                                                            </div>
-                                                        )}
+                                                            {normalizePaymentSessionStatus(student) === 'PAYMENT_PENDING' && (
+                                                                <>
+                                                                    <button 
+                                                                        onClick={() => approvePayment(student)}
+                                                                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
+                                                                    >
+                                                                        {t("Approve")}
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={() => openPaymentRejectDialog(student)}
+                                                                        className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-rose-500/20 transition-all active:scale-95"
+                                                                    >
+                                                                        {t("Reject")}
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -1890,6 +1977,57 @@ function AdminDashboard({ user, onLogout }) {
                                 className="flex-[2] h-14 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-rose-500/20 active:scale-95 transition-all disabled:opacity-50 disabled:shadow-none"
                             >
                                 {loading ? t('Processing...') : t('Confirm Rejection')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div className="absolute top-0 right-0 h-32 w-32 bg-rose-500/5 rounded-bl-full transform translate-x-4 -translate-y-4" />
+            </div>
+        </div>
+      )}
+
+      {/* PAYMENT REJECTION MODAL */}
+      {paymentRejectDialog.open && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={closePaymentRejectDialog} />
+            <div className="relative bg-white dark:bg-slate-900 w-full max-w-lg rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-8 duration-500">
+                <div className="p-10">
+                    <div className="flex items-center gap-4 mb-8">
+                        <div className="h-12 w-12 rounded-2xl bg-rose-50 dark:bg-rose-900/30 flex items-center justify-center text-rose-600 border border-rose-100 dark:border-rose-800/50">
+                            <span className="material-icons-outlined text-2xl">payments</span>
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight leading-none">{t("Reject Payment")}</h3>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">{paymentRejectDialog.student?.namemm}</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="flex flex-col gap-2">
+                            <label htmlFor="payment-reject-reason" className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t("Payment Discrepancy Reason")}</label>
+                            <textarea
+                                id="payment-reject-reason"
+                                className="w-full p-6 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-3xl text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-4 focus:ring-rose-500/5 focus:border-rose-500/30 transition-all placeholder:text-slate-300 min-h-[160px] resize-none"
+                                value={paymentRejectDialog.reason}
+                                onChange={(e) => setPaymentRejectDialog((prev) => ({ ...prev, reason: e.target.value }))}
+                                placeholder={t("Type why the payment was rejected. This receipt will be removed, and student must re-upload...")}
+                            />
+                        </div>
+
+                        <div className="flex gap-4 pt-4">
+                            <button 
+                                onClick={closePaymentRejectDialog}
+                                disabled={loading}
+                                className="flex-1 h-14 bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all active:scale-95"
+                            >
+                                {t("Cancel")}
+                            </button>
+                            <button 
+                                onClick={rejectPayment}
+                                disabled={loading || !paymentRejectDialog.reason.trim()}
+                                className="flex-[2] h-14 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-rose-500/20 active:scale-95 transition-all disabled:opacity-50 disabled:shadow-none"
+                            >
+                                {loading ? t('Processing...') : t('Reject Payment')}
                             </button>
                         </div>
                     </div>

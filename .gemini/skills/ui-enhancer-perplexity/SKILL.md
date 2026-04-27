@@ -19,6 +19,7 @@ This skill applies minimalist, type-centric, and motion-enhanced design patterns
 -   **Color System**: Do NOT change the hex codes of the current design system (e.g., `#077d8a`).
 -   **Pure Presentation**: Only touch Tailwind classes, JSX structure (flex/grid), and CSS.
 -   **Untouchable**: Hooks (`useState`, `useEffect`), Event Handlers (`onClick`), API calls, and business logic.
+-   **Localization Protocol**: Use **Natural Language Keys** in `t()` (e.g., `t("Enrollment Mode")`). NO snake_case keys allowed.
 
 ## Reusable Animation Patterns (Tailwind)
 
@@ -34,4 +35,4 @@ Apply these to enhance the "feel" of the app:
 1.  **Audit**: Identify elements that feel "clunky" or "legacy".
 2.  **Apply Minimalist Polish**: Increase padding, refine font sizes (using `text-sm` for details, `text-base` for body), and add borders `border-gray-100/50`.
 3.  **Inject Motion**: Add the Tailwind animation classes to primary interactions.
-4.  **Verify Integrity**: Ensure no functional code (logic/data) was altered.
+4.  **Verify Integrity**: Ensure no functional code (logic/data) was altered. Verify that **ALL labels are localized correctly** using natural English strings as fallback keys.

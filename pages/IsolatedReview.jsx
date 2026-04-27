@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import '../styles/IsolatedReview.css';
 
 function pick(...values) {
@@ -31,9 +32,9 @@ function toBoolean(value) {
   return !!value;
 }
 
-function formatYesNo(value) {
+function formatYesNo(value, t) {
   if (!hasMeaningfulValue(value)) return '-';
-  return toBoolean(value) ? 'Yes' : 'No';
+  return toBoolean(value) ? t('Yes') : t('No');
 }
 
 function asObject(value) {
@@ -73,26 +74,26 @@ function sortRegistrationsByRecent(registrations) {
   });
 }
 
-function formatFinancialSupporter(value) {
+function formatFinancialSupporter(value, t) {
   const normalized = String(value || '').trim().toLowerCase();
   if (!normalized) return '-';
-  if (normalized === 'father') return 'Father';
-  if (normalized === 'mother') return 'Mother';
-  if (normalized === 'other') return 'Other';
+  if (normalized === 'father') return t('Father');
+  if (normalized === 'mother') return t('Mother');
+  if (normalized === 'other') return t('Other');
   return value;
 }
 
-function ImageCard({ label, url, alt, t }) {
+function ImageCard({ label, url, alt, t, aspect = "aspect-video" }) {
   return (
     <div className="submitted-image-card-isolated group/img overflow-hidden rounded-[24px] border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 shadow-sm transition-all hover:shadow-xl">
       <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
         <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{t ? t(label) : label}</h4>
       </div>
-      <div className="relative aspect-video">
+      <div className={`relative ${aspect} flex items-center justify-center bg-slate-50 dark:bg-slate-950`}>
         {url ? (
           <>
-            <a href={url} target="_blank" rel="noreferrer" className="block h-full w-full overflow-hidden">
-              <img src={url} alt={alt || label} className="h-full w-full object-cover transition-transform duration-500 group-hover/img:scale-110" />
+            <a href={url} target="_blank" rel="noreferrer" className="flex h-full w-full items-center justify-center overflow-hidden">
+              <img src={url} alt={alt || label} className="max-h-full max-w-full object-contain transition-transform duration-500 group-hover/img:scale-105" />
             </a>
             <div className="absolute inset-0 bg-teal-900/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
               <a className="bg-white text-teal-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl flex items-center gap-2 hover:scale-105 active:scale-95 transition-transform" href={url} target="_blank" rel="noreferrer">
@@ -142,9 +143,6 @@ function IsolatedReview({ user, onLogout }) {
           api.listParents(studentId)
         ]);
 
-        console.log('DEBUG: studentResponse:', studentResponse);
-        console.log('DEBUG: parentResponse:', parentResponse);
-
         const safeStudent = studentResponse || null;
         setStudent(safeStudent);
         setParents(Array.isArray(parentResponse) ? parentResponse : []);
@@ -153,8 +151,6 @@ function IsolatedReview({ user, onLogout }) {
           registrationIdOf(location.state?.studentRecord) ||
           registrationIdOf(safeStudent);
         
-        console.log('DEBUG: preferredRegistrationId:', preferredRegistrationId);
-
         let resolvedRegistrationId = preferredRegistrationId || null;
         let resolvedSections = {};
         let foundSectionsWithContent = false;
@@ -171,12 +167,9 @@ function IsolatedReview({ user, onLogout }) {
         const loadSectionsForRegistrationId = async (candidateId) => {
           if (!candidateId) return null;
           try {
-            console.log('DEBUG: Fetching sections for:', candidateId);
             const payload = await api.getRegistrationSections(candidateId);
-            console.log(`DEBUG: Payload for ${candidateId}:`, payload);
             return asObject(payload);
           } catch (sectionError) {
-            console.error(`DEBUG: Error fetching sections for ${candidateId}:`, sectionError);
             if (sectionError?.status === 404) {
               return null;
             }
@@ -190,9 +183,7 @@ function IsolatedReview({ user, onLogout }) {
         let registrationList = [];
         try {
           registrationList = await api.listRegistrations(studentId);
-          console.log('DEBUG: registrationList:', registrationList);
         } catch (registrationError) {
-          console.error('DEBUG: Error listing registrations:', registrationError);
           registrationList = [];
         }
 
@@ -303,7 +294,7 @@ function IsolatedReview({ user, onLogout }) {
     student?.student_name,
     student?.full_name,
     student?.fullName
-  ) || 'Unknown Student';
+  ) || t('Unknown Student');
   const displayUsername = pick(
     student?.user_name,
     student?.username,
@@ -314,7 +305,7 @@ function IsolatedReview({ user, onLogout }) {
   if (loading) {
     return (
         <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-950 font-black text-teal-600 uppercase tracking-widest text-sm animate-pulse">
-            Syncing Profile Data...
+            {t('Syncing Profile Data...')}
         </div>
     );
   }
@@ -323,11 +314,82 @@ function IsolatedReview({ user, onLogout }) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-10">
         <div className="max-w-2xl mx-auto bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-10 rounded-[32px] text-center shadow-sm">
-          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">System Error</h2>
-          <p className="text-slate-500 mt-4 mb-8 font-bold">{error || 'Student record not found.'}</p>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{t('System Error')}</h2>
+          <p className="text-slate-500 mt-4 mb-8 font-bold">{error || t('Student record not found.')}</p>
           <button className="bg-teal-600 text-white px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-teal-700 transition-all active:scale-95" onClick={() => navigate('/admin/dashboard')}>
-            Back to Dashboard
+            {t('Return to Dashboard')}
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isPaymentView) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 md:p-10 font-roboto animate-in fade-in duration-500 pb-20">
+        <div className="max-w-4xl mx-auto space-y-8">
+          {/* HEADER */}
+          <header className="flex items-center justify-between bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-8 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center gap-6">
+              <div className="h-12 w-12 rounded-2xl bg-teal-600 flex items-center justify-center text-white shadow-lg shadow-teal-600/20">
+                <span className="material-icons-outlined">payments</span>
+              </div>
+              <div>
+                <h1 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{t('Payment Review')}</h1>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 flex items-center gap-2">
+                  <span className="h-1 w-1 rounded-full bg-teal-500" /> {t('Verification Desk')}
+                </p>
+              </div>
+            </div>
+            <div className='flex items-center gap-4'>
+              <LanguageSwitcher />
+              <button
+                className="group bg-slate-900 dark:bg-slate-800 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-teal-600 transition-all active:scale-95 flex items-center gap-2 shadow-xl shadow-slate-900/10"
+                onClick={() => navigate('/admin/dashboard')}
+              >
+                <span className="material-icons-round text-sm group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                {t('Back')}
+              </button>
+            </div>
+          </header>
+
+          {/* STUDENT INFO */}
+          <section className="bg-white dark:bg-slate-900 p-10 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-1">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">{t('Student Name')}</p>
+                <p className="text-xl font-black text-slate-900 dark:text-white">{displayStudentName}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">{t('Username')}</p>
+                <p className="text-xl font-black text-slate-900 dark:text-white">{displayUsername}</p>
+              </div>
+            </div>
+          </section>
+
+          {/* PAYMENT RECEIPT */}
+          <section className="bg-white dark:bg-slate-900 p-10 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+            <div className="absolute top-0 right-0 h-48 w-48 bg-teal-500/5 rounded-bl-full transform group-hover:scale-110 transition-transform duration-700" />
+            
+            <div className="relative z-10 space-y-8">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                  <span className="material-icons-outlined text-lg">receipt_long</span>
+                </div>
+                <h3 className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-[0.2em]">{t('Payment Screenshot')}</h3>
+              </div>
+              
+              <div className="max-w-4xl mx-auto">
+                <ImageCard 
+                  label="Payment Receipt" 
+                  url={paymentReceiptUrl} 
+                  alt="Student payment receipt" 
+                  t={t} 
+                  aspect="h-auto min-h-[500px] py-12"
+                />
+              </div>
+            </div>
+          </section>
         </div>
       </div>
     );
@@ -349,13 +411,16 @@ function IsolatedReview({ user, onLogout }) {
                </p>
                </div>
                </div>
-               <button
-               className="group bg-slate-900 dark:bg-slate-800 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-teal-600 transition-all active:scale-95 flex items-center gap-2 shadow-xl shadow-slate-900/10"
-               onClick={() => navigate('/admin/dashboard')}
-               >
-               <span className="material-icons-round text-sm group-hover:-translate-x-1 transition-transform">arrow_back</span>
-               {t('Return to Dashboard')}
-               </button>
+               <div className="flex items-center gap-4">
+                 <LanguageSwitcher />
+                 <button
+                 className="group bg-slate-900 dark:bg-slate-800 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-teal-600 transition-all active:scale-95 flex items-center gap-2 shadow-xl shadow-slate-900/10"
+                 onClick={() => navigate('/admin/dashboard')}
+                 >
+                 <span className="material-icons-round text-sm group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                 {t('Return to Dashboard')}
+                 </button>
+               </div>
 
         </header>
 

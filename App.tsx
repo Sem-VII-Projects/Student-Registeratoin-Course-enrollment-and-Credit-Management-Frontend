@@ -56,6 +56,7 @@ import RegistrationChoice from "./pages/RegistrationChoice";
 import NewStudentDraftDetail from "./pages/NewStudentDraftDetail";
 import SubmittedDetailsReview from "./pages/SubmittedDetailsReview";
 import IsolatedReview from "./pages/IsolatedReview";
+import EnrollmentBlank from "./pages/EnrollmentBlank";
 import { DetailedCardGridSkeleton, Skeleton } from "./components/Skeleton";
 import ThemeToggle from "./components/ThemeToggle";
 
@@ -67,6 +68,17 @@ import { applyTheme, getPreferredTheme } from "./lib/theme";
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [booting, setBooting] = useState(true);
+
+  const handleOnEnterPortal = () => {
+    if (user) {
+      const updatedUser = { ...user, role: "student" as any };
+      setUser(updatedUser);
+      // Update localStorage and sessionStorage
+      localStorage.setItem("studentData", JSON.stringify(updatedUser));
+      sessionStorage.setItem("user", JSON.stringify(updatedUser));
+      sessionStorage.setItem("role", "student");
+    }
+  };
 
   const syncStudentEnrollmentSettings = async () => {
     try {
@@ -389,6 +401,10 @@ const App: React.FC = () => {
                 <Route
                   path="/payment"
                   element={<Payment />}
+                />
+                <Route
+                  path="/enrollment-blank"
+                  element={<EnrollmentBlank />}
                 />
                 <Route
                   path="/student-details"

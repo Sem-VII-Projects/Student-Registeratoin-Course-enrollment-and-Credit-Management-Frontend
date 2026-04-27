@@ -1,18 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../lib/api';
+import { getStudentSession, persistStudentSession } from '../src/utils/studentStorage';
 import '../styles/Payment.css';
 
 const REGISTRATION_CONFIG_STORAGE_KEY = 'registration_form_data';
-
-const getStudentSession = () => {
-  const data = sessionStorage.getItem('user');
-  return data ? JSON.parse(data) : null;
-};
-
-const persistStudentSession = (student) => {
-  sessionStorage.setItem('user', JSON.stringify(student));
-};
 
 function Payment() {
   const navigate = useNavigate();
@@ -55,8 +47,7 @@ function Payment() {
   };
 
   useEffect(() => {
-    // Assuming getStudentSession() is imported or available
-    const parsedStudent = getStudentSession ? getStudentSession() : JSON.parse(sessionStorage.getItem('user') || 'null');
+const parsedStudent = getStudentSession();
     if (!parsedStudent) {
       navigate('/login');
       return;
@@ -190,11 +181,7 @@ function Payment() {
         ...student,
         status: 'PAYMENT_PENDING'
       };
-      if (persistStudentSession) {
-          persistStudentSession(updatedStudent);
-      } else {
-          sessionStorage.setItem('user', JSON.stringify(updatedStudent));
-      }
+persistStudentSession(updatedStudent);
 
       alert(
         '✅ ငွေပေးချေမှု အောင်မြင်ပါသည်!\n\n' +

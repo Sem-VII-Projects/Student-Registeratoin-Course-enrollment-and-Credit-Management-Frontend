@@ -13,6 +13,7 @@ You are strictly prohibited from modifying business logic, state (`useState`), o
 - JSX structure for layout flow (flex/grid).
 - Micro-animations and transitions.
 - Accessibility and semantics.
+- **Localization Integration:** Always wrap UI strings in `t()` using **Natural Language Keys** (e.g., `t("Sign In")` NOT `t("sign_in")`). Ensure the `LanguageSwitcher` is present in high-level layouts.
 
 ## 2. Design Philosophy: "The Perplexity Essence"
 Apply minimalist, type-centric, and motion-enhanced patterns:
@@ -51,7 +52,9 @@ Apply minimalist, type-centric, and motion-enhanced patterns:
 - Verify horizontal alignment of metrics.
 - Ensure all text-heavy areas have `leading-relaxed`.
 - Add "White Space Detectors": If a card feels empty, prefer horizontal grouping or better typography hierarchy over just adding more text.
+- **Localization Check:** Verify that NO snake_case keys are visible. Use natural English strings as keys to ensure graceful fallback.
 
 ## 5. References
 - See `UI_UX_Analysis_Improvement_Plan.md` for the strategic roadmap.
 - See `ui-patterns` skill for component-specific implementation details.
+- See `GEMINI.md` for project-wide localization standards.

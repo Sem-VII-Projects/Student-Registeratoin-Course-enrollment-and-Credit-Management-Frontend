@@ -309,10 +309,10 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
 
       let resolvedStudent = parsedStudent;
 
-      // Refresh student from backend to avoid stale local IDs causing 404 on submit.
-      if (parsedStudent?.email) {
-        try {
-          const candidates = await api.getStudents(parsedStudent.email);
+// Refresh student from backend to avoid stale local IDs causing 404 on submit.
+       if (parsedStudent?.email) {
+         try {
+           const candidates = await api.getStudents(parsedStudent.email, { backend: 'spring' });
           if (Array.isArray(candidates) && candidates.length > 0) {
             const sameId = candidates.find((candidate) => (candidate.studentid || candidate.id) === (parsedStudent.studentid || parsedStudent.id));
             const latest = [...candidates].sort((a, b) => {
@@ -847,14 +847,21 @@ const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
     window.scrollTo(0, 0);
   };
 
-  // Submit entire form
-  const handleSubmit = async () => {
-    if (!validateSection(6)) return;
+// Submit entire form
+const handleSubmit = async () => {
+  // Validate all sections before submitting
+  for (let section = 1; section <= 6; section++) {
+    if (!validateSection(section)) {
+      // Focus on the first invalid section (optional enhancement)
+      setCurrentSection(section);
+      return;
+    }
+  }
 
-    const confirm = window.confirm('သင့်အချက်အလက်များ အပြည့်အစုံ ဖြည့်သွင်းပြီးပါပြီလား?\n\nတင်သွင်းမည်လား?');
-    if (!confirm) return;
+  const confirm = window.confirm('သင့်အချက်အလက်များ အပြည့်အစုံ ဖြည့်သွင်းပြီးပြီးပါပြီလား?\n\nတင်သွင်းမည်လား?');
+  if (!confirm) return;
 
-    setLoading(true);
+  setLoading(true);
 
     try {
       const studentId = student.studentid || student.id;
