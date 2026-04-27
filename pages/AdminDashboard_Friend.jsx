@@ -358,28 +358,28 @@ function AdminDashboard({ user, onLogout }) {
     }
 
     const confirm = window.confirm(
-      t('Reject payment for {{name}}?', { name: student.namemm }) + '\n\n' + 
+      t('Reject payment for {{name}}?', { name: student.namemm }) + '\n\n' +
       t('Student will see this reason and must resubmit payment form.')
     );
     if (!confirm) return;
 
-setLoading(true);
-try {
-  // Update student status first
-  await api.updateStudent(studentId, {
-    status: 'PAYMENT_REQUIRED',
-    rejectionReason: reason,
-    rejection_reason: reason
-  });
+    setLoading(true);
+    try {
+      // 1. Clear payment documents only
+      try {
+        await api.deleteStudentDocuments(studentId, 'PAYMENT_RECEIPT');
+      } catch (docClearError) {
+        console.warn(`Failed to clear payment documents for ${studentId}`, docClearError);
+      }
 
-  // Then clear payment documents (log failures but don't revert the status)
-  try {
-    await api.deleteStudentDocuments(studentId, 'PAYMENT_RECEIPT');
-  } catch (docClearError) {
-    console.warn(`Failed to clear payment documents for ${studentId}`, docClearError);
-  }
+      // 2. Set status back to PAYMENT_REQUIRED and store rejection reason using dual fields
+      await api.updateStudent(studentId, {
+        status: 'PAYMENT_REQUIRED',
+        rejectionReason: reason,
+        rejection_reason: reason
+      });
 
-  alert(t('{{name}}\'s payment was rejected. Student must resubmit payment form.', { name: student.namemm }));
+      alert(t('{{name}}\'s payment was rejected. Student must resubmit payment form.', { name: student.namemm }));
       closePaymentRejectDialog();
       loadData();
     } catch (error) {
@@ -389,7 +389,6 @@ try {
       setLoading(false);
     }
   };
-
   const handleRejectDetails = async () => {
     const student = detailsRejectDialog.student;
     if (!student) return;
