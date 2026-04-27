@@ -129,15 +129,15 @@ const EnrollmentBlank: React.FC = () => {
 
   const handleEnroll = async () => {
     if (mode === 'FOUNDATION_SECTION' && !selectedSection) {
-      alert(t('please_select_section'));
+      alert(t('Please select a section.'));
       return;
     }
     if (mode === 'MAJOR_CLASS' && !selectedMajorClassId) {
-      alert(t('please_select_major_class'));
+      alert(t('Please select a major class.'));
       return;
     }
     if (!mode) {
-      alert(t('enrollment_mode_unavailable'));
+      alert(t('Enrollment mode is unavailable. Please refresh.'));
       return;
     }
 
@@ -148,7 +148,7 @@ const EnrollmentBlank: React.FC = () => {
       ? `Section ${selectedSection}`
       : (selectedMajor?.label || selectedMajor?.courseName || 'Selected Major');
 
-    const isConfirmed = window.confirm(t('confirm_enrollment_n', { label: confirmLabel }));
+    const isConfirmed = window.confirm(t('Are you sure you want to enroll in {{label}}?', { label: confirmLabel }));
     if (!isConfirmed) return;
 
     setLoading(true);
@@ -221,11 +221,11 @@ const EnrollmentBlank: React.FC = () => {
       persistStudentSession(latestStudent);
       setStudent(latestStudent);
 
-      alert(t('enrollment_completed_success'));
+      alert(t('Enrollment completed successfully.'));
       navigate('/dashboard');
     } catch (error: any) {
       console.error('Enrollment error:', error);
-      alert(t('enrollment_failed_n', { error: formatApiError(error, t('Try Again'), t) }));
+      alert(t('Enrollment failed: {{error}}', { error: formatApiError(error, t('Try Again'), t) }));
     } finally {
       setLoading(false);
     }
@@ -236,7 +236,7 @@ const EnrollmentBlank: React.FC = () => {
       <div className="loading animate-in fade-in duration-700">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-teal-500/30 border-t-teal-600 rounded-full animate-spin" />
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{t('initializing_portal')}</p>
+           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{t('Initializing Portal...')}</p>
         </div>
       </div>
     );
@@ -263,23 +263,23 @@ const EnrollmentBlank: React.FC = () => {
     ? t('Foundation Section')
     : mode === 'MAJOR_CLASS'
       ? t('Major Class')
-      : t('awaiting_system_sync');
+       : t('Awaiting System Sync...');
 
   return (
     <div className="enrollment-container animate-in fade-in duration-1000">
       <header className="enrollment-header">
         <div className="header-inner">
           <div className="logo-section">
-            <h1 className="tracking-tight">{student.fullName || t('Course Enrollment')}</h1>
+                  <h1 className="tracking-tight">{t('Course Enrollment')}</h1>
             <p className="text-slate-400 font-medium">
               {currentTerm?.academicYear && currentTerm?.semester
-                ? `${currentTerm.academicYear} \u2022 ${t('Semester')} ${currentTerm.semester}`
-                : t('registration_gateway')}
+                 ? `${currentTerm.academicYear} • ${t('Semester')} ${currentTerm.semester}`
+                 : t('Registration Gateway')}
             </p>
           </div>
           <div className="flex items-center gap-6">
             <div className="hidden md:block text-right">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">{t('enrollment_mode')}</span>
+               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">{t('Enrollment')}</span>
               <span className="text-sm font-black text-teal-600 uppercase tracking-tighter">{modeLabel}</span>
             </div>
             <LanguageSwitcher />
@@ -298,22 +298,22 @@ const EnrollmentBlank: React.FC = () => {
                 <span className="material-icons-outlined text-2xl">architecture</span>
               </div>
               <div>
-                <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">{t('configuration_selection')}</h2>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('select_academic_placement')}</p>
+                 <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">{t('Configuration Selection')}</h2>
+                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('Select your academic placement')}</p>
               </div>
             </div>
 
             {mode === 'FOUNDATION_SECTION' ? (
               <div className="space-y-8">
                 <div className="major-class-field">
-                  <label htmlFor="foundation-section-select">{t('available_foundation_sections')}</label>
+                     <label htmlFor="foundation-section-select">{t('Available Foundation Sections')}</label>
                   <select
                     id="foundation-section-select"
                     value={selectedSection}
                     onChange={(event) => handleClassSelect(event.target.value)}
                     className="hover:border-teal-500/30 transition-all"
                   >
-                    <option value="">{t('choose_section')}</option>
+                     <option value="">{t('Choose a section...')}</option>
                     {classes.map((classItem) => {
                       const disabled = classItem.isLocked || classItem.remaining <= 0;
                       return (
@@ -329,20 +329,21 @@ const EnrollmentBlank: React.FC = () => {
                   {classes.length === 0 ? (
                     <div className="flex items-center gap-3 text-slate-400 italic py-4">
                        <span className="material-icons-outlined">info</span>
-                       <p className="text-sm font-medium">{t('no_sections_configured')}</p>
+                         <p className="text-sm font-medium">{t('No sections are configured for this term cycle.')}</p>
                     </div>
                   ) : selectedFoundation ? (
                     <div className="space-y-1">
-                      <p><strong>{t('section_identifier')}</strong> <span className="font-black text-teal-600">{selectedFoundation.name}</span></p>
-                      <p><strong>{t('academic_level')}</strong> <span className="font-black">{resolvedYearLevel || student?.currentyear || student?.currentYear || '-'}</span></p>
-                      <p><strong>{t('utilization')}</strong> <span className="font-black">{selectedFoundation.currentEnrolled} / {selectedFoundation.maxCapacity}</span></p>
-                      <p><strong>{t('available_slots')}</strong> <span className="font-black text-teal-600">{selectedFoundation.remaining}</span></p>
-                      <p><strong>{t('placement_status')}</strong> <span className={`font-black ${selectedFoundation.isLocked ? 'text-rose-500' : 'text-emerald-500'}`}>{selectedFoundation.isLocked ? t('LOCKED') : selectedFoundation.remaining <= 0 ? t('FULL') : t('OPEN')}</span></p>
+                        <p><strong>{t('Section Identifier')}</strong> <span className="font-black text-teal-600">{selectedFoundation.name}</span></p>
+                        <p><strong>{t('Academic Level')}</strong> <span className="font-black">{resolvedYearLevel || student?.currentyear || student?.currentYear || '-'}</span></p>
+                        <p><strong>{t('Utilization')}</strong> <span className="font-black">{selectedFoundation.currentEnrolled} / {selectedFoundation.maxCapacity}</span></p>
+                        <p><strong>{t('Available Slots')}</strong> <span className="font-black text-teal-600">{selectedFoundation.remaining}</span></p>
+                        <p><strong>{t('Placement Status')}</strong> <span className={`font-black ${selectedFoundation.isLocked ? 'text-rose-500' : 'text-emerald-500'}`}>{selectedFoundation.isLocked ? t('locked') : selectedFoundation.remaining <= 0 ? 'FULL' : t('Open')}</span></p>
                     </div>
                   ) : (
                     <div className="flex items-center gap-3 text-slate-400 italic py-4">
                        <span className="material-icons-outlined">touch_app</span>
-                       <p className="text-sm font-medium">{t('select_placement_dropdown')}</p>
+                       <p className="text-sm font-medium">{t('Select a placement from the dropdown above.')}</p>
+
                     </div>
                   )}
                 </div>
@@ -350,14 +351,14 @@ const EnrollmentBlank: React.FC = () => {
             ) : mode === 'MAJOR_CLASS' ? (
               <div className="space-y-8">
                 <div className="major-class-field">
-                  <label htmlFor="major-class-select">{t('available_major_specializations')}</label>
+                   <label htmlFor="major-class-select">{t('Available Major Specializations')}</label>
                   <select
                     id="major-class-select"
                     value={selectedMajorClassId}
                     onChange={(event) => setSelectedMajorClassId(event.target.value)}
                     className="hover:border-teal-500/30 transition-all"
                   >
-                    <option value="">{t('choose_specialization')}</option>
+                     <option value="">{t('Choose a specialization...')}</option>
                     {majorClassOptions.map((item) => {
                       const optionId = item?.majorClassId || item?.courseId;
                       return (
@@ -372,14 +373,14 @@ const EnrollmentBlank: React.FC = () => {
                 <div className="major-class-preview animate-in fade-in slide-in-from-left-2 duration-500">
                   {selectedMajor ? (
                     <div className="space-y-1">
-                      <p><strong>{t('assigned_section')}</strong> <span className="font-black text-teal-600">{selectedMajor.sectionCode || '-'}</span></p>
-                      <p><strong>{t('curriculum_code')}</strong> <span className="font-black">{selectedMajor.courseCode || '-'}</span></p>
-                      <p><strong>{t('designation')}</strong> <span className="font-black">{selectedMajor.courseName || '-'}</span></p>
+                        <p><strong>{t('Assigned Section')}</strong> <span className="font-black text-teal-600">{selectedMajor.sectionCode || '-'}</span></p>
+                        <p><strong>{t('Curriculum Code')}</strong> <span className="font-black">{selectedMajor.courseCode || '-'}</span></p>
+                        <p><strong>{t('Designation')}</strong> <span className="font-black">{selectedMajor.courseName || '-'}</span></p>
                     </div>
                   ) : (
                     <div className="flex items-center gap-3 text-slate-400 italic py-4">
                        <span className="material-icons-outlined">touch_app</span>
-                       <p className="text-sm font-medium">{t('choose_specialization_view_params')}</p>
+                        <p className="text-sm font-medium">{t('Choose a specialization to view parameters.')}</p>
                     </div>
                   )}
                 </div>
@@ -387,7 +388,7 @@ const EnrollmentBlank: React.FC = () => {
             ) : (
               <div className="py-12 flex flex-col items-center justify-center text-slate-300">
                 <div className="w-12 h-12 border-2 border-slate-100 border-t-slate-200 rounded-full animate-spin mb-4" />
-                <p className="text-[10px] font-black uppercase tracking-widest">{t('awaiting_system_sync')}</p>
+                 <p className="text-[10px] font-black uppercase tracking-widest">{t('Awaiting System Sync...')}</p>
               </div>
             )}
           </div>
@@ -396,7 +397,7 @@ const EnrollmentBlank: React.FC = () => {
         <footer className="enrollment-actions">
           <button className="btn btn-back active:scale-95" onClick={() => navigate('/student/dashboard')}>
             <span className="material-icons-outlined text-sm">west</span>
-            {t('cancel')}
+             {t('Cancel')}
           </button>
           <button
             className="btn btn-enroll active:scale-95 transition-all shadow-emerald-500/10"
@@ -408,12 +409,12 @@ const EnrollmentBlank: React.FC = () => {
             }
           >
             {loading
-              ? t('processing_transaction')
-              : (
-                <>
-                  {mode === 'FOUNDATION_SECTION' 
-                    ? t('enroll_section_n', { section: selectedSection || '...' }) 
-                    : t('enroll_major_class')}
+               ? t('Processing Transaction...')
+               : (
+                 <>
+                   {mode === 'FOUNDATION_SECTION' 
+                     ? t('Enroll Section {{section}}', { section: selectedSection || '...' }) 
+                     : t('Enroll Major Class')}
                   <span className="material-icons-outlined text-sm">check_circle</span>
                 </>
               )}

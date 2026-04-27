@@ -1,57 +1,57 @@
 /* Class Enrollment - Perplexity Enhanced Aesthetic with UniPortal Tokens */
 :root {
-  --perplexity-bg: #fcfcfc;
+  --perplexity-bg: #f8fafc;
   --perplexity-card: #ffffff;
-  --perplexity-border: #f1f1f1;
-  --perplexity-text-main: #171717;
-  --perplexity-text-muted: #666666;
-  --perplexity-text-heading: #000000;
-  --perplexity-accent: #10b981; /* Emerald */
-  --perplexity-warning: #f59e0b; /* Amber */
-  --perplexity-error: #ef4444; /* Rose */
-  --perplexity-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-  --perplexity-shadow-hover: 0 10px 40px rgba(0, 0, 0, 0.06);
-  --perplexity-header-bg: rgba(255, 255, 255, 0.8);
-  --perplexity-logo-bg: #000000;
+  --perplexity-border: #e2e8f0;
+  --perplexity-text-main: #0f172a;
+  --perplexity-text-muted: #475569;
+  --perplexity-text-heading: #020617;
+  --perplexity-accent: #047857; /* Emerald 700 - Dark Green */
+  --perplexity-warning: #ffc20e; /* Alert */
+  --perplexity-error: #dc2626;
+  --perplexity-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  --perplexity-shadow-hover: 0 10px 40px rgba(0, 0, 0, 0.08);
+  --perplexity-header-bg: rgba(255, 255, 255, 0.85);
+  --perplexity-logo-bg: #047857;
   --perplexity-logo-text: #ffffff;
-  --perplexity-input-bg: #f9f9f9;
-  --perplexity-input-border: #f1f1f1;
+  --perplexity-input-bg: #ffffff;
+  --perplexity-input-border: #cbd5e1;
   --perplexity-dropdown-bg: #ffffff;
-  --perplexity-hover: #f5f5f5;
-  --perplexity-modal-overlay: rgba(0, 0, 0, 0.4);
-  
+  --perplexity-hover: #f1f5f9;
+  --perplexity-modal-overlay: rgba(2, 6, 23, 0.5);
+
   --uit-shadow-sm: var(--perplexity-shadow);
   --uit-shadow-md: var(--perplexity-shadow-hover);
 }
 
 .dark {
-  --perplexity-bg: #09090b; /* Zinc 950 */
-  --perplexity-card: #18181b; /* Zinc 900 */
-  --perplexity-border: #27272a; /* Zinc 800 */
-  --perplexity-text-main: #d4d4d8; /* Zinc 300 */
-  --perplexity-text-muted: #a1a1aa; /* Zinc 400 */
+  --perplexity-bg: #0b1220;
+  --perplexity-card: #1e293b;
+  --perplexity-border: #334155;
+  --perplexity-text-main: #f1f5f9;
+  --perplexity-text-muted: #94a3b8;
   --perplexity-text-heading: #ffffff;
-  --perplexity-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  --perplexity-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
   --perplexity-shadow-hover: 0 10px 40px rgba(0, 0, 0, 0.4);
-  --perplexity-header-bg: rgba(9, 9, 11, 0.8);
-  --perplexity-logo-bg: #ffffff;
-  --perplexity-logo-text: #000000;
-  --perplexity-input-bg: #27272a;
-  --perplexity-input-border: #3f3f46;
-  --perplexity-dropdown-bg: #18181b;
-  --perplexity-hover: #27272a;
-  --perplexity-modal-overlay: rgba(0, 0, 0, 0.7);
+  --perplexity-header-bg: rgba(11, 18, 32, 0.85);
+  --perplexity-logo-bg: #047857;
+  --perplexity-logo-text: #ffffff;
+  --perplexity-input-bg: #1e293b;
+  --perplexity-input-border: #334155;
+  --perplexity-dropdown-bg: #1e293b;
+  --perplexity-hover: #1e293b;
+  --perplexity-modal-overlay: rgba(2, 6, 23, 0.8);
 }
 
 .enrollment-container {
   min-height: 100vh;
   background-color: var(--perplexity-bg);
   background-image: 
-    radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.03) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(245, 158, 11, 0.03) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(4, 120, 87, 0.03) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(255, 194, 14, 0.03) 0px, transparent 50%);
   color: var(--perplexity-text-main);
   transition: background-color 0.3s ease, color 0.3s ease;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
   padding: 0;
 }
 
@@ -63,7 +63,7 @@
   backdrop-filter: blur(12px);
   padding: 24px 40px;
   border-bottom: 2px solid var(--perplexity-accent);
-  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.1);
+  box-shadow: 0 2px 10px rgba(4, 120, 87, 0.1);
   margin-bottom: 60px;
   text-align: left;
 }
@@ -146,7 +146,7 @@
 .major-class-field select:focus {
   background: var(--perplexity-card);
   border-color: var(--perplexity-accent);
-  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+  box-shadow: 0 0 0 4px rgba(4, 120, 87, 0.1);
 }
 
 .major-class-preview {

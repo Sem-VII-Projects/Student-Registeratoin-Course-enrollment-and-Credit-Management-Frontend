@@ -363,22 +363,23 @@ function AdminDashboard({ user, onLogout }) {
     );
     if (!confirm) return;
 
-    setLoading(true);
-    try {
-      // Clear payment documents
-      try {
-        await api.deleteStudentDocuments(studentId, 'PAYMENT_RECEIPT');
-      } catch (docClearError) {
-        console.warn(`Failed to clear payment documents for ${studentId}`, docClearError);
-      }
+setLoading(true);
+try {
+  // Update student status first
+  await api.updateStudent(studentId, {
+    status: 'PAYMENT_REQUIRED',
+    rejectionReason: reason,
+    rejection_reason: reason
+  });
 
-      await api.updateStudent(studentId, {
-        status: 'PAYMENT_REQUIRED',
-        rejectionReason: reason,
-        rejection_reason: reason
-      });
+  // Then clear payment documents (log failures but don't revert the status)
+  try {
+    await api.deleteStudentDocuments(studentId, 'PAYMENT_RECEIPT');
+  } catch (docClearError) {
+    console.warn(`Failed to clear payment documents for ${studentId}`, docClearError);
+  }
 
-      alert(t('{{name}}\'s payment was rejected. Student must resubmit payment form.', { name: student.namemm }));
+  alert(t('{{name}}\'s payment was rejected. Student must resubmit payment form.', { name: student.namemm }));
       closePaymentRejectDialog();
       loadData();
     } catch (error) {

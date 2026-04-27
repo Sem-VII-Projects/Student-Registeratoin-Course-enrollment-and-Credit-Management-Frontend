@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useId } from 'react';
 
 interface CustomSelectProps {
+  id?: string;
   value: string;
   onChange: (val: string) => void;
   options: { value: string; label: string }[];
@@ -11,6 +12,7 @@ interface CustomSelectProps {
 }
 
 export default function CustomSelect({
+  id,
   value,
   onChange,
   options,
@@ -19,12 +21,15 @@ export default function CustomSelect({
   disabled = false,
   required = false
 }: CustomSelectProps) {
+  const generatedId = useId();
+  const baseId = id || generatedId.replace(/:/g, '');
+  const listboxId = `${baseId}-listbox`;
+  const triggerId = `${baseId}-trigger`;
+
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const listboxId = "custom-select-listbox";
-  const triggerId = "custom-select-trigger";
 
   const selectedIndex = options.findIndex(o => o.value === value);
 
@@ -99,7 +104,7 @@ export default function CustomSelect({
   }, [open, activeIndex, options, handleOpen, handleSelect, disabled]);
 
   const selectedTitle = options.find(o => o.value === value)?.label || placeholder || "Select...";
-  const activeDescendant = activeIndex >= 0 ? `option-${options[activeIndex]?.value}` : undefined;
+  const activeDescendant = activeIndex >= 0 ? `${baseId}-option-${options[activeIndex]?.value}` : undefined;
 
   return (
     <div className={`relative group ${className}`} ref={containerRef}>
@@ -138,7 +143,7 @@ export default function CustomSelect({
               <button
                 type="button"
                 key={opt.value}
-                id={`option-${opt.value}`}
+                id={`${baseId}-option-${opt.value}`}
                 role="option"
                 aria-selected={isSelected}
                 ref={el => { optionRefs.current[index] = el; }}
