@@ -263,8 +263,8 @@ async function request<T = any>(path: string, options: RequestOptions = {}): Pro
   const isAdminUiRoute = typeof window !== 'undefined' && (window.location.pathname.startsWith('/admin') || window.location.hash.startsWith('#/admin'));
   const hasAdminSession = Boolean(localStorage.getItem('adminData'));
   
-  // For Spring backend, only /api/admin/ or /v1/admin/ are strictly "prefer admin token"
-  const isSpringAdminApi = backend === "spring" && (path.startsWith("/api/admin/") || path.startsWith("/v1/admin/"));
+  // For Spring backend, only /api/admin/, /v1/admin/ or /v1/registration/ are strictly "prefer admin token"
+  const isSpringAdminApi = backend === "spring" && (path.startsWith("/api/admin/") || path.startsWith("/v1/admin/") || path.startsWith("/v1/registration/"));
   const preferAdminToken = hasAdminSession && (isAdminUiRoute || isSpringAdminApi);
 
   let token: string | null = null;

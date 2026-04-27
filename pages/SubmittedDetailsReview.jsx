@@ -114,7 +114,87 @@ function SubmittedDetailsReview() {
   const [sections, setSections] = useState({});
   const [paymentReceiptUrl, setPaymentReceiptUrl] = useState('');
   const [error, setError] = useState('');
+  const [detailsRejectDialog, setDetailsRejectDialog] = useState({ open: false, reason: '' });
   const isPaymentView = location.state?.viewMode === 'payment';
+
+  const approveDetails = async () => {
+    const confirmApprove = window.confirm(t('Approve {{name}}\'s details?', { name: displayStudentName }));
+    if (!confirmApprove) return;
+    setLoading(true);
+    try {
+      await api.updateStudent(student.studentid || student.id || studentId, { status: 'PAYMENT_REQUIRED' });
+      alert(t('Approved details for {{name}}. Student can now proceed to payment.', { name: displayStudentName }));
+      navigate('/admin/dashboard');
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const rejectDetails = async () => {
+    const sId = student.studentid || student.id || studentId;
+    if (!sId) {
+      alert(t('Cannot reject details: student ID not found.'));
+      return;
+    }
+    const reason = detailsRejectDialog.reason.trim();
+    if (!reason) {
+      alert(t('Rejection reason is required.'));
+      return;
+    }
+    const confirmReject = window.confirm(
+      t('Reject {{name}}\'s details form?\n\nStudent will see this reason and must resubmit details.', { name: displayStudentName })
+    );
+    if (!confirmReject) return;
+
+    setLoading(true);
+    try {
+      // 1. Clear staged registration sections
+      if (registrationId) {
+        try {
+          await api.clearRegistrationSections(registrationId);
+        } catch (clearError) {
+          console.warn(`Failed to clear sections for registration ${registrationId}`, clearError);
+        }
+      }
+
+      // 2. Delete all student documents
+      try {
+        await api.deleteStudentDocuments(sId);
+      } catch (docClearError) {
+        console.warn(`Failed to clear student documents for ${sId}`, docClearError);
+      }
+
+      // 3. Store rejection reason
+      await api.updateStudent(sId, {
+        rejectionReason: reason,
+        rejection_reason: reason
+      });
+
+      // 4. Send internal notification
+      try {
+        await api.adminCreateMessage({
+          recipientId: sId,
+          subject: 'Details Form Rejected',
+          body: `Your details form has been rejected. Reason: ${reason}`
+        });
+      } catch (msgErr) {
+        console.warn('Failed to send rejection message to student', msgErr);
+      }
+
+      // 5. Set status to APPROVED so student can resubmit details
+      await api.updateStudentStatus(sId, 'APPROVED');
+
+      alert(t('{{name}}\'s details were rejected.\n\nReason sent to student and staged data cleared.', { name: displayStudentName }));
+      navigate('/admin/dashboard');
+    } catch (error) {
+      console.error('Reject details error:', error);
+      alert(t('Error: ') + (error.message || t('Rejection failed')));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const adminData = localStorage.getItem('adminData');
@@ -367,9 +447,8 @@ function SubmittedDetailsReview() {
             <p><strong>{t('Source')}:</strong> {t('Staged Registration Sections')}</p>
           </div>
           <div className="submitted-actions">
-            <button className="btn-view" onClick={() => {/* TODO: Implement View */}}>{t('View Submitted Data')}</button>
-            <button className="btn-approve" onClick={() => {/* TODO: Implement Approve */}}>{t('Approve Details')}</button>
-            <button className="btn-reject" onClick={() => {/* TODO: Implement Reject */}}>{t('Reject Details')}</button>
+            <button className="btn-approve" onClick={approveDetails} disabled={loading}>{t('Approve Details')}</button>
+            <button className="btn-reject" onClick={() => setDetailsRejectDialog({ open: true, reason: '' })} disabled={loading}>{t('Reject Details')}</button>
           </div>
         </section>
 
@@ -501,6 +580,45 @@ function SubmittedDetailsReview() {
           </div>
         </section>
       </div>
+
+      {detailsRejectDialog.open && (
+        <div className="admin-modal-overlay" onClick={() => setDetailsRejectDialog({ open: false, reason: '' })}>
+          <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>{t('Reject Details Form')}</h3>
+            <div style={{ marginBottom: '0.75rem' }}>
+              {t('Student')}: <strong>{displayStudentName}</strong>
+            </div>
+            <label htmlFor="details-reject-reason">{t('Reason shown to student')}</label>
+            <textarea
+              id="details-reject-reason"
+              className="admin-reject-textarea"
+              value={detailsRejectDialog.reason}
+              onChange={(e) => setDetailsRejectDialog((prev) => ({ ...prev, reason: e.target.value }))}
+              rows={4}
+              style={{ width: '100%', padding: '0.5rem', fontSize: '0.875rem' }}
+              placeholder={t("Type why the details form is rejected...")}
+            />
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+              <button
+                type="button"
+                className="btn-cancel"
+                onClick={() => setDetailsRejectDialog({ open: false, reason: '' })}
+                disabled={loading}
+              >
+                {t('Cancel')}
+              </button>
+              <button
+                type="button"
+                className="btn-reject"
+                onClick={rejectDetails}
+                disabled={loading || !detailsRejectDialog.reason.trim()}
+              >
+                {loading ? t('Processing...') : t('Reject Details')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

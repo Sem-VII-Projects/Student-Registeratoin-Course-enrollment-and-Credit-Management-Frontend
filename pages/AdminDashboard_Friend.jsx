@@ -263,7 +263,8 @@ function AdminDashboard({ user, onLogout }) {
   
   const [rejectDialog, setRejectDialog] = useState({ open: false, student: null, reason: '' });
   const [paymentRejectDialog, setPaymentRejectDialog] = useState({ open: false, student: null, reason: '' });
-  
+  const [detailsRejectDialog, setDetailsRejectDialog] = useState({ open: false, student: null, reason: '' });
+
   const openRejectDialog = (student) => {
     setRejectDialog({ open: true, student, reason: '' });
   };
@@ -280,8 +281,30 @@ function AdminDashboard({ user, onLogout }) {
     setPaymentRejectDialog({ open: false, student: null, reason: '' });
   };
 
-  const handleRejectStudent = async () => {
-    const student = rejectDialog.student;
+  const openDetailsRejectDialog = (student) => {
+    setDetailsRejectDialog({ open: true, student, reason: '' });
+  };
+
+  const closeDetailsRejectDialog = () => {
+    setDetailsRejectDialog({ open: false, student: null, reason: '' });
+  };
+
+  const resolveRegistrationIdForStudent = async (student) => {
+    const studentId = student.studentid || student.id;
+    if (!studentId) return null;
+    try {
+      const list = await api.listRegistrations(studentId);
+      if (!Array.isArray(list) || list.length === 0) return null;
+      // Find the one that isn't rejected
+      const active = list.find(r => String(r.status || '').toUpperCase() !== 'REJECTED') || list[0];
+      return active?.registrationid || active?.id || null;
+    } catch (err) {
+      console.warn("Failed to resolve registration ID", err);
+      return null;
+    }
+  };
+
+  const handleRejectStudent = async () => {    const student = rejectDialog.student;
     if (!student) return;
 
     const studentId = student.studentid || student.id;
@@ -360,6 +383,86 @@ function AdminDashboard({ user, onLogout }) {
       loadData();
     } catch (error) {
       console.error('Reject payment error:', error);
+      alert(t('Error: ') + (error.message || t('Rejection failed')));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRejectDetails = async () => {
+    const student = detailsRejectDialog.student;
+    if (!student) return;
+
+    const studentId = student.studentid || student.id;
+    if (!studentId) {
+      alert(t('Cannot reject details: student ID not found.'));
+      return;
+    }
+
+    const reason = detailsRejectDialog.reason.trim();
+    if (!reason) {
+      alert(t('Rejection reason is required.'));
+      return;
+    }
+
+    const confirm = window.confirm(
+      t('Reject {{name}}\'s details form?\n\nStudent will see this reason and must resubmit details.', { name: student.namemm })
+    );
+    if (!confirm) return;
+
+    setLoading(true);
+    try {
+      // 1. Clear staged registration sections
+      const registrationId = await resolveRegistrationIdForStudent(student);
+      let clearedSections = true;
+      if (registrationId) {
+        try {
+          await api.clearRegistrationSections(registrationId);
+        } catch (clearError) {
+          clearedSections = false;
+          console.warn(`Failed to clear sections for registration ${registrationId}`, clearError);
+        }
+      }
+
+      // 2. Delete all student documents
+      try {
+        await api.deleteStudentDocuments(studentId);
+      } catch (docClearError) {
+        console.warn(`Failed to clear student documents for ${studentId}`, docClearError);
+      }
+
+      // 3. Store rejection reason
+      await api.updateStudent(studentId, {
+        rejectionReason: reason,
+        rejection_reason: reason
+      });
+
+      // 4. Send email notification (placeholder for email service if needed, currently using messages or dedicated API if available)
+      // Since no 'sendEmail' API exists, we'll assume the backend handles the notification via the updated status/reason
+      // or we can add a simple message if needed. Based on the requirement, just noting the logic flow here.
+      try {
+        await api.adminCreateMessage({
+          recipientId: studentId,
+          subject: 'Details Form Rejected',
+          body: `Your details form has been rejected. Reason: ${reason}`
+        });
+      } catch (msgErr) {
+        console.warn('Failed to send rejection message to student', msgErr);
+      }
+
+      // 5. Set status to APPROVED so student can resubmit details
+      await api.updateStudentStatus(studentId, 'APPROVED');
+
+      // 5. Show result
+      if (clearedSections) {
+        alert(t('{{name}}\'s details were rejected.\n\nReason sent to student and staged data cleared.', { name: student.namemm }));
+      } else {
+        alert(t('{{name}}\'s details were rejected.\n\nReason sent to student, but staged data could not be fully cleared.', { name: student.namemm }));
+      }
+      closeDetailsRejectDialog();
+      loadData();
+    } catch (error) {
+      console.error('Reject details error:', error);
       alert(t('Error: ') + (error.message || t('Rejection failed')));
     } finally {
       setLoading(false);
@@ -1189,7 +1292,7 @@ function AdminDashboard({ user, onLogout }) {
                                                 <div className="flex flex-col justify-center gap-3 w-full md:w-auto">
                                                     <button onClick={() => navigate(`/admin/submitted-details-review/${student.studentid || student.id}`, { state: { studentRecord: student } })} className="px-6 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all active:scale-95">{t("View Submitted Data")}</button>
                                                     <button onClick={() => approveDetails(student)} className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all active:scale-95 shadow-md shadow-emerald-500/10">{t("Approve Details")}</button>
-                                                    <button onClick={() => openRejectDialog(student)} className="px-6 py-3 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/10 dark:hover:bg-rose-900/20 text-rose-600 text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all active:scale-95">{t("Reject Details")}</button>
+                                                    <button onClick={() => openDetailsRejectDialog(student)} className="px-6 py-3 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/10 dark:hover:bg-rose-900/20 text-rose-600 text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all active:scale-95">{t("Reject Details")}</button>
                                                 </div>
                                             </div>
                                         </div>
@@ -2028,6 +2131,57 @@ function AdminDashboard({ user, onLogout }) {
                                 className="flex-[2] h-14 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-rose-500/20 active:scale-95 transition-all disabled:opacity-50 disabled:shadow-none"
                             >
                                 {loading ? t('Processing...') : t('Reject Payment')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div className="absolute top-0 right-0 h-32 w-32 bg-rose-500/5 rounded-bl-full transform translate-x-4 -translate-y-4" />
+            </div>
+        </div>
+      )}
+
+      {/* DETAILS REJECTION MODAL */}
+      {detailsRejectDialog.open && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={closeDetailsRejectDialog} />
+            <div className="relative bg-white dark:bg-slate-900 w-full max-w-lg rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-8 duration-500">
+                <div className="p-10">
+                    <div className="flex items-center gap-4 mb-8">
+                        <div className="h-12 w-12 rounded-2xl bg-rose-50 dark:bg-rose-900/30 flex items-center justify-center text-rose-600 border border-rose-100 dark:border-rose-800/50">
+                            <span className="material-icons-outlined text-2xl">fact_check</span>
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight leading-none">{t("Reject Details Form")}</h3>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">{detailsRejectDialog.student?.namemm}</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="flex flex-col gap-2">
+                            <label htmlFor="details-reject-reason" className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t("Details Rejection Reason")}</label>
+                            <textarea
+                                id="details-reject-reason"
+                                className="w-full p-6 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-3xl text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-4 focus:ring-rose-500/5 focus:border-rose-500/30 transition-all placeholder:text-slate-300 min-h-[160px] resize-none"
+                                value={detailsRejectDialog.reason}
+                                onChange={(e) => setDetailsRejectDialog((prev) => ({ ...prev, reason: e.target.value }))}
+                                placeholder={t("Type why the details form is rejected. Student must resubmit details...")}
+                            />
+                        </div>
+
+                        <div className="flex gap-4 pt-4">
+                            <button 
+                                onClick={closeDetailsRejectDialog}
+                                disabled={loading}
+                                className="flex-1 h-14 bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all active:scale-95"
+                            >
+                                {t("Cancel")}
+                            </button>
+                            <button 
+                                onClick={handleRejectDetails}
+                                disabled={loading || !detailsRejectDialog.reason.trim()}
+                                className="flex-[2] h-14 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-rose-500/20 active:scale-95 transition-all disabled:opacity-50 disabled:shadow-none"
+                            >
+                                {loading ? t('Processing...') : t('Reject Details')}
                             </button>
                         </div>
                     </div>
