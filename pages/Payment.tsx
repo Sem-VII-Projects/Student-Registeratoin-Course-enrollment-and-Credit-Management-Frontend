@@ -224,9 +224,12 @@ persistStudentSession(updatedStudent);
             {Object.keys(paymentMethods).map((key) => {
               const method = paymentMethods[key];
               return (
-                <div
+                <button
+                  type="button"
                   key={key}
                   className={`method-card cursor-pointer p-6 rounded-2xl border transition-all duration-300 ${selectedMethod === key ? 'border-teal-600 bg-teal-50 dark:bg-teal-900/20 shadow-md' : 'border-slate-100 dark:border-slate-800 hover:shadow-lg hover:-translate-y-1'}`}
+                  aria-pressed={selectedMethod === key}
+                  aria-label={`Select ${method.name} as payment method`}
                   onClick={() => {
                     setSelectedMethod(key);
                     setSelectedPaymentType('');
@@ -234,7 +237,7 @@ persistStudentSession(updatedStudent);
                 >
                   <div className="method-icon text-3xl mb-3">{method.icon}</div>
                   <div className="method-name text-sm font-black text-slate-900 dark:text-white uppercase">{method.name}</div>
-                </div>
+                </button>
               );
             })}
           </div>

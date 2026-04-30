@@ -122,7 +122,7 @@ function SubmittedDetailsReview() {
     if (!confirmApprove) return;
     setLoading(true);
     try {
-      await api.updateStudent(student.studentid || student.id || studentId, { status: 'PAYMENT_REQUIRED' });
+      await api.updateStudent(student.studentid || student.id || studentId, { status: 'PAYMENT_REQUIRED', rejectionReason: null, rejection_reason: null });
       alert(t('Approved details for {{name}}. Student can now proceed to payment.', { name: displayStudentName }));
       navigate('/admin/dashboard');
     } catch (e) {
@@ -149,12 +149,15 @@ function SubmittedDetailsReview() {
     if (!confirmReject) return;
 
     setLoading(true);
+    let clearSectionsError = null;
+    let deleteDocsError = null;
     try {
       // 1. Clear staged registration sections
       if (registrationId) {
         try {
           await api.clearRegistrationSections(registrationId);
         } catch (clearError) {
+          clearSectionsError = clearError;
           console.warn(`Failed to clear sections for registration ${registrationId}`, clearError);
         }
       }
@@ -163,6 +166,7 @@ function SubmittedDetailsReview() {
       try {
         await api.deleteStudentDocuments(sId);
       } catch (docClearError) {
+        deleteDocsError = docClearError;
         console.warn(`Failed to clear student documents for ${sId}`, docClearError);
       }
 
@@ -172,7 +176,7 @@ function SubmittedDetailsReview() {
         rejection_reason: reason
       });
 
-      // 4. Send internal notification
+      // 4. Send internal notification (regardless of cleanup success)
       try {
         await api.adminCreateMessage({
           recipientId: sId,
@@ -183,9 +187,18 @@ function SubmittedDetailsReview() {
         console.warn('Failed to send rejection message to student', msgErr);
       }
 
-      // 5. Set status to APPROVED so student can resubmit details
-      await api.updateStudentStatus(sId, 'APPROVED');
+      // 5. Check cleanup results
+      if (clearSectionsError || deleteDocsError) {
+        const failedParts = [];
+        if (clearSectionsError) failedParts.push(`clear registration sections (${clearSectionsError.message || 'unknown error'})`);
+        if (deleteDocsError) failedParts.push(`delete student documents (${deleteDocsError.message || 'unknown error'})`);
+        alert(t('{{name}}\'s details were rejected.\n\nReason saved, but failed to: {{failedParts}}.', { name: displayStudentName, failedParts: failedParts.join(', ') }));
+        navigate('/admin/dashboard');
+        return;
+      }
 
+      // 6. Set status to APPROVED only when both cleanups succeeded
+      await api.updateStudentStatus(sId, 'APPROVED');
       alert(t('{{name}}\'s details were rejected.\n\nReason sent to student and staged data cleared.', { name: displayStudentName }));
       navigate('/admin/dashboard');
     } catch (error) {

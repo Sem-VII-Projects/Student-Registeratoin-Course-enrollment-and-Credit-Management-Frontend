@@ -1490,7 +1490,19 @@
   "Ensure all data is correct.": "အချက်အလက်များ မှန်ကန်ကြောင်း သေချာပါစေ။",
   "Submit Form": "ဖောင်တင်သွင်းရန်",
   "Submitting...": "တင်သွင်းနေသည်...",
-  "Previous": "ရှေ့သို့",
+  "Previous": "နောက်သို့",
   "Name (Myanmar)": "အမည် (မြန်မာ)",
-  "Next": "နောက်သို့"
+  "Next": "ရှေ့သို့",
+  "System Admin": "System Admin",
+  "Father Name": "Father Name",
+  "Mother Name": "Mother Name",
+  "Total Marks": "Total Marks",
+  "Academic Year Entered": "Academic Year Entered",
+  "System Note": "System Note",
+  "Approve Details": "Approve Details",
+  "Reject Details": "Reject Details",
+  "Reject Details Form": "Reject Details Form",
+  "Reason shown to student": "Reason shown to student",
+  "Waiting for admin approval": "Waiting for admin approval",
+  "Staged Registration Sections": "Staged Registration Sections"
 }

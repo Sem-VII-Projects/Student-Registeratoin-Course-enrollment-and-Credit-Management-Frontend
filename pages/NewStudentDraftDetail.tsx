@@ -91,6 +91,42 @@ const NewStudentDraftDetail: React.FC<Props> = ({ user, onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<any>(location.state?.draftRecord || null);
   const [admin, setAdmin] = useState<any>(user || null);
+  const [isApproving, setIsApproving] = useState(false);
+  const [isDeclining, setIsDeclining] = useState(false);
+
+  const handleApprove = async () => {
+    setIsApproving(true);
+    try {
+      const registrationId = draft?.registrationid || draft?.registrationId || draft?.registration_id || draft?.id;
+      if (!registrationId) throw new Error('No registration found');
+      await api.adminApproveRegistration(registrationId);
+      alert(t('Registration approved successfully'));
+      navigate('/admin/dashboard');
+    } catch (err:any) {
+      console.error(err);
+      alert(err.message || t('Approval failed'));
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  const handleDecline = async () => {
+    const reason = prompt(t('Enter rejection reason'));
+    if (!reason) return;
+    setIsDeclining(true);
+    try {
+      const registrationId = draft?.registrationid || draft?.registrationId || draft?.registration_id || draft?.id;
+      if (!registrationId) throw new Error('No registration found');
+      await api.adminRejectRegistration(registrationId, reason);
+      alert(t('Registration declined successfully'));
+      navigate('/admin/dashboard');
+    } catch (err:any) {
+      console.error(err);
+      alert(err.message || t('Decline failed'));
+    } finally {
+      setIsDeclining(false);
+    }
+  };
 
   const recordType = useMemo(() => (recordId || '').split('_')[0], [recordId]);
   const recordValue = useMemo(() => (recordId || '').split('_').slice(1).join('_'), [recordId]);
@@ -334,8 +370,46 @@ const NewStudentDraftDetail: React.FC<Props> = ({ user, onLogout }) => {
                     </div>
                     
                     <div className="flex gap-4 relative z-10">
-                        <button className="h-14 px-8 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-teal-500/20 active:scale-95 transition-all">{t('Approve Entry')}</button>
-                        <button className="h-14 px-8 bg-white dark:bg-slate-950 text-rose-600 border border-rose-100 dark:border-rose-900/30 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 transition-all active:scale-95">{t('Decline')}</button>
+                        <button
+                          className={cn(
+                            "h-14 px-8 bg-teal-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-teal-500/20 transition-all",
+                            isApproving
+                              ? "opacity-60 cursor-not-allowed bg-teal-600/80" 
+                              : "hover:bg-teal-700 active:scale-95"
+                          )}
+                          onClick={handleApprove}
+                          disabled={isApproving}
+                          aria-disabled={isApproving}
+                        >
+                          {isApproving ? (
+                            <span className="flex items-center justify-center gap-2">
+                              <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              {t('Approving...')}
+                            </span>
+                          ) : (
+                            t('Approve Entry')
+                          )}
+                        </button>
+                        <button
+                          className={cn(
+                            "h-14 px-8 bg-white dark:bg-slate-950 text-rose-600 border border-rose-100 dark:border-rose-900/30 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all",
+                            isDeclining
+                              ? "opacity-60 cursor-not-allowed bg-rose-50/50 dark:bg-rose-900/20" 
+                              : "hover:bg-rose-50 dark:hover:bg-rose-900/30 active:scale-95"
+                          )}
+                          onClick={handleDecline}
+                          disabled={isDeclining}
+                          aria-disabled={isDeclining}
+                        >
+                          {isDeclining ? (
+                            <span className="flex items-center justify-center gap-2">
+                              <span className="w-3 h-3 border-2 border-rose-600 border-t-transparent rounded-full animate-spin" />
+                              {t('Declining...')}
+                            </span>
+                          ) : (
+                            t('Decline')
+                          )}
+                        </button>
                     </div>
 
                     <div className="absolute top-0 right-0 h-64 w-64 bg-teal-500/5 rounded-bl-full transform translate-x-10 -translate-y-10 transition-transform group-hover:scale-110" />
