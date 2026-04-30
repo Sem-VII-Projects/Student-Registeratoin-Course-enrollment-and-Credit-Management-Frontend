@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import nrcCatalog from '../data/nrc.json';
 import { getStudentSession, persistStudentSession } from '../src/utils/studentStorage';
@@ -162,7 +163,31 @@ const parseDateParts = (rawDate: any) => {
   };
 };
 
+const IconBadge: React.FC<{ icon: string; tone?: 'primary' | 'teal' | 'indigo' | 'cyan' | 'rose' | 'emerald' }> = ({ icon, tone = 'primary' }) => {
+  const tones = {
+    primary: 'bg-slate-900 text-white',
+    teal: 'bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 border-teal-100 dark:border-teal-900/30',
+    indigo: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/30',
+    cyan: 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400 border-cyan-100 dark:border-cyan-900/30',
+    rose: 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-900/30',
+    emerald: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/30',
+  };
+  return (
+    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border shadow-sm ${tones[tone]}`}>
+      <span className="material-icons-round text-xl">{icon}</span>
+    </div>
+  );
+};
+
+const DataField: React.FC<{ label: string; value: string | number; placeholder?: string }> = ({ label, value, placeholder = 'N/A' }) => (
+  <div className="space-y-1.5">
+    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{label}</p>
+    <p className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">{value || placeholder}</p>
+  </div>
+);
+
 const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { step } = useParams<{ step?: string }>();
   const [student, setStudent] = useState<any>(null);
@@ -1034,930 +1059,682 @@ const handleSubmit = async () => {
   };
 
   if (!student) {
-    return <div className="loading">Loading...</div>;
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-slate-200 border-t-teal-600 rounded-full animate-spin" />
+          <p className="text-slate-500 font-black uppercase tracking-widest text-[10px] animate-pulse">{t('Loading...')}</p>
+        </div>
+      </div>
+    );
   }
 
+  const sections = [
+    { id: 1, label: t('Section 1: Student Information'), icon: 'person' },
+    { id: 2, label: t('Section 2: Father\'s Information'), icon: 'hail' },
+    { id: 3, label: t('Section 3: Mother\'s Information'), icon: 'woman' },
+    { id: 4, label: t('Section 4: Parent Agreement Form'), icon: 'handshake' },
+    { id: 5, label: t('Section 5: School Terms and Conditions'), icon: 'gavel' },
+    { id: 6, label: t('Section 6: Student Confession'), icon: 'verified_user' },
+  ];
+
+  const currentSectionData = sections.find(s => s.id === currentSection);
+
   return (
-    <div className="details-form-container">
-      {/* Header */}
-      <header className="form-header">
-        <div className="header-content">
-          <h1>Student Details Form</h1>
-          <p>Complete your student information</p>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans selection:bg-teal-600 selection:text-white pb-20">
+      {/* BACKGROUND ACCENTS */}
+      <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-teal-500/[0.03] dark:bg-teal-500/[0.02] rounded-full blur-[100px] pointer-events-none translate-x-1/2 -translate-y-1/2" />
+      <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-indigo-500/[0.03] dark:bg-indigo-500/[0.02] rounded-full blur-[100px] pointer-events-none -translate-x-1/2 translate-y-1/2" />
+
+      {/* HEADER */}
+      <header className="h-24 flex items-center justify-between px-10 border-b border-slate-200/60 dark:border-slate-800/60 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl sticky top-0 z-50">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center shadow-lg">
+            <span className="material-icons-round text-white">school</span>
+          </div>
+          <div>
+            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight uppercase leading-none mb-1">{t('Student Details Form')}</h1>
+            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('Complete your student information')}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-full border border-slate-200/50 dark:border-slate-700/50">
+            <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
+            <span className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">
+              {t('Step')} {currentSection} / 6
+            </span>
+          </div>
+          <button 
+            onClick={() => navigate('/student/dashboard')}
+            className="w-10 h-10 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition-all text-slate-400 hover:text-slate-900 active:scale-90"
+          >
+            <span className="material-icons-round">close</span>
+          </button>
         </div>
       </header>
 
-      {/* Progress Bar */}
-      <div className="progress-container">
-        <div className="progress-bar">
-          {[1, 2, 3, 4, 5, 6].map((stepNumber) => (
-            <div
-              key={stepNumber}
-              className={`progress-step ${currentSection >= stepNumber ? 'active' : ''} ${currentSection === stepNumber ? 'current' : ''}`}
-            >
-              <div className="step-number">{stepNumber}</div>
-              <div className="step-label">Section {stepNumber}</div>
+      {/* PROGRESS TIMELINE */}
+      <div className="max-w-5xl mx-auto px-10 py-12">
+        <div className="relative flex justify-between">
+          <div className="absolute top-1/2 left-0 w-full h-0.5 bg-slate-200 dark:bg-slate-800 -translate-y-1/2 z-0" />
+          <div 
+            className="absolute top-1/2 left-0 h-0.5 bg-teal-600 -translate-y-1/2 z-0 transition-all duration-700 ease-out" 
+            style={{ width: `${((currentSection - 1) / 5) * 100}%` }}
+          />
+          
+          {sections.map((s) => (
+            <div key={s.id} className="relative z-10 flex flex-col items-center gap-3">
+              <button
+                onClick={() => currentSection > s.id && setCurrentSection(s.id)}
+                disabled={currentSection <= s.id}
+                className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-500 ${
+                  currentSection === s.id 
+                    ? 'bg-slate-900 text-white shadow-xl scale-110' 
+                    : currentSection > s.id 
+                      ? 'bg-teal-600 text-white' 
+                      : 'bg-white dark:bg-slate-900 text-slate-300 dark:text-slate-600 border border-slate-100 dark:border-slate-800'
+                }`}
+              >
+                <span className="material-icons-round text-lg">{s.icon}</span>
+              </button>
+              <span className={`text-[9px] font-black uppercase tracking-widest hidden lg:block ${
+                currentSection === s.id ? 'text-slate-900 dark:text-white' : 'text-slate-400'
+              }`}>
+                {t('Section')} {s.id}
+              </span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Form Content */}
-      <div className="form-content">
-        <div className="form-card">
-
-          {/* SECTION 1: Student Information */}
-          {currentSection === 1 && (
-            <div className="section">
-              <h2 className="section-title">Section 1: Student Information</h2>
-              <p className="section-subtitle">Provide your personal details</p>
-
-              {/* Passport Photo */}
-              <div className="form-group">
-                <label>Passport Photo: <span className="required">*</span></label>
-                <div className="image-upload-box">
-                  {formData.passportPhotoPreview ? (
-                    <div className="image-preview">
-                      <img src={formData.passportPhotoPreview} alt="Passport" />
-                      <button 
-                        type="button" 
-                        className="btn-change-image"
-                        onClick={() => document.getElementById('passportPhoto')?.click()}
-                      >
-                        Change
-                      </button>
-                    </div>
-                  ) : (
-                    <label htmlFor="passportPhoto" className="upload-label">
-                      <div className="upload-icon">Upload</div>
-                      <p>Click to upload photo</p>
-                      <small>(Max 2MB, JPG/PNG)</small>
-                    </label>
-                  )}
-                  <input
-                    type="file"
-                    id="passportPhoto"
-                    accept="image/*"
-                    onChange={(e) => handleFileChange(e, 'passportPhoto', 'passportPhotoPreview')}
-                    style={{ display: 'none' }}
-                  />
-                </div>
-              </div>
-
-              {/* Student Names */}
-              <div className="form-row">
-                <div className="form-group">
-                  <label>အမည် (မြန်မာ): <span className="required">*</span></label>
-                  <input
-                    type="text"
-                    name="studentNameMM"
-                    value={formData.studentNameMM}
-                    onChange={handleChange}
-                    placeholder="မြန်မာအမည်"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Name (English): <span className="required">*</span></label>
-                  <input
-                    type="text"
-                    name="studentNameEN"
-                    value={formData.studentNameEN}
-                    onChange={handleChange}
-                    placeholder="Maung Maung"
-                  />
-                </div>
-              </div>
-
-              {/* NRC Images */}
-              <div className="form-group">
-                <label>မှတ်ပုံတင် ဓာတ်ပုံ (NRC Images): <span className="required">*</span></label>
-                <div className="image-row">
-                  {/* NRC Front */}
-                  <div className="image-upload-box half">
-                    {formData.nrcFrontPreview ? (
-                      <div className="image-preview">
-                        <img src={formData.nrcFrontPreview} alt="NRC Front" />
-                        <button 
-                          type="button" 
-                          className="btn-change-image"
-                          onClick={() => document.getElementById('nrcFront')?.click()}
-                        >
-                          Change
-                        </button>
-                      </div>
-                    ) : (
-                      <label htmlFor="nrcFront" className="upload-label">
-                        <div className="upload-icon">📄</div>
-                        <p>NRC Front (ရှေ့)</p>
-                      </label>
-                    )}
-                    <input
-                      type="file"
-                      id="nrcFront"
-                      accept="image/*"
-                      onChange={(e) => handleFileChange(e, 'nrcFrontImage', 'nrcFrontPreview')}
-                      style={{ display: 'none' }}
-                    />
-                  </div>
-
-                  {/* NRC Back */}
-                  <div className="image-upload-box half">
-                    {formData.nrcBackPreview ? (
-                      <div className="image-preview">
-                        <img src={formData.nrcBackPreview} alt="NRC Back" />
-                        <button 
-                          type="button" 
-                          className="btn-change-image"
-                          onClick={() => document.getElementById('nrcBack')?.click()}
-                        >
-                          Change
-                        </button>
-                      </div>
-                    ) : (
-                      <label htmlFor="nrcBack" className="upload-label">
-                        <div className="upload-icon">📄</div>
-                        <p>NRC Back (နောက်)</p>
-                      </label>
-                    )}
-                    <input
-                      type="file"
-                      id="nrcBack"
-                      accept="image/*"
-                      onChange={(e) => handleFileChange(e, 'nrcBackImage', 'nrcBackPreview')}
-                      style={{ display: 'none' }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Personal Details */}
-              <div className="form-row">
-                <div className="form-group">
-                  <label>ဘာသာ (Religion):</label>
-                  <input
-                    type="text"
-                    name="religion"
-                    value={formData.religion}
-                    onChange={handleChange}
-                    placeholder="ဗုဒ္ဓ"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>လူမျိုး (Ethnicity):</label>
-                  <input
-                    type="text"
-                    name="ethnic"
-                    value={formData.ethnic}
-                    onChange={handleChange}
-                    placeholder="ဗမာ"
-                  />
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>မွေးဖွားရာဌာန (Birthplace):</label>
-                  <input
-                    type="text"
-                    name="birthplace"
-                    value={formData.birthplace}
-                    onChange={handleChange}
-                    placeholder="ရန်ကုန်"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>သွေးအမျိုးအစား (Blood Type):</label>
-                  <select name="bloodType" value={formData.bloodType} onChange={handleChange}>
-                    <option value="">ရွေးချယ်ပါ</option>
-                    <option value="A">A</option>
-                    <option value="B">B</option>
-                    <option value="AB">AB</option>
-                    <option value="O">O</option>
-                  </select>
-                </div>
-              </div>
-
-                            <div className="form-row">
-                <div className="form-group">
-                  <label>Year: <span className="required">*</span></label>
-                  <select name="currentYear" value={formData.currentYear} onChange={handleChange}>
-                    <option value="">Select year</option>
-                    {yearOptions.map((item) => (
-                      <option key={item.value} value={item.value}>{item.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Semester: <span className="required">*</span></label>
-                  <select
-                    name="academicSemester"
-                    value={formData.academicSemester}
-                    onChange={handleChange}
-                    disabled={!formData.currentYear}
-                  >
-                    <option value="">{formData.currentYear ? 'Select semester' : 'Select year first'}</option>
-                    {semesterOptions.map((item) => (
-                      <option key={item} value={item}>{item}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {majorsForSelectedYear.length > 0 && (
-                <div className="form-group">
-                  <label>Major: <span className="required">*</span></label>
-                  <select name="major" value={formData.major} onChange={handleChange}>
-                    <option value="">Select major</option>
-                    {majorsForSelectedYear.map((item: string) => (
-                      <option key={item} value={item}>{item}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Contact Info */}
-              <div className="form-group">
-                <label>လိပ်စာ (Address):</label>
-                <textarea
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  rows={3}
-                  placeholder="အပြည့်အစုံ လိပ်စာ ရေးပါ"
-                />
-              </div>
+      {/* MAIN FORM CARD */}
+      <main className="max-w-4xl mx-auto px-6">
+        <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/50 dark:shadow-none p-10 relative overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
+          
+          {/* Section Header */}
+          <div className="flex items-center gap-6 mb-12">
+            <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-3xl flex items-center justify-center border border-slate-100 dark:border-slate-700 shadow-inner">
+              <span className="material-icons-round text-3xl text-teal-600">{currentSectionData?.icon}</span>
             </div>
-          )}
+            <div>
+              <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{currentSectionData?.label}</h2>
+              <p className="text-sm font-medium text-slate-400 dark:text-slate-500">{t('Provide your personal details')}</p>
+            </div>
+          </div>
 
-          {/* SECTION 2: Father Information */}
-          {currentSection === 2 && (
-            <div className="section">
-              <h2 className="section-title">Section 2: Father's Information</h2>
-              <p className="section-subtitle">Father's details</p>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Father Name (Myanmar): <span className="required">*</span></label>
-                  <input
-                    type="text"
-                    name="fatherNameMM"
-                    value={formData.fatherNameMM}
-                    onChange={handleChange}
-                    placeholder="Enter name"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Father Name (English): <span className="required">*</span></label>
-                  <input
-                    type="text"
-                    name="fatherNameEN"
-                    value={formData.fatherNameEN}
-                    onChange={handleChange}
-                    placeholder="U Aung Aung"
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Occupation:</label>
-                <input
-                  type="text"
-                  name="fatherOccupation"
-                  value={formData.fatherOccupation}
-                  onChange={handleChange}
-                  placeholder="e.g., Teacher"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>NRC Number:</label>
-                <div className="nrc-group">
-                  <select
-                    name="fatherNrcRegion"
-                    value={formData.fatherNrcRegion}
-                    onChange={handleChange}
-                  >
-                    <option value="">Region</option>
-                    {nrcRegions.map((region) => (
-                      <option key={region} value={region}>{toMyanmarDigits(region)}</option>
-                    ))}
-                  </select>
-                  <select
-                    name="fatherNrcTownship"
-                    value={formData.fatherNrcTownship}
-                    onChange={handleChange}
-                  >
-                    <option value="">Township</option>
-                    {fatherTownships.map((township: any) => (
-                      <option key={township.code} value={township.code}>
-                        {township.code} - {township.nameMm || township.nameEn}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    name="fatherNrcType"
-                    value={formData.fatherNrcType}
-                    onChange={handleChange}
-                  >
-                    <option value="">Type</option>
-                    {nrcTypes.map((type) => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
-                  <input
-                    type="text"
-                    name="fatherNrcNumber"
-                    value={formData.fatherNrcNumber}
-                    onChange={handleChange}
-                    placeholder="6 digits"
-                    maxLength={6}
-                  />
-                </div>
-              </div>
-
-              {/* Father NRC Images */}
-              <div className="form-group">
-                <label>Father's NRC Photo: <span className="required">*</span></label>
-                <div className="image-row">
-                  {/* Father NRC Front */}
-                  <div className="image-upload-box half">
-                    {formData.fatherNrcFrontPreview ? (
-                      <div className="image-preview">
-                        <img src={formData.fatherNrcFrontPreview} alt="Father NRC Front" />
-                        <button 
-                          type="button" 
-                          className="btn-change-image"
-                          onClick={() => document.getElementById('fatherNrcFront')?.click()}
-                        >
-                          Change
-                        </button>
-                      </div>
+          <div className="space-y-12">
+            {/* SECTION 1: Student Information */}
+            {currentSection === 1 && (
+              <div className="animate-in fade-in duration-500 space-y-10">
+                
+                {/* Passport Photo */}
+                <div className="group">
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4">{t('Passport Photo')} <span className="text-rose-500">*</span></p>
+                  <div className="relative w-48 h-60 rounded-[32px] overflow-hidden border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-teal-600/50 transition-all bg-slate-50/50 dark:bg-slate-950/50 flex flex-col items-center justify-center gap-4">
+                    {formData.passportPhotoPreview ? (
+                      <>
+                        <img src={formData.passportPhotoPreview} alt="Passport" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <button 
+                            type="button" 
+                            className="bg-white text-slate-900 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-transform"
+                            onClick={() => document.getElementById('passportPhoto')?.click()}
+                          >
+                            {t('Change')}
+                          </button>
+                        </div>
+                      </>
                     ) : (
-                      <label htmlFor="fatherNrcFront" className="upload-label">
-                        <div className="upload-icon">Upload</div>
-                        <p>NRC Front</p>
+                      <label htmlFor="passportPhoto" className="cursor-pointer flex flex-col items-center text-center px-6">
+                        <span className="material-icons-round text-4xl text-slate-300 dark:text-slate-700 mb-2">add_a_photo</span>
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest leading-tight">{t('Click to upload photo')}</p>
+                        <p className="text-[9px] font-medium text-slate-400 mt-1">(Max 2MB, JPG/PNG)</p>
                       </label>
                     )}
+                    <input type="file" id="passportPhoto" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'passportPhoto', 'passportPhotoPreview')} />
+                  </div>
+                </div>
+
+                {/* Names Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{t('Name (Myanmar)')} <span className="text-rose-500">*</span></p>
                     <input
-                      type="file"
-                      id="fatherNrcFront"
-                      accept="image/*"
-                      onChange={(e) => handleFileChange(e, 'fatherNrcFront', 'fatherNrcFrontPreview')}
-                      style={{ display: 'none' }}
+                      type="text"
+                      name="studentNameMM"
+                      value={formData.studentNameMM}
+                      onChange={handleChange}
+                      placeholder={t('Name (Myanmar)')}
+                      className="w-full h-14 px-6 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:ring-4 focus:ring-teal-600/10 focus:border-teal-600 transition-all font-medium text-slate-900 dark:text-white"
                     />
                   </div>
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{t('Name (English)')} <span className="text-rose-500">*</span></p>
+                    <input
+                      type="text"
+                      name="studentNameEN"
+                      value={formData.studentNameEN}
+                      onChange={handleChange}
+                      placeholder="Maung Maung"
+                      className="w-full h-14 px-6 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:ring-4 focus:ring-teal-600/10 focus:border-teal-600 transition-all font-medium text-slate-900 dark:text-white"
+                    />
+                  </div>
+                </div>
 
-                  {/* Father NRC Back */}
-                  <div className="image-upload-box half">
-                    {formData.fatherNrcBackPreview ? (
-                      <div className="image-preview">
-                        <img src={formData.fatherNrcBackPreview} alt="Father NRC Back" />
-                        <button 
-                          type="button" 
-                          className="btn-change-image"
-                          onClick={() => document.getElementById('fatherNrcBack')?.click()}
-                        >
-                          Change
-                        </button>
+                {/* NRC SECTION */}
+                <div className="space-y-6">
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{t('NRC Images')} <span className="text-rose-500">*</span></p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Front */}
+                    <div className="relative group aspect-video rounded-3xl overflow-hidden border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50">
+                      {formData.nrcFrontPreview ? (
+                        <>
+                          <img src={formData.nrcFrontPreview} alt="NRC Front" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <button type="button" className="bg-white text-slate-900 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-transform" onClick={() => document.getElementById('nrcFront')?.click()}>{t('Change')}</button>
+                          </div>
+                        </>
+                      ) : (
+                        <label htmlFor="nrcFront" className="cursor-pointer h-full flex flex-col items-center justify-center text-center p-6">
+                          <span className="material-icons-round text-3xl text-slate-300 dark:text-slate-700 mb-2">fingerprint</span>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('NRC Front (Front)')}</p>
+                        </label>
+                      )}
+                      <input type="file" id="nrcFront" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'nrcFrontImage', 'nrcFrontPreview')} />
+                    </div>
+                    {/* Back */}
+                    <div className="relative group aspect-video rounded-3xl overflow-hidden border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50">
+                      {formData.nrcBackPreview ? (
+                        <>
+                          <img src={formData.nrcBackPreview} alt="NRC Back" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <button type="button" className="bg-white text-slate-900 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-transform" onClick={() => document.getElementById('nrcBack')?.click()}>{t('Change')}</button>
+                          </div>
+                        </>
+                      ) : (
+                        <label htmlFor="nrcBack" className="cursor-pointer h-full flex flex-col items-center justify-center text-center p-6">
+                          <span className="material-icons-round text-3xl text-slate-300 dark:text-slate-700 mb-2">fingerprint</span>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('NRC Back (Back)')}</p>
+                        </label>
+                      )}
+                      <input type="file" id="nrcBack" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'nrcBackImage', 'nrcBackPreview')} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Additional Info Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="space-y-2.5">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{t('Religion')}</p>
+                    <input type="text" name="religion" value={formData.religion} onChange={handleChange} className="w-full h-12 px-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:ring-4 focus:ring-teal-600/10 transition-all font-bold text-sm" placeholder="ဗုဒ္ဓ" />
+                  </div>
+                  <div className="space-y-2.5">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{t('Ethnicity')}</p>
+                    <input type="text" name="ethnic" value={formData.ethnic} onChange={handleChange} className="w-full h-12 px-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:ring-4 focus:ring-teal-600/10 transition-all font-bold text-sm" placeholder="ဗမာ" />
+                  </div>
+                  <div className="space-y-2.5">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{t('Birthplace')}</p>
+                    <input type="text" name="birthplace" value={formData.birthplace} onChange={handleChange} className="w-full h-12 px-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:ring-4 focus:ring-teal-600/10 transition-all font-bold text-sm" placeholder="ရန်ကုန်" />
+                  </div>
+                  <div className="space-y-2.5">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{t('Blood Type')}</p>
+                    <select name="bloodType" value={formData.bloodType} onChange={handleChange} className="w-full h-12 px-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:ring-4 focus:ring-teal-600/10 transition-all font-bold text-sm">
+                      <option value="">{t('Select blood type')}</option>
+                      <option value="A">A</option>
+                      <option value="B">B</option>
+                      <option value="AB">AB</option>
+                      <option value="O">O</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Academic Placement */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-50 dark:border-slate-800/50">
+                  <div className="space-y-2.5">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{t('Year')} <span className="text-rose-500">*</span></p>
+                    <select name="currentYear" value={formData.currentYear} onChange={handleChange} className="w-full h-12 px-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:ring-4 focus:ring-teal-600/10 transition-all font-bold text-sm">
+                      <option value="">{t('Select year')}</option>
+                      {yearOptions.map((item) => (
+                        <option key={item.value} value={item.value}>{item.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2.5">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{t('Semester')} <span className="text-rose-500">*</span></p>
+                    <select name="academicSemester" value={formData.academicSemester} onChange={handleChange} disabled={!formData.currentYear} className="w-full h-12 px-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:ring-4 focus:ring-teal-600/10 transition-all font-bold text-sm disabled:opacity-50">
+                      <option value="">{formData.currentYear ? t('Select semester') : t('Select year first')}</option>
+                      {semesterOptions.map((item) => (
+                        <option key={item} value={item}>{item}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {majorsForSelectedYear.length > 0 && (
+                  <div className="space-y-2.5">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{t('Major')} <span className="text-rose-500">*</span></p>
+                    <select name="major" value={formData.major} onChange={handleChange} className="w-full h-14 px-6 rounded-2xl bg-teal-50 dark:bg-teal-900/10 border border-teal-100 dark:border-teal-900/30 focus:ring-4 focus:ring-teal-600/10 transition-all font-black text-teal-600">
+                      <option value="">{t('Select major')}</option>
+                      {majorsForSelectedYear.map((item: string) => (
+                        <option key={item} value={item}>{item}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Full Address */}
+                <div className="space-y-2.5">
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{t('Address')}</p>
+                  <textarea
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    rows={3}
+                    placeholder={t('Enter full address')}
+                    className="w-full px-6 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:ring-4 focus:ring-teal-600/10 transition-all font-medium text-sm leading-relaxed"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* SECTION 2 & 3: Parent Information */}
+            {(currentSection === 2 || currentSection === 3) && (
+              <div className="animate-in fade-in duration-500 space-y-10">
+                {/* Section specific fields (Father or Mother) */}
+                {(() => {
+                  const isFather = currentSection === 2;
+                  const prefix = isFather ? 'father' : 'mother';
+                  const townships = isFather ? fatherTownships : motherTownships;
+                  
+                  return (
+                    <div className="space-y-10">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-3">
+                          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{isFather ? t('Father Name (Myanmar)') : t('Mother Name (Myanmar)')} <span className="text-rose-500">*</span></p>
+                          <input type="text" name={`${prefix}NameMM`} value={formData[`${prefix}NameMM`]} onChange={handleChange} className="w-full h-14 px-6 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:ring-4 focus:ring-teal-600/10 transition-all font-medium text-slate-900 dark:text-white" placeholder="အမည်" />
+                        </div>
+                        <div className="space-y-3">
+                          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{isFather ? t('Father Name (English)') : t('Mother Name (English)')} <span className="text-rose-500">*</span></p>
+                          <input type="text" name={`${prefix}NameEN`} value={formData[`${prefix}NameEN`]} onChange={handleChange} className="w-full h-14 px-6 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:ring-4 focus:ring-teal-600/10 transition-all font-medium text-slate-900 dark:text-white" placeholder="Name" />
+                        </div>
                       </div>
-                    ) : (
-                      <label htmlFor="fatherNrcBack" className="upload-label">
-                        <div className="upload-icon">Upload</div>
-                        <p>NRC Back</p>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-3">
+                          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{t('Occupation')}</p>
+                          <input type="text" name={`${prefix}Occupation`} value={formData[`${prefix}Occupation`]} onChange={handleChange} className="w-full h-14 px-6 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:ring-4 focus:ring-teal-600/10 transition-all font-medium" placeholder={t('e.g., Teacher')} />
+                        </div>
+                        <div className="space-y-3">
+                          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{t('Phone')}</p>
+                          <input type="tel" name={`${prefix}Phone`} value={formData[`${prefix}Phone`]} onChange={handleChange} className="w-full h-14 px-6 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:ring-4 focus:ring-teal-600/10 transition-all font-bold text-sm" placeholder="09xxxxxxxxx" />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-3">
+                          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{t('Religion')}</p>
+                          <input type="text" name={`${prefix}Religion`} value={formData[`${prefix}Religion`]} onChange={handleChange} className="w-full h-14 px-6 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:ring-4 focus:ring-teal-600/10 transition-all font-medium text-slate-900 dark:text-white" placeholder="ဗုဒ္ဓ" />
+                        </div>
+                        <div className="space-y-3">
+                          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{t('Ethnicity')}</p>
+                          <input type="text" name={`${prefix}Ethnic`} value={formData[`${prefix}Ethnic`]} onChange={handleChange} className="w-full h-14 px-6 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:ring-4 focus:ring-teal-600/10 transition-all font-medium text-slate-900 dark:text-white" placeholder="ဗမာ" />
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{t('Birthplace')}</p>
+                        <input type="text" name={`${prefix}Birthplace`} value={formData[`${prefix}Birthplace`]} onChange={handleChange} className="w-full h-14 px-6 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:ring-4 focus:ring-teal-600/10 transition-all font-medium text-slate-900 dark:text-white" placeholder="ရန်ကုန်" />
+                      </div>
+
+                      {/* NRC GROUP */}
+                      <div className="space-y-4">
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{t('NRC Number')} <span className="text-rose-500">*</span></p>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <select name={`${prefix}NrcRegion`} value={formData[`${prefix}NrcRegion`]} onChange={handleChange} className="h-12 px-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:ring-4 focus:ring-teal-600/10 font-bold text-xs">
+                            <option value="">{t('Region')}</option>
+                            {nrcRegions.map((region) => (
+                              <option key={region} value={region}>{toMyanmarDigits(region)}</option>
+                            ))}
+                          </select>
+                          <select name={`${prefix}NrcTownship`} value={formData[`${prefix}NrcTownship`]} onChange={handleChange} className="h-12 px-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:ring-4 focus:ring-teal-600/10 font-bold text-xs">
+                            <option value="">{t('Township')}</option>
+                            {townships.map((township: any) => (
+                              <option key={township.code} value={township.code}>{township.code} - {township.nameMm}</option>
+                            ))}
+                          </select>
+                          <select name={`${prefix}NrcType`} value={formData[`${prefix}NrcType`]} onChange={handleChange} className="h-12 px-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:ring-4 focus:ring-teal-600/10 font-bold text-xs">
+                            <option value="">{t('Type')}</option>
+                            {nrcTypes.map((type) => (
+                              <option key={type} value={type}>{type}</option>
+                            ))}
+                          </select>
+                          <input type="text" name={`${prefix}NrcNumber`} value={formData[`${prefix}NrcNumber`]} onChange={handleChange} placeholder={t('6 digits')} maxLength={6} className="h-12 px-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:ring-4 focus:ring-teal-600/10 font-black text-sm tracking-[0.2em]" />
+                        </div>
+                      </div>
+
+                      {/* Parent NRC Photos */}
+                      <div className="space-y-6">
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{isFather ? t('Father\'s NRC Photo') : t('Mother\'s NRC Photo')} <span className="text-rose-500">*</span></p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* Front */}
+                          <div className="relative group aspect-video rounded-3xl overflow-hidden border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50">
+                            {formData[`${prefix}NrcFrontPreview`] ? (
+                              <>
+                                <img src={formData[`${prefix}NrcFrontPreview`]} alt="NRC Front" className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <button type="button" className="bg-white text-slate-900 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl" onClick={() => document.getElementById(`${prefix}NrcFront`)?.click()}>{t('Change')}</button>
+                                </div>
+                              </>
+                            ) : (
+                              <label htmlFor={`${prefix}NrcFront`} className="cursor-pointer h-full flex flex-col items-center justify-center text-center p-6">
+                                <span className="material-icons-round text-3xl text-slate-300 dark:text-slate-700 mb-2">fingerprint</span>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-tight">{t('NRC Front (Front)')}</p>
+                              </label>
+                            )}
+                            <input type="file" id={`${prefix}NrcFront`} accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, `${prefix}NrcFront`, `${prefix}NrcFrontPreview`)} />
+                          </div>
+                          {/* Back */}
+                          <div className="relative group aspect-video rounded-3xl overflow-hidden border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50">
+                            {formData[`${prefix}NrcBackPreview`] ? (
+                              <>
+                                <img src={formData[`${prefix}NrcBackPreview`]} alt="NRC Back" className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <button type="button" className="bg-white text-slate-900 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl" onClick={() => document.getElementById(`${prefix}NrcBack`)?.click()}>{t('Change')}</button>
+                                </div>
+                              </>
+                            ) : (
+                              <label htmlFor={`${prefix}NrcBack`} className="cursor-pointer h-full flex flex-col items-center justify-center text-center p-6">
+                                <span className="material-icons-round text-3xl text-slate-300 dark:text-slate-700 mb-2">fingerprint</span>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-tight">{t('NRC Back (Back)')}</p>
+                              </label>
+                            )}
+                            <input type="file" id={`${prefix}NrcBack`} accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, `${prefix}NrcBack`, `${prefix}NrcBackPreview`)} />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3 pt-4 border-t border-slate-50 dark:border-slate-800/50">
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{t('Address')}</p>
+                        <textarea
+                          name={`${prefix}Address`}
+                          value={formData[`${prefix}Address`]}
+                          onChange={handleChange}
+                          rows={3}
+                          placeholder={t('Enter full address')}
+                          className="w-full px-6 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:ring-4 focus:ring-teal-600/10 transition-all font-medium text-sm leading-relaxed"
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* SECTION 4: Parent Agreement */}
+            {currentSection === 4 && (
+              <div className="animate-in fade-in duration-500 space-y-12">
+                <div className="space-y-6">
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{t('Who will support your studies?')} <span className="text-rose-500">*</span></p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {['father', 'mother', 'other'].map((opt) => (
+                      <label key={opt} className={`relative flex items-center justify-center h-24 rounded-3xl border-2 transition-all cursor-pointer ${
+                        formData.financialSupporter === opt 
+                          ? 'border-teal-600 bg-teal-50 dark:bg-teal-900/10' 
+                          : 'border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 hover:border-teal-600/30'
+                      }`}>
+                        <input type="radio" name="financialSupporter" value={opt} checked={formData.financialSupporter === opt} onChange={handleChange} className="hidden" />
+                        <span className={`text-xs font-black uppercase tracking-widest ${
+                          formData.financialSupporter === opt ? 'text-teal-600' : 'text-slate-500'
+                        }`}>
+                          {t(opt.charAt(0).toUpperCase() + opt.slice(1))}
+                        </span>
+                        {formData.financialSupporter === opt && (
+                          <div className="absolute top-3 right-3 w-4 h-4 bg-teal-600 rounded-full flex items-center justify-center">
+                            <span className="material-icons-round text-white text-[10px]">check</span>
+                          </div>
+                        )}
                       </label>
-                    )}
-                    <input
-                      type="file"
-                      id="fatherNrcBack"
-                      accept="image/*"
-                      onChange={(e) => handleFileChange(e, 'fatherNrcBack', 'fatherNrcBackPreview')}
-                      style={{ display: 'none' }}
-                    />
+                    ))}
                   </div>
                 </div>
-              </div>
 
-              <div className="form-row">
-                <div className="form-group">
-                  <label>ဘာသာ (Religion):</label>
-                  <input
-                    type="text"
-                    name="fatherReligion"
-                    value={formData.fatherReligion}
-                    onChange={handleChange}
-                    placeholder="ဗုဒ္ဓ"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>လူမျိုး (Ethnicity):</label>
-                  <input
-                    type="text"
-                    name="fatherEthnic"
-                    value={formData.fatherEthnic}
-                    onChange={handleChange}
-                    placeholder="ဗမာ"
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>မွေးဖွားရာဌာန (Birthplace):</label>
-                <input
-                  type="text"
-                  name="fatherBirthplace"
-                  value={formData.fatherBirthplace}
-                  onChange={handleChange}
-                  placeholder="မန္တလေး"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>လိပ်စာ (Address):</label>
-                <textarea
-                  name="fatherAddress"
-                  value={formData.fatherAddress}
-                  onChange={handleChange}
-                  rows={3}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>ဖုန်းနံပါတ် (Phone):</label>
-                <input
-                  type="tel"
-                  name="fatherPhone"
-                  value={formData.fatherPhone}
-                  onChange={handleChange}
-                  placeholder="09xxxxxxxxx"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* SECTION 3: Mother Information */}
-          {currentSection === 3 && (
-            <div className="section">
-              <h2 className="section-title">👩 Section 3: Mother's Information</h2>
-              <p className="section-subtitle">အမေ၏ အချက်အလက်များ</p>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>အမေအမည် (မြန်မာ): <span className="required">*</span></label>
-                  <input
-                    type="text"
-                    name="motherNameMM"
-                    value={formData.motherNameMM}
-                    onChange={handleChange}
-                    placeholder="ဒေါ်မြမြ"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Mother Name (English): <span className="required">*</span></label>
-                  <input
-                    type="text"
-                    name="motherNameEN"
-                    value={formData.motherNameEN}
-                    onChange={handleChange}
-                    placeholder="Daw Mya Mya"
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>အလုပ်အကိုင် (Occupation):</label>
-                <input
-                  type="text"
-                  name="motherOccupation"
-                  value={formData.motherOccupation}
-                  onChange={handleChange}
-                  placeholder="ဥပမာ - ဆရာမ"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>မှတ်ပုံတင်အမှတ် (NRC Number):</label>
-                <div className="nrc-group">
-                  <select
-                    name="motherNrcRegion"
-                    value={formData.motherNrcRegion}
-                    onChange={handleChange}
-                  >
-                    <option value="">Region</option>
-                    {nrcRegions.map((region) => (
-                      <option key={region} value={region}>{toMyanmarDigits(region)}</option>
-                    ))}
-                  </select>
-                  <select
-                    name="motherNrcTownship"
-                    value={formData.motherNrcTownship}
-                    onChange={handleChange}
-                  >
-                    <option value="">Township</option>
-                    {motherTownships.map((township: any) => (
-                      <option key={township.code} value={township.code}>
-                        {township.code} - {township.nameMm || township.nameEn}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    name="motherNrcType"
-                    value={formData.motherNrcType}
-                    onChange={handleChange}
-                  >
-                    <option value="">Type</option>
-                    {nrcTypes.map((type) => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
-                  <input
-                    type="text"
-                    name="motherNrcNumber"
-                    value={formData.motherNrcNumber}
-                    onChange={handleChange}
-                    placeholder="6 digits"
-                    maxLength={6}
-                  />
-                </div>
-              </div>
-
-              {/* Mother NRC Images */}
-              <div className="form-group">
-                <label>အမေ၏ မှတ်ပုံတင် ဓာတ်ပုံ: <span className="required">*</span></label>
-                <div className="image-row">
-                  {/* Mother NRC Front */}
-                  <div className="image-upload-box half">
-                  {formData.motherNrcFrontPreview ? (
-                    <div className="image-preview">
-                      <img src={formData.motherNrcFrontPreview} alt="Mother NRC Front" />
-                      <button 
-                        type="button" 
-                        className="btn-change-image"
-                        onClick={() => document.getElementById('motherNrcFront')?.click()}
-                      >
-                        Change
-                      </button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <label className={`p-8 rounded-[32px] border-2 transition-all cursor-pointer flex flex-col gap-4 ${
+                    formData.needsFinancialAid ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/10' : 'border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50'
+                  }`}>
+                    <div className="flex items-center justify-between w-full">
+                      <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center shadow-sm">
+                        <span className="material-icons-round text-indigo-600">payments</span>
+                      </div>
+                      <input type="checkbox" name="needsFinancialAid" checked={formData.needsFinancialAid} onChange={handleChange} className="w-6 h-6 rounded-lg border-slate-300 text-indigo-600 focus:ring-indigo-600/20" />
                     </div>
-                  ) : (
-                    <label htmlFor="motherNrcFront" className="upload-label">
-                      <div className="upload-icon">Upload</div>
-                      <p>NRC Front (ရှေ့)</p>
-                    </label>
-                  )}
-                  <input
-                    type="file"
-                    id="motherNrcFront"
-                    accept="image/*"
-                    onChange={(e) => handleFileChange(e, 'motherNrcFront', 'motherNrcFrontPreview')}
-                    style={{ display: 'none' }}
-                  />
-                  </div>
-
-                  {/* Mother NRC Back */}
-                  <div className="image-upload-box half">
-                  {formData.motherNrcBackPreview ? (
-                    <div className="image-preview">
-                      <img src={formData.motherNrcBackPreview} alt="Mother NRC Back" />
-                      <button 
-                        type="button" 
-                        className="btn-change-image"
-                        onClick={() => document.getElementById('motherNrcBack')?.click()}
-                      >
-                        Change
-                      </button>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('Financial Support')}</p>
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{t('Needs Financial Aid?')}</h4>
                     </div>
-                  ) : (
-                    <label htmlFor="motherNrcBack" className="upload-label">
-                      <div className="upload-icon">Upload</div>
-                      <p>NRC Back (နောက်)</p>
-                    </label>
-                  )}
-
-                    <input
-                      type="file"
-                      id="motherNrcBack"
-                      accept="image/*"
-                      onChange={(e) => handleFileChange(e, 'motherNrcBack', 'motherNrcBackPreview')}
-                      style={{ display: 'none' }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>ဘာသာ (Religion):</label>
-                  <input
-                    type="text"
-                    name="motherReligion"
-                    value={formData.motherReligion}
-                    onChange={handleChange}
-                    placeholder="ဗုဒ္ဓ"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>လူမျိုး (Ethnicity):</label>
-                  <input
-                    type="text"
-                    name="motherEthnic"
-                    value={formData.motherEthnic}
-                    onChange={handleChange}
-                    placeholder="ဗမာ"
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>မွေးဖွားရာဌာန (Birthplace):</label>
-                <input
-                  type="text"
-                  name="motherBirthplace"
-                  value={formData.motherBirthplace}
-                  onChange={handleChange}
-                  placeholder="ရန်ကုန်"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>လိပ်စာ (Address):</label>
-                <textarea
-                  name="motherAddress"
-                  value={formData.motherAddress}
-                  onChange={handleChange}
-                  rows={3}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>ဖုန်းနံပါတ် (Phone):</label>
-                <input
-                  type="tel"
-                  name="motherPhone"
-                  value={formData.motherPhone}
-                  onChange={handleChange}
-                  placeholder="09xxxxxxxxx"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* SECTION 4: Parent Agreement */}
-          {currentSection === 4 && (
-            <div className="section">
-              <h2 className="section-title">Section 4: Parent Agreement Form</h2>
-              <p className="section-subtitle">မိဘ သဘောတူညီချက်</p>
-
-              {/* Question 1: Financial Supporter */}
-              <div className="form-group">
-                <label className="question-label">
-                  1. သင့်အားတက္ကသိုလ်တွင် ပညာသင်ကြားရန် ငွေကြေးထောက်ပံ့မည့်သူ: <span className="required">*</span>
-                </label>
-                <div className="radio-group-vertical">
-                  <label className="radio-label">
-                    <input
-                      type="radio"
-                      name="financialSupporter"
-                      value="father"
-                      checked={formData.financialSupporter === 'father'}
-                      onChange={handleChange}
-                    />
-                    <span>အဖ (Father)</span>
                   </label>
-                  <label className="radio-label">
-                    <input
-                      type="radio"
-                      name="financialSupporter"
-                      value="mother"
-                      checked={formData.financialSupporter === 'mother'}
-                      onChange={handleChange}
-                    />
-                    <span>အမေ (Mother)</span>
-                  </label>
-                  <label className="radio-label">
-                    <input
-                      type="radio"
-                      name="financialSupporter"
-                      value="other"
-                      checked={formData.financialSupporter === 'other'}
-                      onChange={handleChange}
-                    />
-                    <span>အခြား (Other)</span>
-                  </label>
-                </div>
-              </div>
 
-              {/* Question 2: Financial Aid */}
-              <div className="form-group">
-                <label className="question-label">
-                  2. တက္ကသိုလ်မှ ငွေကြေးအကူအညီ လိုအပ်ပါသလား?
-                </label>
-                <div className="checkbox-group-box">
-                  <label className="checkbox-label-large">
-                    <input
-                      type="checkbox"
-                      name="needsFinancialAid"
-                      checked={formData.needsFinancialAid}
-                      onChange={handleChange}
-                    />
-                    <div className="checkbox-content">
-                      <span className="checkbox-title">လိုအပ်ပါသည်</span>
-                      <span className="checkbox-desc">
-                        (အက်ဒမင်မှ သင့်လျှောက်လွှာကို စစ်ဆေး၍ ဆုံးဖြတ်ပေးပါမည်)
-                      </span>
+                  <label className={`p-8 rounded-[32px] border-2 transition-all cursor-pointer flex flex-col gap-4 ${
+                    formData.needsHostel ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-900/10' : 'border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50'
+                  }`}>
+                    <div className="flex items-center justify-between w-full">
+                      <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center shadow-sm">
+                        <span className="material-icons-round text-emerald-600">apartment</span>
+                      </div>
+                      <input type="checkbox" name="needsHostel" checked={formData.needsHostel} onChange={handleChange} className="w-6 h-6 rounded-lg border-slate-300 text-emerald-600 focus:ring-emerald-600/20" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('Hostel Accommodation')}</p>
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{t('Needs Hostel?')}</h4>
                     </div>
                   </label>
                 </div>
-              </div>
 
-              {/* Question 3: Hostel */}
-              <div className="form-group">
-                <label className="question-label">
-                  3. ဘော်ဒါ (Hostel) လိုအပ်ပါသလား?
-                </label>
-                <div className="checkbox-group-box">
-                  <label className="checkbox-label-large">
-                    <input
-                      type="checkbox"
-                      name="needsHostel"
-                      checked={formData.needsHostel}
-                      onChange={handleChange}
-                    />
-                    <div className="checkbox-content">
-                      <span className="checkbox-title">လိုအပ်ပါသည်</span>
-                      <span className="checkbox-desc">
-                        (ကျောင်းနေထိုင်ခွင့် လိုအပ်ပါသည်)
-                      </span>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              {/* Family Registration Photo (if hostel needed) */}
-              {formData.needsHostel && (
-                <div className="form-group hostel-document">
-                  <label>
-                    အိမ်ထောင်စုစာရင်း ဓာတ်ပုံ (Family Registration):
-                  </label>
-                  <p className="helper-text">Family registration photo is required only when hostel is selected.</p>
-                  <div className="image-upload-box">
-                    {formData.familyRegistrationPreview ? (
-                      <div className="image-preview">
-                        <img src={formData.familyRegistrationPreview} alt="Family Registration" />
-                        <button 
-                          type="button" 
-                          className="btn-change-image"
-                          onClick={() => document.getElementById('familyReg')?.click()}
-                        >
-                          Change
-                        </button>
+                {formData.needsFinancialAid && (
+                  <div className="animate-in fade-in slide-in-from-top-4 duration-500 p-8 rounded-[32px] bg-slate-900 text-white relative overflow-hidden mb-8">
+                    <div className="relative z-10 space-y-6">
+                      <div className="flex items-center gap-4">
+                        <span className="material-icons-round text-indigo-400">upload_file</span>
+                        <h4 className="text-sm font-black uppercase tracking-widest">{t('Income Evidence')}</h4>
                       </div>
-                    ) : (
-                      <label htmlFor="familyReg" className="upload-label">
-                        <div className="upload-icon">Upload</div>
-                        <p>Upload Family Registration</p>
-                        <small>(အိမ်ထောင်စုစာရင်း)</small>
-                      </label>
-                    )}
-                    <input
-                      type="file"
-                      id="familyReg"
-                      accept="image/*"
-                      onChange={(e) => handleFileChange(e, 'familyRegistrationPhoto', 'familyRegistrationPreview')}
-                      style={{ display: 'none' }}
-                    />
+                      <div className="relative group aspect-video md:w-96 rounded-2xl overflow-hidden border-2 border-dashed border-slate-700 bg-slate-800 flex flex-col items-center justify-center">
+                        {formData.financialAidPreview ? (
+                          <>
+                            <img src={formData.financialAidPreview} alt="Income Evidence" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <button type="button" className="bg-white text-slate-900 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl" onClick={() => document.getElementById('financialAidPhoto')?.click()}>{t('Change')}</button>
+                            </div>
+                          </>
+                        ) : (
+                          <label htmlFor="financialAidPhoto" className="cursor-pointer h-full flex flex-col items-center justify-center text-center p-6">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t('Upload Recommendation/Income Evidence')}</p>
+                            <span className="text-[9px] text-slate-500 font-medium">(Required for Financial Aid)</span>
+                          </label>
+                        )}
+                        <input type="file" id="financialAidPhoto" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'financialAidPhoto', 'financialAidPreview')} />
+                      </div>
+                    </div>
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-bl-full transform translate-x-1/2 -translate-y-1/2" />
+                  </div>
+                )}
+
+                {formData.needsHostel && (
+                  <div className="animate-in fade-in slide-in-from-top-4 duration-500 p-8 rounded-[32px] bg-slate-900 text-white relative overflow-hidden">
+                    <div className="relative z-10 space-y-6">
+                      <div className="flex items-center gap-4">
+                        <span className="material-icons-round text-emerald-400">upload_file</span>
+                        <h4 className="text-sm font-black uppercase tracking-widest">{t('Family Registration')}</h4>
+                      </div>
+                      <div className="relative group aspect-video md:w-96 rounded-2xl overflow-hidden border-2 border-dashed border-slate-700 bg-slate-800 flex flex-col items-center justify-center">
+                        {formData.familyRegistrationPreview ? (
+                          <>
+                            <img src={formData.familyRegistrationPreview} alt="Family Reg" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <button type="button" className="bg-white text-slate-900 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl" onClick={() => document.getElementById('familyReg')?.click()}>{t('Change')}</button>
+                            </div>
+                          </>
+                        ) : (
+                          <label htmlFor="familyReg" className="cursor-pointer h-full flex flex-col items-center justify-center text-center p-6">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{t('Upload Family Registration')}</p>
+                            <span className="text-[9px] text-slate-500 font-medium">(Required for Hostel)</span>
+                          </label>
+                        )}
+                        <input type="file" id="familyReg" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'familyRegistrationPhoto', 'familyRegistrationPreview')} />
+                      </div>
+                    </div>
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-bl-full transform translate-x-1/2 -translate-y-1/2" />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* SECTION 5: School Terms */}
+            {currentSection === 5 && (
+              <div className="animate-in fade-in duration-500 space-y-10">
+                <div className="p-10 rounded-[32px] bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 max-h-[400px] overflow-y-auto scrollbar-hide ring-1 ring-slate-100/50">
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight mb-8 flex items-center gap-3">
+                    <span className="w-2 h-8 bg-teal-600 rounded-full" />
+                    University of Information Technology - စည်းကမ်းချက်များ
+                  </h3>
+                  <div className="space-y-6 text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed">
+                    {[
+                      '၁။ ကျောင်းသားသည် တက္ကသိုလ်၏ စည်းကမ်းချက်များကို လိုက်နာရမည်။',
+                      '၂။ သင်တန်းတက်ရောက်ခြင်းတွင် အနည်းဆုံး ၇၅% တက်ရောက်ရမည်။',
+                      '၃။ စာမေးပွဲများတွင် အဝတ်အစားသတ်မှတ်ချက်နှင့်အညီ ဝင်ရောက်ရမည်။',
+                      '၄။ ကျောင်းပိုင်ဆိုင်မှုများကို မထိခိုက်စေရ၊ ထိခိုက်ပါက ပြန်လည်ပြင်ဆင်ပေးရမည်။',
+                      '၅။ အခြားကျောင်းသားများ၏ အခွင့်အရေးများကို လေးစားရမည်။',
+                      '၆။ စာသင်ကြားရေး လုပ်ငန်းစဉ်များကို ဂရုတစိုက် လုပ်ဆောင်ရမည်။',
+                      '၇။ တက္ကသိုလ်၏ မျက်နှာသာကို ထိခိုက်စေသည့် လုပ်ရပ်များ မပြုလုပ်ရ။',
+                      '၈။ သတ်မှတ်ထားသော စာရင်းကြေးများကို အချိန်မီ ပေးချေရမည်။',
+                      '၉။ ကျောင်းထုတ်ခံရပါက ပြန်လည်လျှောက်ထားခွင့် မရှိပါ။',
+                      '၁၀။ ဤစည်းကမ်းချက်များကို ချိုးဖောက်ပါက သင့်လျော်သော အရေးယူမှု ခံရမည်။'
+                    ].map((term, i) => (
+                      <div key={i} className="flex gap-4 p-4 rounded-2xl hover:bg-white dark:hover:bg-slate-900 transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-800 group">
+                        <span className="text-teal-600 font-black group-hover:scale-110 transition-transform">{i+1}</span>
+                        <p>{term}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              )}
-            </div>
-          )}
 
-          {/* SECTION 5: School Terms */}
-          {currentSection === 5 && (
-            <div className="section">
-              <h2 className="section-title">Section 5: School Terms and Conditions</h2>
-              <p className="section-subtitle">ကျောင်းစည်းကမ်းများ</p>
-
-              <div className="terms-box">
-                <h3>University of Information Technology - စည်းကမ်းချက်များ</h3>
-                <ul className="terms-list">
-                  <li>၁။ ကျောင်းသားသည် တက္ကသိုလ်၏ စည်းကမ်းချက်များကို လိုက်နာရမည်။</li>
-                  <li>၂။ သင်တန်းတက်ရောက်ခြင်းတွင် အနည်းဆုံး ၇၅% တက်ရောက်ရမည်။</li>
-                  <li>၃။ စာမေးပွဲများတွင် အဝတ်အစားသတ်မှတ်ချက်နှင့်အညီ ဝင်ရောက်ရမည်။</li>
-                  <li>၄။ ကျောင်းပိုင်ဆိုင်မှုများကို မထိခိုက်စေရ၊ ထိခိုက်ပါက ပြန်လည်ပြင်ဆင်ပေးရမည်။</li>
-                  <li>၅။ အခြားကျောင်းသားများ၏ အခွင့်အရေးများကို လေးစားရမည်။</li>
-                  <li>၆။ စာသင်ကြားရေး လုပ်ငန်းစဉ်များကို ဂရုတစိုက် လုပ်ဆောင်ရမည်။</li>
-                  <li>၇။ တက္ကသိုလ်၏ မျက်နှာသာကို ထိခိုက်စေသည့် လုပ်ရပ်များ မပြုလုပ်ရ။</li>
-                  <li>၈။ သတ်မှတ်ထားသော စာရင်းကြေးများကို အချိန်မီ ပေးချေရမည်။</li>
-                  <li>၉။ ကျောင်းထုတ်ခံရပါက ပြန်လည်လျှောက်ထားခွင့် မရှိပါ။</li>
-                  <li>၁၀။ ဤစည်းကမ်းချက်များကို ချိုးဖောက်ပါက သင့်လျော်သော အရေးယူမှု ခံရမည်။</li>
-                </ul>
-              </div>
-
-              <div className="checkbox-group-box acceptance">
-                <label className="checkbox-label-large">
-                  <input
-                    type="checkbox"
-                    name="schoolTermsAccepted"
-                    checked={formData.schoolTermsAccepted}
-                    onChange={handleChange}
-                  />
-                  <div className="checkbox-content">
-                    <span className="checkbox-title">
-                      အထက်ပါ ကျောင်းစည်းကမ်းချက်များအားလုံးကို ဖတ်ရှုပြီး သဘောတူပါသည် <span className="required">*</span>
-                    </span>
-                    <span className="checkbox-desc">
-                      I have read and agree to all the school terms and conditions
-                    </span>
+                <label className={`p-8 rounded-[32px] border-2 transition-all cursor-pointer flex items-center gap-6 ${
+                  formData.schoolTermsAccepted ? 'border-teal-600 bg-teal-50 dark:bg-teal-900/10' : 'border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50'
+                }`}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                    formData.schoolTermsAccepted ? 'bg-teal-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-transparent'
+                  }`}>
+                    <span className="material-icons-round text-lg">check</span>
+                  </div>
+                  <input type="checkbox" name="schoolTermsAccepted" checked={formData.schoolTermsAccepted} onChange={handleChange} className="hidden" />
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight leading-tight mb-1">{t('I have read and agree to all the school terms and conditions')}</h4>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('Agree to all terms')}</p>
                   </div>
                 </label>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* SECTION 6: Student Confession */}
-          {currentSection === 6 && (
-            <div className="section">
-              <h2 className="section-title">Section 6: Student Confession</h2>
-              <p className="section-subtitle">ကျောင်းသား ကတိသစ္စာ</p>
-
-              <div className="confession-box">
-                <h3>ကျောင်းသား ကတိသစ္စာ ပြုချက်</h3>
-                <div className="confession-text">
-                  <p>
-                    အကျွန်ုပ်သည် University of Information Technology တွင် ပညာသင်ကြားရာ၌:
-                  </p>
-                  <ul>
-                    <li>တက္ကသိုလ်၏ စည်းကမ်းချက်များကို တင်းကြပ်စွာ လိုက်နာပါမည်။</li>
-                    <li>ဆရာ/ဆရာမများ၏ ညွှန်ကြားချက်များကို လေးစားလိုက်နာပါမည်။</li>
-                    <li>အခြားကျောင်းသားများနှင့် ကောင်းမွန်သော ဆက်ဆံရေး ထိန်းသိမ်းပါမည်။</li>
-                    <li>တက္ကသိုလ်၏ ဂုဏ်သိက္ခာကို မြှင့်တင်ရန် ကြိုးစားပါမည်။</li>
-                    <li>သတ်မှတ်ထားသော စည်းကမ်းချက်များကို ချိုးဖောက်ပါက အပြစ်ဒဏ်ခံယူပါမည်။</li>
-                  </ul>
-                  <p className="confession-footer">
-                    အထက်ပါအချက်များကို ကျွန်ုပ်၏ ကိုယ်ပိုင်ဆန္ဒဖြင့် ကတိပြုပါသည်။
-                  </p>
+            {/* SECTION 6: Student Confession */}
+            {currentSection === 6 && (
+              <div className="animate-in fade-in duration-500 space-y-12">
+                <div className="relative p-12 rounded-[40px] bg-slate-900 text-white overflow-hidden group shadow-2xl">
+                  <div className="relative z-10 space-y-8">
+                    <h3 className="text-2xl font-black uppercase tracking-tight border-b border-white/10 pb-6">{t('Student Confession')}</h3>
+                    <div className="space-y-6 text-sm font-medium text-slate-300 leading-relaxed">
+                      <p className="text-teal-400 font-black uppercase tracking-widest text-[10px]">အကျွန်ုပ်သည် University of Information Technology တွင် ပညာသင်ကြားရာ၌:</p>
+                      <ul className="space-y-4">
+                        <li className="flex gap-4">
+                          <span className="material-icons-round text-teal-500 text-sm">auto_awesome</span>
+                          <span>တက္ကသိုလ်၏ စည်းကမ်းချက်များကို တင်းကြပ်စွာ လိုက်နာပါမည်။</span>
+                        </li>
+                        <li className="flex gap-4">
+                          <span className="material-icons-round text-teal-500 text-sm">auto_awesome</span>
+                          <span>ဆရာ/ဆရာမများ၏ ညွှန်ကြားချက်များကို လေးစားလိုက်နာပါမည်။</span>
+                        </li>
+                        <li className="flex gap-4">
+                          <span className="material-icons-round text-teal-500 text-sm">auto_awesome</span>
+                          <span>အခြားကျောင်းသားများနှင့် ကောင်းမွန်သော ဆက်ဆံရေး ထိန်းသိမ်းပါမည်။</span>
+                        </li>
+                        <li className="flex gap-4">
+                          <span className="material-icons-round text-teal-500 text-sm">auto_awesome</span>
+                          <span>တက္ကသိုလ်၏ ဂုဏ်သိက္ခာကို မြှင့်တင်ရန် ကြိုးစားပါမည်။</span>
+                        </li>
+                      </ul>
+                      <p className="pt-6 text-xs text-slate-400 border-t border-white/5 font-black uppercase tracking-widest">အထက်ပါအချက်များကို ကျွန်ုပ်၏ ကိုယ်ပိုင်ဆန္ဒဖြင့် ကတိပြုပါသည်။</p>
+                    </div>
+                  </div>
+                  <div className="absolute top-0 right-0 p-10 opacity-5 transform group-hover:scale-110 transition-transform">
+                    <span className="material-icons-round text-[200px]">verified</span>
+                  </div>
                 </div>
-              </div>
 
-              <div className="checkbox-group-box acceptance">
-                <label className="checkbox-label-large">
-                  <input
-                    type="checkbox"
-                    name="confessionAccepted"
-                    checked={formData.confessionAccepted}
-                    onChange={handleChange}
-                  />
-                  <div className="checkbox-content">
-                    <span className="checkbox-title">
-                      အထက်ပါ ကတိသစ္စာပြုချက်အား လက်ခံသဘောတူပါသည် <span className="required">*</span>
-                    </span>
-                    <span className="checkbox-desc">
-                      I accept and agree to this confession statement
-                    </span>
+                <label className={`p-8 rounded-[32px] border-2 transition-all cursor-pointer flex items-center gap-6 ${
+                  formData.confessionAccepted ? 'border-teal-600 bg-teal-50 dark:bg-teal-900/10' : 'border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50'
+                }`}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                    formData.confessionAccepted ? 'bg-teal-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-transparent'
+                  }`}>
+                    <span className="material-icons-round text-lg">check</span>
+                  </div>
+                  <input type="checkbox" name="confessionAccepted" checked={formData.confessionAccepted} onChange={handleChange} className="hidden" />
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight leading-tight mb-1">{t('I accept and agree to this confession statement')}</h4>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('Agree to confession statement')}</p>
                   </div>
                 </label>
-              </div>
 
-              <div className="final-note">
-                <p>သတိပြုရန်: Form တင်သွင်းပြီးပါက ပြင်ဆင်၍ မရတော့ပါ။</p>
-                <p>အချက်အလက်များ မှန်ကန်ကြောင်း သေချာပါစေ။</p>
+                <div className="p-8 rounded-[32px] bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30 flex items-start gap-4">
+                  <span className="material-icons-round text-rose-500">warning</span>
+                  <div>
+                    <p className="text-[10px] font-black text-rose-600 uppercase tracking-[0.2em] mb-1">{t('Final Warning: Changes cannot be made after submission.')}</p>
+                    <p className="text-sm font-bold text-rose-900 dark:text-rose-400">{t('Ensure all data is correct.')}</p>
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Navigation Buttons */}
-          <div className="form-navigation">
-            {currentSection > 1 && (
-              <button 
-                type="button" 
-                className="btn btn-secondary"
-                onClick={handlePrevious}
-              >
-                ← Previous
-              </button>
-            )}
+          <div className="flex items-center justify-between mt-16 pt-10 border-t border-slate-100 dark:border-slate-800">
+            <button 
+              type="button" 
+              onClick={handlePrevious}
+              disabled={currentSection === 1}
+              className={`flex items-center gap-2 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 ${
+                currentSection === 1 
+                  ? 'opacity-0 pointer-events-none' 
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-lg'
+              }`}
+            >
+              <span className="material-icons-round text-sm">arrow_back</span>
+              {t('Previous')}
+            </button>
             
             {currentSection < 6 ? (
               <button 
                 type="button" 
-                className="btn btn-primary"
                 onClick={handleNext}
+                className="flex items-center gap-2 bg-slate-900 text-white px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:shadow-2xl hover:-translate-y-0.5 active:scale-95 transition-all"
               >
-                Next →
+                {t('Next')}
+                <span className="material-icons-round text-sm">arrow_forward</span>
               </button>
             ) : (
               <button 
                 type="button" 
-                className="btn btn-submit"
                 onClick={handleSubmit}
                 disabled={loading}
+                className="flex items-center gap-2 bg-teal-600 text-white px-12 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-teal-500/20 hover:bg-teal-700 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none"
               >
-                {loading ? 'တင်သွင်းနေသည်...' : 'Submit Form'}
+                <span className="material-icons-round text-sm">{loading ? 'sync' : 'done_all'}</span>
+                {loading ? t('Submitting...') : t('Submit Form')}
               </button>
             )}
           </div>
 
         </div>
-      </div>
+      </main>
     </div>
   );
 };

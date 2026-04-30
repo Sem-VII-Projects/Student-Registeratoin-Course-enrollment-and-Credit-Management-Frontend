@@ -465,45 +465,47 @@ const handleEnterPortal = () => {
             <p className="username-display">{t('Account:')} <strong>{student.username || student.user_name}</strong></p>
           </section>
 
-          <section className="status-card">
-            <h3>{t('Current Status')}</h3>
-            <div className="status-info">
-              <div className="status-item">
-                <span className="label">{t('Registry Status')}</span>
-                <span className={`badge badge-${String(student.status || '').toLowerCase()}`}>
+          <section className="status-card bg-white dark:bg-slate-900 p-7 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 group relative overflow-hidden">
+            <div className="absolute top-0 right-0 h-24 w-24 bg-teal-500/5 rounded-bl-full transform translate-x-4 -translate-y-4 transition-transform group-hover:scale-110" />
+            <h3 className="text-lg font-black tracking-tight text-slate-900 dark:text-white mb-6">{t('Current Status')}</h3>
+            <div className="status-info grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="status-item flex flex-col gap-2">
+                <span className="label text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{t('Registry Status')}</span>
+                <span className={`badge badge-${String(student.status || '').toLowerCase()} inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em]`}>
                   {statusLabel}
                 </span>
               </div>
-              <div className="status-item">
-                <span className="label">{t('Academic Year')}</span>
-                <span className="value">{currentTerm?.academicYear || '2024-2025'}</span>
+              <div className="status-item flex flex-col gap-2">
+                <span className="label text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{t('Academic Year')}</span>
+                <span className="value text-sm font-bold text-slate-900 dark:text-white">{currentTerm?.academicYear || '2024-2025'}</span>
               </div>
-              <div className="status-item">
-                <span className="label">{t('Semester')}</span>
-                <span className="value">{t(currentTerm?.semester || 'Semester 1')}</span>
+              <div className="status-item flex flex-col gap-2">
+                <span className="label text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{t('Semester')}</span>
+                <span className="value text-sm font-bold text-slate-900 dark:text-white">{t(currentTerm?.semester || 'Semester 1')}</span>
               </div>
-              <div className="status-item">
-                <span className="label">{t('Level')}</span>
-                <span className="value">{yearLevelLabel}</span>
+              <div className="status-item flex flex-col gap-2">
+                <span className="label text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{t('Level')}</span>
+                <span className="value text-sm font-bold text-slate-900 dark:text-white">{yearLevelLabel}</span>
               </div>
             </div>
             {startRouteReason === 'CLOSED' && (
-              <p className="status-note" style={{ marginTop: '20px', color: '#ef4444', fontWeight: '700' }}>
+              <p className="status-note mt-6 text-sm font-bold text-rose-600">
                 {t('Registration cycle is currently closed.')}
               </p>
             )}
           </section>
 
-          <section className="action-cards">
+          <section className="action-cards grid gap-6">
             {showYearChangedRegistrationAction && (
-              <div className="action-card warning">
-                <div className="card-icon">
+              <div className="action-card warning bg-white dark:bg-slate-900 p-7 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 group relative overflow-hidden border-t-4 border-t-amber-500">
+                <div className="absolute top-0 right-0 h-24 w-24 bg-amber-500/5 rounded-bl-full transform translate-x-4 -translate-y-4 transition-transform group-hover:scale-110" />
+                <div className="card-icon shrink-0 p-3 bg-amber-50 rounded-2xl text-amber-600 border border-amber-100/50 mb-4 inline-flex">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 </div>
-                <div className="card-text">
-                  <h3>{yearChangedActionTitle}</h3>
-                  <p>{t('Your record has been advanced to the next academic cycle. Please update your registration details.')}</p>
-                  <button className="btn-primary" onClick={() => navigate(yearChangedTargetRoute)}>
+                <div className="card-text relative z-10">
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">{yearChangedActionTitle}</h3>
+                  <p className="text-slate-500 dark:text-slate-400 mb-6">{t('Your record has been advanced to the next academic cycle. Please update your registration details.')}</p>
+                  <button className="inline-flex items-center justify-center gap-2 rounded-2xl bg-teal-600 px-6 py-3 text-sm font-bold text-white transition-all hover:bg-teal-500 hover:shadow-md hover:-translate-y-0.5" onClick={() => navigate(yearChangedTargetRoute)}>
                     {t('Begin Registration')}
                   </button>
                 </div>
@@ -523,13 +525,32 @@ const handleEnterPortal = () => {
             )}
 
             {student.status === 'APPROVED' && (
-              <div className="action-card success">
+              <div className={`action-card ${(student.rejection_reason || student.rejectionReason) ? 'warning' : 'success'}`}>
                 <div className="card-icon">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                 </div>
                 <div className="card-text">
                   <h3>{(student.rejection_reason || student.rejectionReason) ? t('Action Required: Resubmit') : t('Complete Registration')}</h3>
                   <p>{t('Please provide your comprehensive student details and required documentation.')}</p>
+                  
+                  {(student.rejection_reason || student.rejectionReason) && (
+                    <div className="rejection-reason-box" style={{ 
+                      marginTop: '12px', 
+                      padding: '12px 16px', 
+                      background: 'rgba(245, 158, 11, 0.1)', 
+                      borderRadius: '12px',
+                      borderLeft: '4px solid #f59e0b',
+                      marginBottom: '16px'
+                    }}>
+                      <p style={{ fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#d97706', marginBottom: '4px' }}>
+                        {t('Feedback from Registrar')}:
+                      </p>
+                      <p style={{ fontSize: '13px', fontWeight: '700', color: '#92400e', lineHeight: '1.5' }}>
+                        {student.rejection_reason || student.rejectionReason}
+                      </p>
+                    </div>
+                  )}
+
                   <button className="btn-primary" onClick={() => navigate('/student-details')}>
                     {(student.rejection_reason || student.rejectionReason) ? t('Resubmit Details') : t('Continue to Form')}
                   </button>
@@ -612,6 +633,39 @@ const handleEnterPortal = () => {
               </div>
             )}
 
+            {student.status === 'PAYMENT_REJECTED' && (
+              <div className="action-card error">
+                <div className="card-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                </div>
+                <div className="card-text">
+                  <h3>{t('Payment Rejected')}</h3>
+                  <p>{t('Your payment transaction was declined.')}</p>
+                  
+                  {(student.rejection_reason || student.rejectionReason) && (
+                    <div className="rejection-reason-box" style={{ 
+                      marginTop: '12px', 
+                      padding: '12px 16px', 
+                      background: 'rgba(239, 68, 68, 0.1)', 
+                      borderRadius: '12px',
+                      borderLeft: '4px solid #ef4444',
+                      marginBottom: '8px'
+                    }}>
+                      <p style={{ fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#dc2626', marginBottom: '4px' }}>
+                        {t('Reason:')}:
+                      </p>
+                      <p style={{ fontSize: '13px', fontWeight: '700', color: '#991b1b', lineHeight: '1.5' }}>
+                        {student.rejection_reason || student.rejectionReason}
+                      </p>
+                    </div>
+                  )}
+                  <button className="btn-primary" onClick={() => navigate('/payment')}>
+                    {t('Try Payment Again')}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {student.status === 'REJECTED' && (
               <div className="action-card error">
                 <div className="card-icon">
@@ -619,42 +673,58 @@ const handleEnterPortal = () => {
                 </div>
                 <div className="card-text">
                   <h3>{t('Application Refused')}</h3>
-                  <p>{t('Reason:')} {student.rejection_reason || student.rejectionReason || t('No reason provided.')}</p>
+                  <p>{t('Your application has been declined by the administration.')}</p>
+                  
+                  <div className="rejection-reason-box" style={{ 
+                    marginTop: '12px', 
+                    padding: '12px 16px', 
+                    background: 'rgba(239, 68, 68, 0.1)', 
+                    borderRadius: '12px',
+                    borderLeft: '4px solid #ef4444',
+                    marginBottom: '8px'
+                  }}>
+                    <p style={{ fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#dc2626', marginBottom: '4px' }}>
+                      {t('Reason:')}:
+                    </p>
+                    <p style={{ fontSize: '13px', fontWeight: '700', color: '#991b1b', lineHeight: '1.5' }}>
+                      {student.rejection_reason || student.rejectionReason || t('No reason provided.')}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
           </section>
 
-          <section className="info-section">
-            <h3>{t('Registry Information')}</h3>
-            <div className="info-grid">
-              <div className="info-item">
-                <span className="info-label">{t('Identity')}</span>
-                <p className="info-value">{matriculationRollNo}</p>
+          <section className="info-section bg-white dark:bg-slate-900 p-7 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 group relative overflow-hidden">
+            <h3 className="text-lg font-black tracking-tight text-slate-900 dark:text-white mb-6">{t('Registry Information')}</h3>
+            <div className="info-grid grid grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="info-item flex flex-col gap-2">
+                <span className="info-label text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{t('Identity')}</span>
+                <p className="info-value text-sm font-bold text-slate-900 dark:text-white">{matriculationRollNo}</p>
               </div>
-              <div className="info-item">
-                <span className="info-label">{t('Academic Merit')}</span>
-                <p className="info-value">{totalMarksObtained}</p>
+              <div className="info-item flex flex-col gap-2">
+                <span className="info-label text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{t('Academic Merit')}</span>
+                <p className="info-value text-sm font-bold text-slate-900 dark:text-white">{totalMarksObtained}</p>
               </div>
-              <div className="info-item">
-                <span className="info-label">{t('Entry Cycle')}</span>
-                <p className="info-value">{student.academicyearentered}</p>
+              <div className="info-item flex flex-col gap-2">
+                <span className="info-label text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{t('Entry Cycle')}</span>
+                <p className="info-value text-sm font-bold text-slate-900 dark:text-white">{student.academicyearentered}</p>
               </div>
-              <div className="info-item contact-group">
-                <span className="info-label">{t('Contact')}</span>
-                <div className="contact-details">
-                  <div className="contact-detail-item">
-                    <svg className="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <div className="info-item contact-group flex flex-col gap-2">
+                <span className="info-label text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{t('Contact')}</span>
+                <div className="contact-details flex flex-col gap-2">
+                  <div className="contact-detail-item flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800 rounded-xl">
+                    <svg className="contact-icon w-4 h-4 text-teal-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
                     </svg>
-                    <span className="contact-value">{student.phone}</span>
+                    <span className="contact-value text-sm font-bold text-slate-900 dark:text-white">{student.phone}</span>
                   </div>
-                  <div className="contact-detail-item">
-                    <svg className="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <div className="contact-detail-item flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800 rounded-xl">
+                    <svg className="contact-icon w-4 h-4 text-teal-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                       <polyline points="22,6 12,13 2,6"/>
                     </svg>
-                    <span className="contact-value email">{student.email}</span>
+                    <span className="contact-value email text-sm font-bold text-slate-500">{student.email}</span>
                   </div>
                 </div>
               </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../lib/client';
 
 // UI Components to match project style
@@ -70,6 +71,7 @@ function mapRegistrationToDraft(record: any) {
     township: pick(record.township, nestedStudent.township),
     address: pick(record.address, nestedStudent.address),
     status: pick(record.status, nestedStudent.status) || 'DRAFT',
+    rejection_reason: pick(record.rejection_reason, record.rejectionReason, nestedStudent.rejection_reason, nestedStudent.rejectionReason),
     createdAt: pick(record.createdAt, record.created_at, nestedStudent.createdAt)
   };
 }
@@ -85,6 +87,7 @@ const NewStudentDraftDetail: React.FC<Props> = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { recordId } = useParams();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<any>(location.state?.draftRecord || null);
   const [admin, setAdmin] = useState<any>(user || null);
@@ -207,7 +210,7 @@ const NewStudentDraftDetail: React.FC<Props> = ({ user, onLogout }) => {
   ];
 
   if (loading) {
-    return <div className="flex h-screen items-center justify-center bg-white dark:bg-slate-950 font-black text-teal-600 uppercase tracking-widest text-xs animate-pulse">Loading Draft Context...</div>;
+    return <div className="flex h-screen items-center justify-center bg-white dark:bg-slate-950 font-black text-teal-600 uppercase tracking-widest text-xs animate-pulse">{t('Loading Draft Context...')}</div>;
   }
 
   if (!draft || !admin) {
@@ -215,13 +218,13 @@ const NewStudentDraftDetail: React.FC<Props> = ({ user, onLogout }) => {
       <div className="flex h-screen items-center justify-center bg-white dark:bg-slate-950 p-10">
         <div className="bg-white dark:bg-slate-900 p-10 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-2xl text-center max-w-lg">
           <IconBadge icon="error_outline" tone="rose" />
-          <h2 className="text-2xl font-black text-slate-900 dark:text-white mt-6 uppercase tracking-tight">Record Desynchronized</h2>
-          <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">This registration record could not be retrieved from the central database.</p>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white mt-6 uppercase tracking-tight">{t('Record Desynchronized')}</h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">{t('This registration record could not be retrieved from the central database.')}</p>
           <button 
             className="mt-8 inline-flex items-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:shadow-xl active:scale-95 transition-all"
             onClick={() => navigate('/admin/dashboard')}
           >
-            Return to Dashboard
+            {t('Return to Dashboard')}
           </button>
         </div>
       </div>
@@ -249,7 +252,7 @@ const NewStudentDraftDetail: React.FC<Props> = ({ user, onLogout }) => {
                 <React.Fragment key={idx}>
                     {link.section && (
                         <div className="pt-8 pb-3 px-4">
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">{link.section}</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">{t(link.section)}</p>
                         </div>
                     )}
                     <button
@@ -260,7 +263,7 @@ const NewStudentDraftDetail: React.FC<Props> = ({ user, onLogout }) => {
                         )}
                     >
                         <span className="material-icons-outlined text-[22px] mr-4 transition-transform group-hover:scale-110 duration-300">{link.icon}</span>
-                        <span className="text-sm font-bold tracking-tight">{link.label}</span>
+                        <span className="text-sm font-bold tracking-tight">{t(link.label)}</span>
                     </button>
                 </React.Fragment>
             ))}
@@ -274,12 +277,12 @@ const NewStudentDraftDetail: React.FC<Props> = ({ user, onLogout }) => {
                     </div>
                     <div className="ml-4 overflow-hidden">
                         <p className="text-sm font-black text-slate-900 dark:text-white truncate tracking-tight uppercase">{admin.adminname}</p>
-                        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate">System Admin</p>
+                        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate">{t('System Admin')}</p>
                     </div>
                 </div>
                 <button onClick={() => navigate('/')} className="w-full flex items-center justify-center gap-3 py-3 rounded-xl bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 border border-slate-100 dark:border-slate-800 transition-all text-xs font-black uppercase tracking-widest shadow-sm active:scale-[0.98]">
                     <span className="material-icons-round text-sm">logout</span>
-                    <span>Sign Out</span>
+                    <span>{t('Sign Out')}</span>
                 </button>
             </div>
         </div>
@@ -290,8 +293,8 @@ const NewStudentDraftDetail: React.FC<Props> = ({ user, onLogout }) => {
         {/* HEADER */}
         <header className="flex h-20 items-center justify-between border-b border-slate-100 bg-white/80 px-6 md:px-10 dark:border-slate-800 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
             <div className="flex flex-col">
-                <h1 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase tracking-widest text-[11px] opacity-40 mb-0.5">NAVIGATION CONTEXT</h1>
-                <p className="text-sm font-bold text-slate-500 dark:text-slate-400 capitalize">Registration Audit • {draft.namemm}</p>
+                <h1 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase tracking-widest text-[11px] opacity-40 mb-0.5">{t('NAVIGATION CONTEXT')}</h1>
+                <p className="text-sm font-bold text-slate-500 dark:text-slate-400 capitalize">{t('Registration Audit')} • {draft.namemm}</p>
             </div>
             <div className="flex items-center gap-6">
                 <button 
@@ -299,7 +302,7 @@ const NewStudentDraftDetail: React.FC<Props> = ({ user, onLogout }) => {
                   className="inline-flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:shadow-xl active:scale-95 transition-all"
                 >
                     <span className="material-icons-outlined text-sm">arrow_back</span>
-                    <span>Back to Portal</span>
+                    <span>{t('Back to Portal')}</span>
                 </button>
             </div>
         </header>
@@ -309,7 +312,7 @@ const NewStudentDraftDetail: React.FC<Props> = ({ user, onLogout }) => {
                 
                 {/* HERO SECTION */}
                 <section className="flex flex-col md:flex-row md:items-end justify-between gap-8 bg-slate-50 dark:bg-slate-900/50 p-10 rounded-[48px] border border-slate-100 dark:border-slate-800 relative group overflow-hidden">
-                    <div className="relative z-10">
+                    <div className="relative z-10 flex-1">
                         <div className="flex items-center gap-4 mb-6">
                             <div className="h-16 w-16 rounded-[24px] bg-white dark:bg-slate-950 flex items-center justify-center text-teal-600 border border-slate-100 dark:border-slate-800 shadow-xl shadow-teal-500/5 transition-transform duration-700 group-hover:rotate-12">
                                 <span className="material-icons-outlined text-3xl">person_search</span>
@@ -317,12 +320,22 @@ const NewStudentDraftDetail: React.FC<Props> = ({ user, onLogout }) => {
                             <span className="px-4 py-1.5 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-600 text-[10px] font-black uppercase tracking-widest border border-amber-100 dark:border-amber-800">{String(draft.status || 'DRAFT').toUpperCase()}</span>
                         </div>
                         <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tighter leading-tight mb-6">{pick(draft.student_name, draft.namemm) || 'Unknown Student'}</h2>
-                        <p className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-[0.2em] text-[10px]">Record ID: {recordId} • Submitted {formatDate(draft.createdAt)}</p>
+                        <p className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-[0.2em] text-[10px] mb-4">{t('Record ID: ')}{recordId} • {t('Submitted ')}{formatDate(draft.createdAt)}</p>
+                        
+                        {draft.rejection_reason && (
+                          <div className="mt-4 p-5 rounded-3xl bg-amber-500/10 border border-amber-200 dark:border-amber-900/30">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="material-icons-outlined text-amber-600 text-sm">warning_amber</span>
+                              <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest">{t('Rejection Reason')}</span>
+                            </div>
+                            <p className="text-sm font-bold text-amber-900 dark:text-amber-200">{draft.rejection_reason}</p>
+                          </div>
+                        )}
                     </div>
                     
                     <div className="flex gap-4 relative z-10">
-                        <button className="h-14 px-8 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-teal-500/20 active:scale-95 transition-all">Approve Entry</button>
-                        <button className="h-14 px-8 bg-white dark:bg-slate-950 text-rose-600 border border-rose-100 dark:border-rose-900/30 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 transition-all active:scale-95">Decline</button>
+                        <button className="h-14 px-8 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-teal-500/20 active:scale-95 transition-all">{t('Approve Entry')}</button>
+                        <button className="h-14 px-8 bg-white dark:bg-slate-950 text-rose-600 border border-rose-100 dark:border-rose-900/30 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 transition-all active:scale-95">{t('Decline')}</button>
                     </div>
 
                     <div className="absolute top-0 right-0 h-64 w-64 bg-teal-500/5 rounded-bl-full transform translate-x-10 -translate-y-10 transition-transform group-hover:scale-110" />
@@ -335,19 +348,19 @@ const NewStudentDraftDetail: React.FC<Props> = ({ user, onLogout }) => {
                     <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 group relative overflow-hidden">
                         <div className="flex items-center gap-4 mb-8">
                             <IconBadge icon="badge" tone="primary" />
-                            <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Core Identity</h3>
+                            <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">{t('Core Identity')}</h3>
                         </div>
                         <div className="space-y-6">
-                            <DataField label="Student Name (EN)" value={pick(draft.student_name, draft.nameen)} />
-                            <DataField label="Student Name (MM)" value={draft.namemm} />
+                            <DataField label={t('Student Name (EN)')} value={pick(draft.student_name, draft.nameen)} />
+                            <DataField label={t('Student Name (MM)')} value={draft.namemm} />
                             <div className="grid grid-cols-2 gap-4">
-                                <DataField label="Gender" value={draft.gender} />
-                                <DataField label="Birth Date" value={formatDate(draft.date_of_birth)} />
+                                <DataField label={t('Gender')} value={t(draft.gender)} />
+                                <DataField label={t('Birth Date')} value={formatDate(draft.date_of_birth)} />
                             </div>
-                            <DataField label="NRC Number" value={draft.nrc_number} />
+                            <DataField label={t('NRC Number')} value={draft.nrc_number} />
                             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50 dark:border-slate-800/50">
-                                <DataField label="Father Name" value={draft.father_name} />
-                                <DataField label="Mother Name" value={draft.mother_name} />
+                                <DataField label={t('Father Name')} value={draft.father_name} />
+                                <DataField label={t('Mother Name')} value={draft.mother_name} />
                             </div>
                         </div>
                         <div className="absolute top-0 right-0 h-24 w-24 bg-teal-500/5 rounded-bl-full transform translate-x-4 -translate-y-4 transition-transform group-hover:scale-110" />
@@ -357,13 +370,13 @@ const NewStudentDraftDetail: React.FC<Props> = ({ user, onLogout }) => {
                     <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 group relative overflow-hidden">
                         <div className="flex items-center gap-4 mb-8">
                             <IconBadge icon="alternate_email" tone="indigo" />
-                            <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Communication Hub</h3>
+                            <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">{t('Communication Hub')}</h3>
                         </div>
                         <div className="space-y-6">
-                            <DataField label="Primary Email" value={draft.email} />
-                            <DataField label="Phone Contact" value={draft.phone} />
-                            <DataField label="Birthplace Origin" value={draft.birthplace} />
-                            <DataField label="Residential Address" value={draft.address} />
+                            <DataField label={t('Primary Email')} value={draft.email} />
+                            <DataField label={t('Phone Contact')} value={draft.phone} />
+                            <DataField label={t('Birthplace Origin')} value={draft.birthplace} />
+                            <DataField label={t('Residential Address')} value={draft.address} />
                         </div>
                         <div className="absolute top-0 right-0 h-24 w-24 bg-indigo-500/5 rounded-bl-full transform translate-x-4 -translate-y-4 transition-transform group-hover:scale-110" />
                     </div>
@@ -372,21 +385,21 @@ const NewStudentDraftDetail: React.FC<Props> = ({ user, onLogout }) => {
                     <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 group relative overflow-hidden">
                         <div className="flex items-center gap-4 mb-8">
                             <IconBadge icon="history_edu" tone="cyan" />
-                            <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Academic Credentials</h3>
+                            <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">{t('Academic Credentials')}</h3>
                         </div>
                         <div className="space-y-6">
                             <div className="grid grid-cols-2 gap-4">
-                                <DataField label="Entrance Roll" value={draft.exam_roll_no} />
-                                <DataField label="Matric Roll" value={draft.matriculation_rollno} />
+                                <DataField label={t('Entrance Roll')} value={draft.exam_roll_no} />
+                                <DataField label={t('Matric Roll')} value={draft.matriculation_rollno} />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <DataField label="Passed Year" value={draft.matriculation_passed_year} />
-                                <DataField label="Total Marks" value={draft.totalmarks_obtained} />
+                                <DataField label={t('Passed Year')} value={draft.matriculation_passed_year} />
+                                <DataField label={t('Total Marks')} value={draft.totalmarks_obtained} />
                             </div>
-                            <DataField label="Academic Year Entered" value={draft.academicyearentered} />
+                            <DataField label={t('Academic Year Entered')} value={draft.academicyearentered} />
                             <div className="mt-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-relaxed">System Note</p>
-                                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-relaxed">Values shown are extracted from the original registration draft payload.</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-relaxed">{t('System Note')}</p>
+                                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-relaxed">{t('Values shown are extracted from the original registration draft payload.')}</p>
                             </div>
                         </div>
                         <div className="absolute top-0 right-0 h-24 w-24 bg-cyan-500/5 rounded-bl-full transform translate-x-4 -translate-y-4 transition-transform group-hover:scale-110" />
