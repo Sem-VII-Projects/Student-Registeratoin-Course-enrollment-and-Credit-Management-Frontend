@@ -130,16 +130,6 @@ function normalizeAnnouncement(a: any): Announcement {
   };
 }
 
-function nextExpiryText(a: Announcement) {
-  const exp = safeDate(a.expiry_date ?? null);
-  if (!exp) return t("No expiry");
-  const ms = exp.getTime() - Date.now();
-  const absDays = Math.floor(Math.abs(ms) / (1000 * 60 * 60 * 24));
-  if (ms < 0) return `${t("Expired")} ${absDays}${t("d ago")}`;
-  if (absDays === 0) return t("Expires today");
-  return `${t("Expires in")} ${absDays}${t("d")}`;
-}
-
 async function copy(text: string) {
   try {
     await navigator.clipboard.writeText(text);
@@ -980,7 +970,7 @@ const AdminAnnouncements: React.FC<Props> = ({ user, onLogout }) => {
                                 expired ? "text-rose-500" : "text-slate-400 dark:text-slate-500"
                               )}>
                                 <span className="material-icons-outlined text-sm opacity-60">timer_off</span>
-                                {expired ? "Lapsed" : `{t("Ends: ")}${formatLocalWithTz(expIso)}`}
+                                {expired ? "Lapsed" : `${t("Ends: ")}${formatLocalWithTz(expIso)}`}
                               </div>
                             )}
                           </div>

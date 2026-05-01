@@ -163,16 +163,6 @@ const parseDateParts = (rawDate: any) => {
   };
 };
 
-
-};
-
-const DataField: React.FC<{ label: string; value: string | number; placeholder?: string }> = ({ label, value, placeholder = 'N/A' }) => (
-  <div className="space-y-1.5">
-    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{label}</p>
-    <p className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">{value || placeholder}</p>
-  </div>
-);
-
 const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();

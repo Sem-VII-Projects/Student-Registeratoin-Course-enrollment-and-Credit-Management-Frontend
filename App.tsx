@@ -419,7 +419,12 @@ const App: React.FC = () => {
         )}
       </Routes>
       <ThemeToggle />
-      <StudentChatTrigger visible={!!user && user.role === "student" && !user.must_reset_password} />        <PublicChatTrigger />
+      {user?.role !== "admin" && (
+        <>
+          <StudentChatTrigger visible={!!user && user.role === "student" && !user.must_reset_password} />
+          <PublicChatTrigger />
+        </>
+      )}
         </HashRouter>
     </UIProvider>
   );
