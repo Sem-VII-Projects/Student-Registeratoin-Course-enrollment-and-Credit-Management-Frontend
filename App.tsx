@@ -14,7 +14,8 @@ import ResetPasswordToken from "./pages/ResetPasswordToken";
 import HomePage from "./pages/HomePage";
 import NewStudentRegister from "./pages/NewStudentRegister";
 
-import IntegratedAdminPortal from "./pages/IntegratedAdminPortal";
+import AdminLayout from "./components/AdminLayout";
+import AdminDashboard from "./pages/AdminDashboard";
 import AdminEnrollment from "./pages/AdminEnrollment";
 import AdminCourses from "./pages/AdminCourses";
 import AdminStudents from "./pages/AdminStudents";
@@ -253,8 +254,8 @@ const App: React.FC = () => {
             <Route path="/reset-password-token" element={<ResetPasswordToken />} />
 
             {user?.role === "admin" ? (
-              <>
-                <Route path="/admin/dashboard" element={<IntegratedAdminPortal user={user} onLogout={handleLogout} />} />
+              <Route element={<AdminLayout user={user} onLogout={handleLogout} />}>
+                <Route path="/admin/dashboard" element={<AdminDashboard user={user} onLogout={handleLogout} />} />
                 <Route
                   path="/admin/enrollment"
                   element={<AdminEnrollment user={user} onLogout={handleLogout} />}
@@ -318,8 +319,8 @@ const App: React.FC = () => {
                 />
 
                 <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
-              </>
-                        ) : user?.role === "student" ? (
+              </Route>
+            ) : user?.role === "student" ? (
               <>
                 <Route
                   path="/student/dashboard"

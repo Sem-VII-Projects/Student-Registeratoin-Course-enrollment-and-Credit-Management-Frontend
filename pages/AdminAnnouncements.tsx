@@ -927,53 +927,52 @@ const AdminAnnouncements: React.FC<Props> = ({ user, onLogout }) => {
                           />
                           <div className="lg:hidden flex flex-wrap items-center gap-2">
                              <span className={clsx("text-[9px] font-extrabold uppercase tracking-widest px-2 py-1 rounded-md border", typeBadge(a.type))}>
-                               {a.type ?? "General"}
+                               {t(a.type ?? "General")}
                              </span>
                              <span className={clsx("text-[9px] font-extrabold uppercase tracking-widest px-2 py-1 rounded-md border", statusBadge(status))}>
-                               {status}
+                               {t(status)}
                              </span>
-                          </div>
-                        </div>
+                             </div>
+                             </div>
 
-                        {/* Category */}
-                        <div className="hidden lg:block w-20 shrink-0">
-                          <span className={clsx("text-[9px] font-extrabold uppercase tracking-widest px-2 py-1 rounded-md border", typeBadge(a.type))}>
-                            {a.type ?? "General"}
-                          </span>
-                        </div>
+                             {/* Category */}
+                             <div className="hidden lg:block w-20 shrink-0">
+                             <span className={clsx("text-[9px] font-extrabold uppercase tracking-widest px-2 py-1 rounded-md border", typeBadge(a.type))}>
+                             {t(a.type ?? "General")}
+                             </span>
+                             </div>
 
-                        {/* Status */}
-                        <div className="hidden lg:block w-24 shrink-0">
-                          <span className={clsx("text-[9px] font-extrabold uppercase tracking-widest px-2 py-1 rounded-md border", statusBadge(status))}>
-                            {status}
-                          </span>
-                        </div>
+                             {/* Status */}
+                             <div className="hidden lg:block w-24 shrink-0">
+                             <span className={clsx("text-[9px] font-extrabold uppercase tracking-widest px-2 py-1 rounded-md border", statusBadge(status))}>
+                             {t(status)}
+                             </span>
+                             </div>
 
-                        {/* Details Area */}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2">
-                            <div className="flex items-center gap-2">
+                             {/* Details Area */}
+                             <div className="min-w-0 flex-1">
+                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2">
+                             <div className="flex items-center gap-2">
                               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{t("Audience: ")}</span>
-                              <span className="text-[10px] font-extrabold text-slate-900 dark:text-white uppercase tracking-widest">{a.target_audience ?? "Global"}</span>
-                            </div>
+                              <span className="text-[10px] font-extrabold text-slate-900 dark:text-white uppercase tracking-widest">{t(a.target_audience ?? "Global")}</span>
+                             </div>
 
-                            {createdIso && (
+                             {createdIso && (
                               <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">
                                 <span className="material-icons-outlined text-sm opacity-60">history</span>
                                 {formatLocalWithTz(createdIso)}
                               </div>
-                            )}
+                             )}
 
-                            {expIso && (
+                             {expIso && (
                               <div className={clsx(
                                 "flex items-center gap-2 text-[10px] font-bold uppercase tracking-tighter",
                                 expired ? "text-rose-500" : "text-slate-400 dark:text-slate-500"
                               )}>
                                 <span className="material-icons-outlined text-sm opacity-60">timer_off</span>
-                                {expired ? "Lapsed" : `${t("Ends: ")}${formatLocalWithTz(expIso)}`}
+                                {expired ? t("Lapsed") : `{t("Ends: ")}${formatLocalWithTz(expIso)}`}
                               </div>
-                            )}
-                          </div>
+                             )}                          </div>
 
                           <h4 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-2 group-hover:text-teal-600 transition-colors leading-snug">{a.title}</h4>
                           <p className="text-sm font-medium text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2 md:line-clamp-3 mb-6">{a.content}</p>

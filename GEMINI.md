@@ -69,7 +69,8 @@ Runs ESLint to check for code quality and style issues.
 - **Component Structure:** Components are organized in `components/`, with page-level components in `pages/`.
 - **Styling:** Prefers Tailwind CSS utility classes. Significant custom styles are in `styles/`.
 - **Type Safety:** Strict TypeScript usage is encouraged. Common types are defined in `types/` and `types.ts`.
-- **Surgical Updates:** When modifying UI, preserve all existing functional elements and data fields.
+- **Surgical Updates:** You are permitted to modify or refactor existing code, including core course management logic, to ensure clean integration of new features or to improve architectural consistency. Always prioritize preserving existing functional elements and data fields unless explicitly directed otherwise.
+- **Friend's Project Integration:** Components and logic from external sources (e.g., the 'Friend's Project') should be seamlessly integrated into the main codebase. Avoid creating isolated entities; instead, adapt and merge them to follow the project's established patterns and design system.
 
 ## Key Files & Directories
 

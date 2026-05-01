@@ -452,12 +452,8 @@ const AdminStudents: React.FC<StudentsProps> = ({ user, onLogout }) => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white dark:bg-slate-950">
-      <Sidebar user={user} onLogout={onLogout} />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header title={t("Students Directory")} user={user} />
-        <main className="flex-1 overflow-y-auto p-8 animate-in fade-in duration-700 slide-in-from-bottom-4 scrollbar-hide">
-          {/* Filters Row */}
+    <div className="flex-1 overflow-y-auto p-8 animate-in fade-in duration-700 slide-in-from-bottom-4 scrollbar-hide">
+      {/* Filters Row */}
           <div className="mb-10 flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
             <div className="flex flex-1 flex-wrap items-end gap-4">
               {/* Search */}
@@ -772,8 +768,6 @@ const AdminStudents: React.FC<StudentsProps> = ({ user, onLogout }) => {
                </div>
              </div>
           </div>
-        </main>
-      </div>
 
       {/* Add Student Modal */}
       {showAddModal && (

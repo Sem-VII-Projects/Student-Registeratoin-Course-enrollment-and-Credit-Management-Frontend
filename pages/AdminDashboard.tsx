@@ -501,15 +501,9 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white dark:bg-slate-950">
-      <Sidebar user={user} onLogout={onLogout} />
-
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header title={t("Admin Dashboard")} user={user} />
-
-        <main className="flex-1 overflow-y-auto scrollbar-hide">
-          {/* Top command bar */}
-          <div className="px-10 pt-10 animate-in fade-in duration-1000 slide-in-from-bottom-4">
+    <div className="flex-1 overflow-y-auto scrollbar-hide">
+      {/* Top command bar */}
+      <div className="px-10 pt-10 animate-in fade-in duration-1000 slide-in-from-bottom-4">
             <div className="bg-slate-50/30 dark:bg-slate-900/20 rounded-[40px] border border-slate-100 dark:border-slate-800/50 p-10 shadow-sm transition-all hover:shadow-md">
               <div className="flex flex-col gap-10 xl:flex-row xl:items-end xl:justify-between">
                 <div className="space-y-3">
@@ -911,8 +905,6 @@ const AdminDashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               </p>
             </footer>
           </div>
-        </main>
-      </div>
 
       {/* Pending Queue Modal */}
       <Modal
