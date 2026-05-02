@@ -109,12 +109,8 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
         <div className="p-6 mt-auto">
           <div className="rounded-[32px] bg-slate-50 dark:bg-slate-900/50 p-5 border border-slate-100 dark:border-slate-800">
             <div className="flex items-center mb-6 px-1">
-              <div className="relative group">
-                <img alt={user.name} className="h-11 w-11 rounded-2xl object-cover border-2 border-white dark:border-slate-800 shadow-sm transition-transform duration-500 group-hover:scale-105" src={user.avatar} />
-                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" />
-              </div>
-              <div className="ml-4 overflow-hidden">
-                <p className="text-sm font-black text-slate-900 dark:text-white truncate tracking-tight">{user.name}</p>
+              <div className="overflow-hidden">
+                <p className="text-sm font-black text-slate-900 dark:text-white truncate tracking-tight">{user.role === 'admin' ? 'Admin' : user.name}</p>
                 <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate">{user.department}</p>
               </div>
             </div>

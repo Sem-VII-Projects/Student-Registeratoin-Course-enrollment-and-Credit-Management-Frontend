@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-// import React, { useState, useEffect } from 'react';
-import Sidebar from '../components/Sidebar';
-import Header from '../components/Header';
 import { TableSkeletonRows } from '../components/Skeleton';
 import { User, EnrollmentRequest } from '../types';
 import { api } from '../lib/api';
@@ -304,25 +301,18 @@ const AdminEnrollment: React.FC<EnrollmentProps> = ({ user, onLogout }) => {
 
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white dark:bg-slate-950 relative">
-      <Sidebar user={user} onLogout={onLogout} />
-      
-      {/* Toast Notification */}
-      {toast.type && (
-        <div className={`fixed top-8 right-8 z-50 flex items-center gap-4 rounded-2xl px-6 py-4 shadow-xl border transition-all animate-in slide-in-from-right-10 duration-500 ${
-            toast.type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900/40' : 'bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900/40'
-        }`}>
-            <span className="material-icons-outlined text-xl">
-                {toast.type === 'success' ? 'check_circle' : 'error'}
-            </span>
-            <p className="font-bold text-sm tracking-tight">{toast.message}</p>
-        </div>
-      )}
-
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header title={t("Enrollment Management")} user={user} />
-        <main className="flex-1 overflow-y-auto p-8 animate-in fade-in duration-700 slide-in-from-bottom-4 scrollbar-hide">
-          <div className="mb-10 grid grid-cols-1 gap-8 md:grid-cols-2">
+<main className="flex-1 overflow-y-auto p-8 animate-in fade-in duration-700 slide-in-from-bottom-4 scrollbar-hide">
+        {toast.type && (
+          <div className={`fixed top-8 right-8 z-50 flex items-center gap-4 rounded-2xl px-6 py-4 shadow-xl border transition-all animate-in slide-in-from-right-10 duration-500 ${
+              toast.type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900/40' : 'bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900/40'
+          }`}>
+              <span className="material-icons-outlined text-xl">
+                  {toast.type === 'success' ? 'check_circle' : 'error'}
+              </span>
+              <p className="font-bold text-sm tracking-tight">{toast.message}</p>
+          </div>
+        )}
+      <div className="mb-10 grid grid-cols-1 gap-8 md:grid-cols-2">
              <div className="group relative overflow-hidden rounded-3xl bg-slate-50/50 dark:bg-slate-900/30 p-8 border border-slate-200/60 dark:border-slate-800/60 transition-all hover:bg-white dark:hover:bg-slate-900 hover:shadow-lg hover:-translate-y-1">
               <div className="absolute right-0 top-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-teal-500/5 transition-all group-hover:scale-150 group-hover:bg-teal-500/10" />
               <div className="relative z-10 flex items-start justify-between mb-8">
@@ -667,8 +657,6 @@ const AdminEnrollment: React.FC<EnrollmentProps> = ({ user, onLogout }) => {
           )}
 
         </main>
-      </div>
-    </div>
   );
 };
 

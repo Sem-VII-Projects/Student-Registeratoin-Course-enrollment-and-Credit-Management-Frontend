@@ -358,12 +358,7 @@ export default function AdminMessages({ user, onLogout }: Props) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white dark:bg-slate-950 font-poppins">
-      <Sidebar user={user} onLogout={onLogout} />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header title={t("Communications")} user={user} />
-
-        <main className="flex-1 overflow-y-auto p-8 animate-in fade-in duration-700 slide-in-from-bottom-4 scrollbar-hide">
+    <div className="flex-1 overflow-y-auto p-8 animate-in fade-in duration-700 slide-in-from-bottom-4 scrollbar-hide">
           <div className="flex flex-col gap-10 pb-10 max-w-[1600px] mx-auto">
             {/* Toast */}
             {toast && (
@@ -710,7 +705,7 @@ export default function AdminMessages({ user, onLogout }: Props) {
                                       : "bg-teal-50 text-teal-700 border-teal-100 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-900"
                                   )}
                                 >
-                                  t(m.category ?? "General")
+                                  {t(m.category ?? "General")}
                                 </span>
                                 <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tight">
                                   {formatListDate(m.sent_at)}
@@ -786,7 +781,7 @@ export default function AdminMessages({ user, onLogout }: Props) {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-6">
                             <span className="text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 border border-teal-100 dark:border-teal-800">
-                              t(selected.category ?? "Institutional")
+                              {t(selected.category ?? "Institutional")}
                             </span>
 
                             <span
@@ -806,13 +801,6 @@ export default function AdminMessages({ user, onLogout }: Props) {
                           </h2>
 
                           <div className="flex flex-wrap items-center gap-x-10 gap-y-4">
-                            <div className="space-y-1.5">
-                              <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t("Sender ID")}</span>
-                              <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-full bg-slate-900 dark:bg-slate-800 flex items-center justify-center text-white text-[10px] font-bold">A</div>
-                                <span className="text-sm font-bold text-slate-900 dark:text-white">{selected.sender_id}</span>
-                              </div>
-                            </div>
                             <div className="space-y-1.5">
                               <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t("Recipient")}</span>
                               <div className="flex items-center gap-2">
@@ -881,8 +869,7 @@ export default function AdminMessages({ user, onLogout }: Props) {
               </div>
             </div>
           </div>
-        </main>
-      </div>
+
     </div>
   );
 }

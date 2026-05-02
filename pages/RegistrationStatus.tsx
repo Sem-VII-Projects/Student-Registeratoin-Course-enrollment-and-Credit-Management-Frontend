@@ -651,9 +651,9 @@ const handleEnterPortal = () => {
                       borderLeft: '4px solid #ef4444',
                       marginBottom: '8px'
                     }}>
-                      <p style={{ fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#dc2626', marginBottom: '4px' }}>
-                        {t('Reason:')}:
-                      </p>
+                       <p style={{ fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#dc2626', marginBottom: '4px' }}>
+                         {t('Reason')}:
+                       </p>
                       <p style={{ fontSize: '13px', fontWeight: '700', color: '#991b1b', lineHeight: '1.5' }}>
                         {student.rejection_reason || student.rejectionReason}
                       </p>
@@ -684,7 +684,7 @@ const handleEnterPortal = () => {
                     marginBottom: '8px'
                   }}>
                     <p style={{ fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#dc2626', marginBottom: '4px' }}>
-                      {t('Reason:')}:
+                      {t('Reason')}:
                     </p>
                     <p style={{ fontSize: '13px', fontWeight: '700', color: '#991b1b', lineHeight: '1.5' }}>
                       {student.rejection_reason || student.rejectionReason || t('No reason provided.')}

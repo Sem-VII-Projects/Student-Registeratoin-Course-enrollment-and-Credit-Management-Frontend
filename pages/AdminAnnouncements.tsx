@@ -1,7 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import Sidebar from "../components/Sidebar";
-import Header from "../components/Header";
 import { DetailedCardGridSkeleton } from "../components/Skeleton";
 import { User } from "../types";
 import { api } from "../lib/api";
@@ -128,16 +126,6 @@ function normalizeAnnouncement(a: any): Announcement {
     expiry_date: a.expiry_date ?? null,
     target_audience: a.target_audience ?? "All",
   };
-}
-
-function nextExpiryText(a: Announcement) {
-  const exp = safeDate(a.expiry_date ?? null);
-  if (!exp) return t("No expiry");
-  const ms = exp.getTime() - Date.now();
-  const absDays = Math.floor(Math.abs(ms) / (1000 * 60 * 60 * 24));
-  if (ms < 0) return `${t("Expired")} ${absDays}${t("d ago")}`;
-  if (absDays === 0) return t("Expires today");
-  return `${t("Expires in")} ${absDays}${t("d")}`;
 }
 
 async function copy(text: string) {
@@ -651,12 +639,7 @@ const AdminAnnouncements: React.FC<Props> = ({ user, onLogout }) => {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white dark:bg-slate-950 font-poppins">
-      <Sidebar user={user} onLogout={onLogout} />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header title={t("Announcements")} user={user} />
-
-        <main className="flex-1 overflow-y-auto p-8 animate-in fade-in duration-700 slide-in-from-bottom-4 scrollbar-hide max-w-[1600px] mx-auto w-full">
+    <main className="flex-1 overflow-y-auto p-8 animate-in fade-in duration-700 slide-in-from-bottom-4 scrollbar-hide max-w-[1600px] mx-auto w-full">
           {error && (
             <div className="mb-10 rounded-2xl border border-rose-100 bg-rose-50 p-5 text-sm font-bold text-rose-700 dark:border-rose-900/40 dark:bg-rose-900/20 dark:text-rose-300 flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
               <span className="material-icons-outlined text-lg">error_outline</span>
@@ -937,53 +920,52 @@ const AdminAnnouncements: React.FC<Props> = ({ user, onLogout }) => {
                           />
                           <div className="lg:hidden flex flex-wrap items-center gap-2">
                              <span className={clsx("text-[9px] font-extrabold uppercase tracking-widest px-2 py-1 rounded-md border", typeBadge(a.type))}>
-                               {a.type ?? "General"}
+                               {t(a.type ?? "General")}
                              </span>
                              <span className={clsx("text-[9px] font-extrabold uppercase tracking-widest px-2 py-1 rounded-md border", statusBadge(status))}>
-                               {status}
+                               {t(status)}
                              </span>
-                          </div>
-                        </div>
+                             </div>
+                             </div>
 
-                        {/* Category */}
-                        <div className="hidden lg:block w-20 shrink-0">
-                          <span className={clsx("text-[9px] font-extrabold uppercase tracking-widest px-2 py-1 rounded-md border", typeBadge(a.type))}>
-                            {a.type ?? "General"}
-                          </span>
-                        </div>
+                             {/* Category */}
+                             <div className="hidden lg:block w-20 shrink-0">
+                             <span className={clsx("text-[9px] font-extrabold uppercase tracking-widest px-2 py-1 rounded-md border", typeBadge(a.type))}>
+                             {t(a.type ?? "General")}
+                             </span>
+                             </div>
 
-                        {/* Status */}
-                        <div className="hidden lg:block w-24 shrink-0">
-                          <span className={clsx("text-[9px] font-extrabold uppercase tracking-widest px-2 py-1 rounded-md border", statusBadge(status))}>
-                            {status}
-                          </span>
-                        </div>
+                             {/* Status */}
+                             <div className="hidden lg:block w-24 shrink-0">
+                             <span className={clsx("text-[9px] font-extrabold uppercase tracking-widest px-2 py-1 rounded-md border", statusBadge(status))}>
+                             {t(status)}
+                             </span>
+                             </div>
 
-                        {/* Details Area */}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2">
-                            <div className="flex items-center gap-2">
+                             {/* Details Area */}
+                             <div className="min-w-0 flex-1">
+                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2">
+                             <div className="flex items-center gap-2">
                               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{t("Audience: ")}</span>
-                              <span className="text-[10px] font-extrabold text-slate-900 dark:text-white uppercase tracking-widest">{a.target_audience ?? "Global"}</span>
-                            </div>
+                              <span className="text-[10px] font-extrabold text-slate-900 dark:text-white uppercase tracking-widest">{t(a.target_audience ?? "Global")}</span>
+                             </div>
 
-                            {createdIso && (
+                             {createdIso && (
                               <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">
                                 <span className="material-icons-outlined text-sm opacity-60">history</span>
                                 {formatLocalWithTz(createdIso)}
                               </div>
-                            )}
+                             )}
 
-                            {expIso && (
+                             {expIso && (
                               <div className={clsx(
                                 "flex items-center gap-2 text-[10px] font-bold uppercase tracking-tighter",
                                 expired ? "text-rose-500" : "text-slate-400 dark:text-slate-500"
                               )}>
                                 <span className="material-icons-outlined text-sm opacity-60">timer_off</span>
-                                {expired ? "Lapsed" : `{t("Ends: ")}${formatLocalWithTz(expIso)}`}
+                                {expired ? t("Lapsed") : `{t("Ends: ")}${formatLocalWithTz(expIso)}`}
                               </div>
-                            )}
-                          </div>
+                             )}                          </div>
 
                           <h4 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-2 group-hover:text-teal-600 transition-colors leading-snug">{a.title}</h4>
                           <p className="text-sm font-medium text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2 md:line-clamp-3 mb-6">{a.content}</p>
@@ -1211,8 +1193,6 @@ const AdminAnnouncements: React.FC<Props> = ({ user, onLogout }) => {
           />
           <Toast open={toastOpen} message={toastMsg} kind={toastKind} onClose={() => setToastOpen(false)} />
         </main>
-      </div>
-    </div>
   );
 
 };

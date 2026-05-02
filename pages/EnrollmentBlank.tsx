@@ -129,7 +129,7 @@ const EnrollmentBlank: React.FC = () => {
 
   const handleEnroll = async () => {
     if (mode === 'FOUNDATION_SECTION' && !selectedSection) {
-      alert(t('Please select a section.'));
+      alert(t('Please select a class section.'));
       return;
     }
     if (mode === 'MAJOR_CLASS' && !selectedMajorClassId) {

@@ -163,29 +163,6 @@ const parseDateParts = (rawDate: any) => {
   };
 };
 
-const IconBadge: React.FC<{ icon: string; tone?: 'primary' | 'teal' | 'indigo' | 'cyan' | 'rose' | 'emerald' }> = ({ icon, tone = 'primary' }) => {
-  const tones = {
-    primary: 'bg-slate-900 text-white',
-    teal: 'bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 border-teal-100 dark:border-teal-900/30',
-    indigo: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/30',
-    cyan: 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400 border-cyan-100 dark:border-cyan-900/30',
-    rose: 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-900/30',
-    emerald: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/30',
-  };
-  return (
-    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border shadow-sm ${tones[tone]}`}>
-      <span className="material-icons-round text-xl">{icon}</span>
-    </div>
-  );
-};
-
-const DataField: React.FC<{ label: string; value: string | number; placeholder?: string }> = ({ label, value, placeholder = 'N/A' }) => (
-  <div className="space-y-1.5">
-    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{label}</p>
-    <p className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">{value || placeholder}</p>
-  </div>
-);
-
 const StudentDetails: React.FC<{ user?: any; onLogout?: () => void }> = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();

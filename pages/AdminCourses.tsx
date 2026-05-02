@@ -1090,14 +1090,8 @@ const AdminCourses: React.FC<CoursesProps> = ({ user, onLogout }) => {
   const goDetails = (code: string) => navigate(`/admin/courses/${encodeURIComponent(code)}`);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white dark:bg-slate-950">
-      <Sidebar user={user} onLogout={onLogout} />
-
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header title="Course Catalog" user={user} />
-
-        <main className="flex-1 overflow-y-auto p-8 animate-in fade-in duration-700 slide-in-from-bottom-4 scrollbar-hide">
-          <div className="mb-10 rounded-[32px] border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 shadow-sm overflow-hidden transition-all hover:shadow-md">
+    <div className="flex-1 overflow-y-auto p-8 animate-in fade-in duration-700 slide-in-from-bottom-4 scrollbar-hide">
+      <div className="mb-10 rounded-[32px] border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 shadow-sm overflow-hidden transition-all hover:shadow-md">
             <div className="px-8 py-8 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-8">
               <div className="min-w-0 space-y-2">
                 <div className="flex items-center gap-4">
@@ -1320,8 +1314,6 @@ const AdminCourses: React.FC<CoursesProps> = ({ user, onLogout }) => {
           >
             <span className="material-icons-outlined text-3xl group-hover:rotate-90 transition-transform duration-500">add</span>
           </button>
-        </main>
-      </div>
 
       <CourseWizardModal
         open={wizardOpen}

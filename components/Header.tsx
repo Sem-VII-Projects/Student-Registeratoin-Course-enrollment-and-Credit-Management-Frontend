@@ -97,12 +97,8 @@ const Header: React.FC<HeaderProps> = ({ title, user }) => {
 
         <div className="flex items-center gap-4 pl-6 border-l border-slate-100 dark:border-slate-800">
            <div className="text-right hidden sm:block">
-              <p className="text-sm font-black text-slate-900 dark:text-white leading-tight tracking-tight">{user.name}</p>
+              <p className="text-sm font-black text-slate-900 dark:text-white leading-tight tracking-tight">{user.role === 'admin' ? 'Admin' : user.name}</p>
               <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{user.department}</p>
-           </div>
-           <div className="relative">
-             <img src={user.avatar} className="h-10 w-10 rounded-2xl border-2 border-white dark:border-slate-800 object-cover shadow-sm hover:scale-105 transition-transform cursor-pointer" alt="avatar" />
-             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" />
            </div>
         </div>
       </div>

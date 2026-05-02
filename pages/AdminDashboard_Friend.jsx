@@ -289,20 +289,20 @@ function AdminDashboard({ user, onLogout }) {
     setDetailsRejectDialog({ open: false, student: null, reason: '' });
   };
 
-  const resolveRegistrationIdForStudent = async (student) => {
-    const studentId = student.studentid || student.id;
-    if (!studentId) return null;
-    try {
-      const list = await api.listRegistrations(studentId);
-      if (!Array.isArray(list) || list.length === 0) return null;
-      // Find the one that isn't rejected
-      const active = list.find(r => String(r.status || '').toUpperCase() !== 'REJECTED') || list[0];
-      return active?.registrationid || active?.id || null;
-    } catch (err) {
-      console.warn("Failed to resolve registration ID", err);
-      return null;
-    }
-  };
+const resolveRegistrationIdForStudent = async (student) => {
+  const studentId = student.studentid || student.id;
+  if (!studentId) return null;
+  try {
+    const list = await api.listRegistrations(studentId);
+    if (!Array.isArray(list) || list.length === 0) return null;
+    const active = list.find(r => String(r.status || '').toUpperCase() !== 'REJECTED') || list[0];
+    const activeId = getRegistrationId(active);
+    return activeId || null;
+  } catch (err) {
+    console.warn("Failed to resolve registration ID", err);
+    return null;
+  }
+};
 
   const handleRejectStudent = async () => {    const student = rejectDialog.student;
     if (!student) return;
@@ -412,17 +412,17 @@ function AdminDashboard({ user, onLogout }) {
 
     setLoading(true);
     try {
-      // 1. Clear staged registration sections
-      const registrationId = await resolveRegistrationIdForStudent(student);
-      let clearedSections = true;
-      if (registrationId) {
-        try {
-          await api.clearRegistrationSections(registrationId);
-        } catch (clearError) {
-          clearedSections = false;
-          console.warn(`Failed to clear sections for registration ${registrationId}`, clearError);
-        }
-      }
+// 1. Clear staged registration sections
+  const registrationId = await resolveRegistrationIdForStudent(student);
+  let clearedSections = false;
+  if (registrationId) {
+    try {
+      await api.clearRegistrationSections(registrationId);
+      clearedSections = true;
+    } catch (clearError) {
+      console.warn(`Failed to clear sections for registration ${registrationId}`, clearError);
+    }
+  }
 
       // 2. Delete all student documents
       try {
