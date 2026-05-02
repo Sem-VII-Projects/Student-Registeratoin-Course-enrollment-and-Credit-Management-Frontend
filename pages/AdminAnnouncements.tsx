@@ -1,7 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import Sidebar from "../components/Sidebar";
-import Header from "../components/Header";
 import { DetailedCardGridSkeleton } from "../components/Skeleton";
 import { User } from "../types";
 import { api } from "../lib/api";
@@ -641,12 +639,7 @@ const AdminAnnouncements: React.FC<Props> = ({ user, onLogout }) => {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white dark:bg-slate-950 font-poppins">
-      <Sidebar user={user} onLogout={onLogout} />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header title={t("Announcements")} user={user} />
-
-        <main className="flex-1 overflow-y-auto p-8 animate-in fade-in duration-700 slide-in-from-bottom-4 scrollbar-hide max-w-[1600px] mx-auto w-full">
+    <main className="flex-1 overflow-y-auto p-8 animate-in fade-in duration-700 slide-in-from-bottom-4 scrollbar-hide max-w-[1600px] mx-auto w-full">
           {error && (
             <div className="mb-10 rounded-2xl border border-rose-100 bg-rose-50 p-5 text-sm font-bold text-rose-700 dark:border-rose-900/40 dark:bg-rose-900/20 dark:text-rose-300 flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
               <span className="material-icons-outlined text-lg">error_outline</span>
@@ -1200,8 +1193,6 @@ const AdminAnnouncements: React.FC<Props> = ({ user, onLogout }) => {
           />
           <Toast open={toastOpen} message={toastMsg} kind={toastKind} onClose={() => setToastOpen(false)} />
         </main>
-      </div>
-    </div>
   );
 
 };

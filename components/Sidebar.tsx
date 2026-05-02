@@ -110,7 +110,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout }) => {
           <div className="rounded-[32px] bg-slate-50 dark:bg-slate-900/50 p-5 border border-slate-100 dark:border-slate-800">
             <div className="flex items-center mb-6 px-1">
               <div className="overflow-hidden">
-                <p className="text-sm font-black text-slate-900 dark:text-white truncate tracking-tight">{user.name}</p>
+                <p className="text-sm font-black text-slate-900 dark:text-white truncate tracking-tight">{user.role === 'admin' ? 'Admin' : user.name}</p>
                 <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate">{user.department}</p>
               </div>
             </div>

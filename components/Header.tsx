@@ -97,7 +97,7 @@ const Header: React.FC<HeaderProps> = ({ title, user }) => {
 
         <div className="flex items-center gap-4 pl-6 border-l border-slate-100 dark:border-slate-800">
            <div className="text-right hidden sm:block">
-              <p className="text-sm font-black text-slate-900 dark:text-white leading-tight tracking-tight">{user.name}</p>
+              <p className="text-sm font-black text-slate-900 dark:text-white leading-tight tracking-tight">{user.role === 'admin' ? 'Admin' : user.name}</p>
               <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{user.department}</p>
            </div>
         </div>

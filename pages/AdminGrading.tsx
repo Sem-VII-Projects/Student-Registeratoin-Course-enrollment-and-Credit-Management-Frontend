@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import Sidebar from '../components/Sidebar';
-import Header from '../components/Header';
 import { TableSkeletonRows } from '../components/Skeleton';
 import { User } from '../types';
 import { API_BASE_URL } from '../lib/apiBase';
@@ -99,7 +97,7 @@ function CustomSelect({
   );
 }
 
-const AdminGrading: React.FC<GradingProps> = ({ user, onLogout }) => {
+const AdminGrading: React.FC<GradingProps> = ({ user: _user, onLogout: _onLogout }) => {
   const { t } = useTranslation();
   const [year, setYear] = useState<number | ''>('');
   const [semester, setSemester] = useState<number | ''>('');
@@ -131,15 +129,6 @@ const AdminGrading: React.FC<GradingProps> = ({ user, onLogout }) => {
   const showMajor = yearNum === 0 || (yearNum >= 3 && yearNum <= 5);
   const majorOptions = yearNum === 3 ? ['CS', 'CT'] : ['SE', 'KE', 'HPC', 'CSec', 'CN', 'BIS', 'ES'];
 
-  // Fetch exam results when filters change (with debounce)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchResults();
-    }, 400); // Wait 400ms after last typing before fetching
-
-    return () => clearTimeout(timer);
-  }, [year, semester, section, major, courseCode]);
-
   const fetchResults = async () => {
     setLoading(true);
     try {
@@ -167,6 +156,15 @@ const AdminGrading: React.FC<GradingProps> = ({ user, onLogout }) => {
       setLoading(false);
     }
   };
+
+  // Fetch exam results when filters change (with debounce)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchResults();
+    }, 400); // Wait 400ms after last typing before fetching
+
+    return () => clearTimeout(timer);
+  }, [year, semester, section, major, courseCode]);
 
   const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -416,12 +414,8 @@ const AdminGrading: React.FC<GradingProps> = ({ user, onLogout }) => {
   const hasChanges = Object.keys(editedScores).length > 0;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white dark:bg-slate-950 font-poppins">
-      <Sidebar user={user} onLogout={onLogout} />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header title="Academic Performance" user={user} />
-        <main className="flex-1 overflow-y-auto p-10 animate-in fade-in duration-1000 slide-in-from-bottom-4 scrollbar-hide max-w-[1600px] mx-auto w-full">
-           <div className="flex flex-col xl:flex-row items-start xl:items-end justify-between gap-10 mb-12">
+    <div className="p-10 animate-in fade-in duration-500">
+      <div className="flex flex-col xl:flex-row items-start xl:items-end justify-between gap-10 mb-12">
             <div className="flex flex-wrap items-end gap-5">
               {/* Year Selection */}
               <div className="space-y-2.5">
@@ -697,9 +691,6 @@ const AdminGrading: React.FC<GradingProps> = ({ user, onLogout }) => {
                   </button>
                 </div>
               </div>
-          </div>
-        </main>
-      </div>
 
       {/* Add Result Modal */}
       {showAddModal && (
@@ -831,8 +822,8 @@ const AdminGrading: React.FC<GradingProps> = ({ user, onLogout }) => {
         </div>
       )}
     </div>
+    </div>
   );
-
 };
 
 export default AdminGrading;

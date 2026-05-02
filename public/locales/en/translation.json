@@ -1338,5 +1338,5 @@
   "Reason shown to student": "Reason shown to student",
   "Waiting for admin approval": "Waiting for admin approval",
   "Staged Registration Sections": "Staged Registration Sections",
-  "{{name}}\'s details were rejected.\n\nReason saved, but failed to: {{failedParts}}.": "{{name}}\'s details were rejected.\n\nReason saved, but failed to: {{failedParts}}."
+  "{{name}}'s details were rejected.\n\nReason saved, but failed to: {{failedParts}}.": "{{name}}'s details were rejected.\n\nReason saved, but failed to: {{failedParts}}."
 }
